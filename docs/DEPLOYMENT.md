@@ -212,17 +212,19 @@ Both containers also carry a `HEALTHCHECK`, and the frontend only starts once th
 
 The backend and the frontend can also be run directly.
 
+Two terminals, each opened in the root of the repository.
+
 ```bash
-# the API
+# the API, on :8080
 cd backend
 WJ_DATA_DIR=../data go run ./cmd/server
-# it listens on :8080
+```
 
-# the interface
+```bash
+# the interface, on :5173, proxying /api to the backend
 cd frontend
 npm ci
 npm run dev
-# it listens on :5173 and proxies /api to the backend
 ```
 
 A native run does not read the files of the Compose deployment, so the settings have to be put into the environment by hand. `config.env` is a plain list of assignments and can be read into the shell:
@@ -233,9 +235,12 @@ set -a; . ./config.env; set +a
 
 For a production build without a container:
 
+Both commands run in the root of the repository, so each one changes into
+its own directory only for the length of the command.
+
 ```bash
-cd backend && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o server ./cmd/server
-cd frontend && npm ci && npm run build
+(cd backend && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o server ./cmd/server)
+(cd frontend && npm ci && npm run build)
 ```
 
 Serve the `frontend/dist` directory with any web server and proxy `/api` to the backend. The uploaded files must live on a persistent path that the backend can write to, and the process needs write access to the database directory.

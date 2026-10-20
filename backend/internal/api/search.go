@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -279,18 +280,38 @@ func (s *Server) handleStats(c *gin.Context) {
 		lastDate = dates[len(dates)-1]
 	}
 
+	// The entries written in the current year, counted in the zone the
+	// account reads the calendar in.
+	zone := time.UTC
+	if settings, err := s.loadSettings(user.ID); err == nil {
+		name := strings.TrimSpace(settings.Timezone)
+		if name != "" && name != "auto" {
+			if loc, err := time.LoadLocation(name); err == nil {
+				zone = loc
+			}
+		}
+	}
+	year := time.Now().In(zone).Year()
+	var entriesThisYear int64
+	s.handle.DB().Model(&models.Entry{}).
+		Where("user_id = ? AND event_date >= ? AND event_date <= ?", user.ID,
+			fmt.Sprintf("%04d-01-01", year), fmt.Sprintf("%04d-12-31", year)).
+		Count(&entriesThisYear)
+
 	httpx.OK(c, gin.H{
-		"totalEntries":   totalEntries,
-		"totalPhotos":    plainImages + liveStills,
-		"totalVideos":    videos + liveMotions,
-		"totalAudios":    audios,
-		"totalFiles":     files,
-		"totalWords":     totalWords,
-		"activeDays":     activeDays,
-		"currentStreak":  current,
-		"longestStreak":  longest,
-		"firstEntryDate": firstDate,
-		"lastEntryDate":  lastDate,
+		"totalEntries":    totalEntries,
+		"totalPhotos":     plainImages + liveStills,
+		"totalVideos":     videos + liveMotions,
+		"totalAudios":     audios,
+		"totalFiles":      files,
+		"totalWords":      totalWords,
+		"activeDays":      activeDays,
+		"currentStreak":   current,
+		"longestStreak":   longest,
+		"firstEntryDate":  firstDate,
+		"lastEntryDate":   lastDate,
+		"entriesThisYear": entriesThisYear,
+		"currentYear":     year,
 	})
 }
 

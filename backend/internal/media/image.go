@@ -2,6 +2,7 @@ package media
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"image"
@@ -38,6 +39,9 @@ const (
 func Sniff(head []byte, filename string) (mime, ext, kind string) {
 	if isHEIF(head) {
 		return "image/heic", ".heic", KindImage
+	}
+	if isAVIF(head) {
+		return "image/avif", ".avif", KindImage
 	}
 	if isQuickTime(head) {
 		return "video/quicktime", ".mov", KindVideo
@@ -87,8 +91,6 @@ func Sniff(head []byte, filename string) (mime, ext, kind string) {
 		return "image/gif", ".gif", KindImage
 	case len(head) >= 12 && bytes.Equal(head[0:4], []byte("RIFF")) && bytes.Equal(head[8:12], []byte("WEBP")):
 		return "image/webp", ".webp", KindImage
-	case len(head) >= 12 && bytes.Equal(head[4:8], []byte("ftyp")):
-		return "image/heif", ".heif", KindImage
 	}
 
 	// Fall back to the generic detector and, failing that, to the extension.
@@ -172,12 +174,50 @@ func isHEIF(head []byte) bool {
 	if len(head) < 12 || !bytes.Equal(head[4:8], []byte("ftyp")) {
 		return false
 	}
-	brand := string(head[8:12])
-	switch brand {
-	case "heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs", "mif1", "msf1":
-		return true
+	// The major brand comes first, the compatible brands follow it. A file
+	// written by one tool is often branded by another, so every brand in the
+	// box is looked at.
+	for _, brand := range ftypBrands(head) {
+		switch brand {
+		case "heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs",
+			"mif1", "msf1", "miaf", "mif2":
+			return true
+		}
 	}
 	return false
+}
+
+// isAVIF reports whether the file is an AV1 image, which is a different
+// container that happens to use the same box layout.
+func isAVIF(head []byte) bool {
+	if len(head) < 12 || !bytes.Equal(head[4:8], []byte("ftyp")) {
+		return false
+	}
+	for _, brand := range ftypBrands(head) {
+		if brand == "avif" || brand == "avis" {
+			return true
+		}
+	}
+	return false
+}
+
+// ftypBrands returns the major brand of the file type box and every brand
+// it declares as compatible.
+func ftypBrands(head []byte) []string {
+	if len(head) < 16 || !bytes.Equal(head[4:8], []byte("ftyp")) {
+		return nil
+	}
+	brands := []string{string(head[8:12])}
+	// The size of the box bounds the list of brands, so nothing beyond the
+	// box is read.
+	limit := len(head)
+	if size := int(binary.BigEndian.Uint32(head[0:4])); size >= 16 && size < limit {
+		limit = size
+	}
+	for offset := 16; offset+4 <= limit; offset += 4 {
+		brands = append(brands, string(head[offset:offset+4]))
+	}
+	return brands
 }
 
 func isQuickTime(head []byte) bool {

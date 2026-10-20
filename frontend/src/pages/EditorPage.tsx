@@ -12,12 +12,22 @@ import { ConfirmDialog } from '../components/ui/Dialog'
 import { RichTextEditor } from '../components/editor/RichTextEditor'
 import { DrawingCanvas } from '../components/editor/DrawingCanvas'
 import { MediaUploader } from '../components/media/MediaUploader'
-import { MediaStrip } from '../components/media/MediaViewer'
+import { MediaGallery } from '../components/media/MediaViewer'
+import { Thumb } from '../components/media/Thumb'
 import { NewFolderForm } from '../components/entries/NewFolderForm'
 import { TagInput } from '../components/entries/TagInput'
 import { LocationPicker } from '../components/entries/LocationPicker'
 import { AIMetadataPanel } from '../components/entries/AIMetadataPanel'
-import { CheckIcon, ChevronLeftIcon, ClockIcon, LocationIcon, PaletteIcon, PinIcon } from '../components/icons'
+import { BackButton, TopBar } from '../components/layout/TopBar'
+import {
+  CheckIcon,
+  ClockIcon,
+  ImageIcon,
+  LocationIcon,
+  PaletteIcon,
+  PinIcon,
+  StarIcon,
+} from '../components/icons'
 import type { DocNode, Entry, Media, PlaceRef, Stroke, Tag } from '../lib/types'
 
 const AUTOSAVE_DELAY = 1200
@@ -44,6 +54,7 @@ interface EditorState {
   color: string
   isPinned: boolean
   mediaIds: number[]
+  coverMediaId?: number | null
   location?: PlaceRef | null
 }
 
@@ -68,6 +79,7 @@ export function EditorPage() {
     color: '',
     isPinned: false,
     mediaIds: [],
+    coverMediaId: null,
     location: null,
   })
   const [media, setMedia] = useState<Media[]>([])
@@ -79,6 +91,7 @@ export function EditorPage() {
   const [showDrawing, setShowDrawing] = useState(false)
   const [showLocation, setShowLocation] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [gallery, setGallery] = useState<{ items: Media[]; index: number } | null>(null)
 
   const timer = useRef<number | null>(null)
   const saving = useRef(false)
@@ -87,6 +100,10 @@ export function EditorPage() {
   const dirty = useRef(false)
   const stateRef = useRef(state)
   stateRef.current = state
+  // The entry this page has just created. Its state on screen is already the
+  // truth, so it must not be replaced by what the server sends back.
+  const createdId = useRef<number | null>(null)
+  const mounted = useRef(true)
   const entryIdRef = useRef<number | undefined>(entryId ? Number(entryId) : undefined)
 
   const language = user?.settings.language ?? 'en'
@@ -101,6 +118,10 @@ export function EditorPage() {
   // Load the entry when editing.
   useEffect(() => {
     if (!entryId) return
+    if (createdId.current === Number(entryId)) {
+      createdId.current = null
+      return
+    }
     let cancelled = false
     void (async () => {
       try {
@@ -120,6 +141,7 @@ export function EditorPage() {
           color: loaded.color,
           isPinned: loaded.isPinned,
           mediaIds: loaded.media.map((item) => item.id),
+          coverMediaId: loaded.coverMediaId ?? null,
           location: loaded.location ?? null,
         })
         setLoadError('')
@@ -165,11 +187,13 @@ export function EditorPage() {
         color: snapshot.color,
         isPinned: snapshot.isPinned,
         mediaIds: snapshot.mediaIds,
+        coverMediaId: snapshot.coverMediaId ?? null,
         revision: revision.current,
       }
 
       if (revision.current === undefined) {
         const created = await api.createEntry(payload)
+        createdId.current = created.id
         revision.current = created.revision
         entryIdRef.current = created.id
         setEntry(created)
@@ -215,6 +239,7 @@ export function EditorPage() {
       saving.current = false
       if (pending.current) {
         pending.current = false
+        if (!mounted.current) return
         dirty.current = true
         schedule()
       }
@@ -249,7 +274,9 @@ export function EditorPage() {
   }, [])
 
   useEffect(() => {
+    mounted.current = true
     return () => {
+      mounted.current = false
       if (timer.current !== null) window.clearTimeout(timer.current)
     }
   }, [])
@@ -259,12 +286,18 @@ export function EditorPage() {
       setConfirmLeave(true)
       return
     }
-    navigate('/')
+    navigate(-1)
+  }
+
+  async function finish() {
+    await save()
+    if (entryIdRef.current) navigate(`/entries/${entryIdRef.current}`)
+    else navigate('/')
   }
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-3 pb-16">
+      <div className="flex flex-col gap-3 pt-6 pb-16">
         <Skeleton className="h-10 w-2/3" />
         <Skeleton className="h-56 w-full" />
       </div>
@@ -283,268 +316,287 @@ export function EditorPage() {
   }
 
   return (
-    <div className="pb-24">
-      <header className="mb-5 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={leave}
-          className="inline-flex items-center gap-0.5 rounded-full py-1 pr-3 pl-1 text-[0.9375rem] text-ink-muted transition-colors active:bg-paper-sunken hover:text-ink"
-        >
-          <ChevronLeftIcon size={18} />
-          {t('nav.back')}
-        </button>
-        <div className="ml-auto">
-          <SaveIndicator state={saveState} savedAt={savedAt} language={language} />
-        </div>
-      </header>
+    <div className="animate-page-in pb-24">
+      <TopBar
+        title={state.title || t('entries.newEntry')}
+        left={<BackButton label={t('nav.back')} onClick={leave} />}
+        actions={
+          <>
+            <SaveIndicator state={saveState} savedAt={savedAt} language={language} />
+            <Button size="sm" variant="primary" onClick={() => void finish()}>
+              {t('entries.done')}
+            </Button>
+          </>
+        }
+      />
 
-      {conflict ? (
-        <div
-          className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-danger-soft px-3.5 py-2.5 text-sm text-danger"
-          role="alert"
-        >
-          <span className="flex-1">{t('errors.conflict')}</span>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              dirty.current = false
-              window.location.reload()
-            }}
+      <div className="pt-4">
+        {conflict ? (
+          <div
+            className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-danger-soft px-3.5 py-2.5 text-sm text-danger"
+            role="alert"
           >
-            {t('common.retry')}
-          </Button>
-        </div>
-      ) : null}
-
-      <div className="flex flex-col gap-5">
-        <input
-          value={state.title}
-          placeholder={t('entries.placeholder')}
-          aria-label={t('entries.title')}
-          onChange={(event) => update({ title: event.target.value })}
-          className="w-full border-0 bg-transparent px-0 font-serif text-[1.75rem] leading-tight text-ink-strong placeholder:text-ink-faint/70 focus:ring-0 focus:outline-none"
-        />
-
-        <RichTextEditor
-          content={state.document}
-          onChange={(document) => update({ document })}
-          placeholder={t('entries.bodyPlaceholder')}
-          ariaLabel={t('entries.bodyPlaceholder')}
-        />
-
-        <section>
-          <div className="mb-2 flex items-center gap-2">
-            <h2 className="text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
-              {t('entries.attachments')}
-            </h2>
-            <div className="ml-auto">
-              <MediaUploader
-                onUploaded={(uploaded) => {
-                  setMedia((current) => [...current, ...uploaded])
-                  update({ mediaIds: [...state.mediaIds, ...uploaded.map((item) => item.id)] })
-                }}
-              />
-            </div>
+            <span className="flex-1">{t('errors.conflict')}</span>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                dirty.current = false
+                window.location.reload()
+              }}
+            >
+              {t('common.retry')}
+            </Button>
           </div>
-          {media.length > 0 ? (
-            <MediaStrip media={media} className="grid-cols-3 sm:grid-cols-4" />
-          ) : (
-            <p className="text-sm text-ink-faint">{t('entries.noMedia')}</p>
-          )}
-        </section>
+        ) : null}
 
-        <section className="card p-4 sm:p-5">
-          <h2 className="mb-4 text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
-            {t('editor.details')}
-          </h2>
+        <div className="flex flex-col gap-5">
+          <input
+            value={state.title}
+            placeholder={t('entries.placeholder')}
+            aria-label={t('entries.title')}
+            onChange={(event) => update({ title: event.target.value })}
+            className="w-full border-0 bg-transparent px-0 font-serif text-[1.75rem] leading-tight text-ink-strong placeholder:text-ink-faint/70 focus:ring-0 focus:outline-none"
+          />
 
-          <div className="flex flex-col gap-4">
-            <Field label={t('entries.eventTime')} htmlFor="event-time" hint={t('entries.eventTimeHint')}>
-              <div className="flex items-center gap-2">
-                <ClockIcon size={16} className="shrink-0 text-ink-faint" />
-                <input
-                  id="event-time"
-                  type="datetime-local"
-                  value={isoToWallInput(state.eventTime, state.timezone)}
-                  onChange={(event) =>
-                    update({ eventTime: wallInputToISO(event.target.value, state.timezone) })
-                  }
-                  className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+          <RichTextEditor
+            content={state.document}
+            onChange={(document) => update({ document })}
+            placeholder={t('entries.bodyPlaceholder')}
+            ariaLabel={t('entries.bodyPlaceholder')}
+          />
+
+          <section>
+            <div className="mb-2 flex items-center gap-2">
+              <h2 className="text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
+                {t('entries.attachments')}
+              </h2>
+              <div className="ml-auto">
+                <MediaUploader
+                  onUploaded={(uploaded) => {
+                    setMedia((current) => [...current, ...uploaded])
+                    // The pictures are added in one step, so two uploads that
+                    // arrive at the same time cannot lose one another.
+                    setState((current) => ({
+                      ...current,
+                      mediaIds: [...current.mediaIds, ...uploaded.map((item) => item.id)],
+                      coverMediaId:
+                        current.coverMediaId ??
+                        (uploaded.find((item) => item.kind === 'image')?.id ?? null),
+                    }))
+                    dirty.current = true
+                    setSaveState('dirty')
+                    schedule()
+                  }}
                 />
               </div>
-            </Field>
-
-            <Field label={t('entries.folder')} htmlFor="entry-folder">
-              <select
-                id="entry-folder"
-                value={state.folderId === null || state.folderId === undefined ? '' : String(state.folderId)}
-                onChange={(event) =>
-                  update({ folderId: event.target.value === '' ? null : Number(event.target.value) })
-                }
-                className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-              >
-                <option value="">{t('entries.noFolder')}</option>
-                {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
-              <NewFolderForm
-                className="mt-2"
-                onCreated={(folder) => update({ folderId: folder.id })}
+            </div>
+            {media.length > 0 ? (
+              <EditorMedia
+                media={media}
+                coverMediaId={state.coverMediaId ?? null}
+                onSetCover={(id) => update({ coverMediaId: id })}
+                onOpen={(_, index) => setGallery({ items: media, index })}
               />
-            </Field>
+            ) : (
+              <p className="text-sm text-ink-faint">{t('entries.noMedia')}</p>
+            )}
+          </section>
 
-            <Field label={t('entries.tags')} htmlFor="entry-tags">
-              <TagInput
-                id="entry-tags"
-                value={state.tags}
-                onChange={(tags) => update({ tags })}
-              />
-            </Field>
+          <section className="card p-4 sm:p-5">
+            <h2 className="mb-4 text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
+              {t('editor.details')}
+            </h2>
 
-            <Field label={t('entries.location')} htmlFor="entry-location">
-              <div className="flex items-center gap-2">
-                <LocationIcon size={16} className="shrink-0 text-ink-faint" />
-                {state.location ? (
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
-                    {state.location.name || state.location.address}
-                  </span>
-                ) : (
-                  <span className="min-w-0 flex-1 text-sm text-ink-faint">{t('entries.noLocation')}</span>
-                )}
-                <Button size="sm" variant="secondary" onClick={() => setShowLocation(true)}>
-                  {state.location ? t('entries.rename') : t('entries.addLocation')}
-                </Button>
-                {state.location ? (
+            <div className="flex flex-col gap-4">
+              <Field label={t('entries.eventTime')} htmlFor="event-time" hint={t('entries.eventTimeHint')}>
+                <div className="flex items-center gap-2">
+                  <ClockIcon size={16} className="shrink-0 text-ink-faint" />
+                  <input
+                    id="event-time"
+                    type="datetime-local"
+                    value={isoToWallInput(state.eventTime, state.timezone)}
+                    onChange={(event) =>
+                      update({ eventTime: wallInputToISO(event.target.value, state.timezone) })
+                    }
+                    className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  />
+                </div>
+              </Field>
+
+              <Field label={t('entries.folder')} htmlFor="entry-folder">
+                <select
+                  id="entry-folder"
+                  value={state.folderId === null || state.folderId === undefined ? '' : String(state.folderId)}
+                  onChange={(event) =>
+                    update({ folderId: event.target.value === '' ? null : Number(event.target.value) })
+                  }
+                  className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+                >
+                  <option value="">{t('entries.noFolder')}</option>
+                  {folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
+                <NewFolderForm
+                  className="mt-2"
+                  onCreated={(folder) => update({ folderId: folder.id })}
+                />
+              </Field>
+
+              <Field label={t('entries.tags')} htmlFor="entry-tags">
+                <TagInput
+                  id="entry-tags"
+                  value={state.tags}
+                  onChange={(tags) => update({ tags })}
+                />
+              </Field>
+
+              <Field label={t('entries.location')} htmlFor="entry-location">
+                <div className="flex items-center gap-2">
+                  <LocationIcon size={16} className="shrink-0 text-ink-faint" />
+                  {state.location ? (
+                    <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                      {state.location.name || state.location.address}
+                    </span>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate text-sm text-ink-faint">
+                      {t('entries.noLocation')}
+                    </span>
+                  )}
+                  <Button size="sm" variant="secondary" onClick={() => setShowLocation(true)}>
+                    {state.location ? t('entries.rename') : t('entries.addLocation')}
+                  </Button>
+                  {state.location ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        update({ location: null })
+                        if (entryIdRef.current) {
+                          void api.clearEntryLocation(entryIdRef.current)
+                        }
+                      }}
+                    >
+                      {t('entries.remove')}
+                    </Button>
+                  ) : null}
+                </div>
+              </Field>
+
+              <Field label={t('entries.color')} htmlFor="entry-color">
+                <div className="flex items-center gap-2">
+                  <PaletteIcon size={16} className="shrink-0 text-ink-faint" />
+                  <div className="flex flex-wrap gap-2" id="entry-color">
+                    {COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => update({ color: state.color === color ? '' : color })}
+                        aria-label={color}
+                        aria-pressed={state.color === color}
+                        className={cn(
+                          'size-7 rounded-full transition-transform duration-150',
+                          state.color === color
+                            ? 'ring-2 ring-ink ring-offset-2 ring-offset-paper-raised'
+                            : 'ring-1 ring-black/5',
+                        )}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => {
-                      update({ location: null })
-                      if (entryIdRef.current) {
-                        void api.clearEntryLocation(entryIdRef.current)
-                      }
-                    }}
+                    className="ml-auto"
+                    icon={<PinIcon size={14} />}
+                    onClick={() => update({ isPinned: !state.isPinned })}
                   >
-                    {t('entries.remove')}
+                    {state.isPinned ? t('entries.unpin') : t('entries.pin')}
                   </Button>
-                ) : null}
-              </div>
-            </Field>
+                </div>
+              </Field>
+            </div>
+          </section>
 
-            <Field label={t('entries.color')} htmlFor="entry-color">
-              <div className="flex items-center gap-2">
-                <PaletteIcon size={16} className="shrink-0 text-ink-faint" />
-                <div className="flex flex-wrap gap-2" id="entry-color">
-                  {COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => update({ color: state.color === color ? '' : color })}
-                      aria-label={color}
-                      aria-pressed={state.color === color}
-                      className={cn(
-                        'size-7 rounded-full transition-transform duration-150',
-                        state.color === color
-                          ? 'ring-2 ring-ink ring-offset-2 ring-offset-paper-raised'
-                          : 'ring-1 ring-black/5',
-                      )}
-                      style={{ backgroundColor: color }}
+          <section>
+            <div className="mb-2 flex items-center gap-2">
+              <h2 className="text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
+                {t('drawing.title')}
+              </h2>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="ml-auto"
+                onClick={() => setShowDrawing((value) => !value)}
+              >
+                {showDrawing ? t('drawing.close') : t('drawing.open')}
+              </Button>
+            </div>
+            {showDrawing ? (
+              <DrawingCanvas
+                strokes={state.drawing}
+                onChange={(drawing) => update({ drawing })}
+              />
+            ) : state.drawing.length > 0 ? (
+              <div className="overflow-hidden rounded-2xl border border-line bg-paper-raised">
+                <svg
+                  viewBox="0 0 1000 750"
+                  preserveAspectRatio="none"
+                  className="block aspect-[4/3] w-full"
+                  role="img"
+                  aria-label={t('drawing.title')}
+                >
+                  {state.drawing.map((stroke, index) => (
+                    <path
+                      key={stroke.id ?? index}
+                      d={
+                        stroke.points.length
+                          ? stroke.points
+                              .map(
+                                ([x, y], i) =>
+                                  `${i === 0 ? 'M' : 'L'} ${(x * 1000).toFixed(1)} ${(y * 750).toFixed(1)}`,
+                              )
+                              .join(' ')
+                          : ''
+                      }
+                      fill="none"
+                      stroke={stroke.color}
+                      strokeWidth={stroke.width}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                   ))}
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-auto"
-                  icon={<PinIcon size={14} />}
-                  onClick={() => update({ isPinned: !state.isPinned })}
-                >
-                  {state.isPinned ? t('entries.unpin') : t('entries.pin')}
-                </Button>
+                </svg>
               </div>
-            </Field>
-          </div>
-        </section>
+            ) : null}
+          </section>
 
-        <section>
-          <div className="mb-2 flex items-center gap-2">
-            <h2 className="text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
-              {t('drawing.title')}
-            </h2>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="ml-auto"
-              onClick={() => setShowDrawing((value) => !value)}
-            >
-              {showDrawing ? t('drawing.close') : t('drawing.open')}
-            </Button>
-          </div>
-          {showDrawing ? (
-            <DrawingCanvas
-              strokes={state.drawing}
-              onChange={(drawing) => update({ drawing })}
-            />
-          ) : state.drawing.length > 0 ? (
-            <div className="overflow-hidden rounded-2xl border border-line bg-paper-raised">
-              <svg
-                viewBox="0 0 1000 750"
-                preserveAspectRatio="none"
-                className="block aspect-[4/3] w-full"
-                role="img"
-                aria-label={t('drawing.title')}
-              >
-                {state.drawing.map((stroke, index) => (
-                  <path
-                    key={stroke.id ?? index}
-                    d={
-                      stroke.points.length
-                        ? stroke.points
-                            .map(
-                              ([x, y], i) =>
-                                `${i === 0 ? 'M' : 'L'} ${(x * 1000).toFixed(1)} ${(y * 750).toFixed(1)}`,
-                            )
-                            .join(' ')
-                        : ''
+          {entry && entry.aiMetadata.length > 0 ? (
+            <AIMetadataPanel
+              metadata={entry.aiMetadata}
+              entryId={entry.id}
+              onApplyTags={(names) => {
+                const existing = state.tags.map((tag) => tag.name.toLowerCase())
+                const missing = names.filter((name) => !existing.includes(name.toLowerCase()))
+                if (!missing.length) return
+                void (async () => {
+                  const created: Tag[] = []
+                  for (const name of missing) {
+                    try {
+                      created.push(await api.createTag(name))
+                    } catch {
+                      // A tag that cannot be created is simply not suggested.
                     }
-                    fill="none"
-                    stroke={stroke.color}
-                    strokeWidth={stroke.width}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                ))}
-              </svg>
-            </div>
-          ) : null}
-        </section>
-
-        {entry && entry.aiMetadata.length > 0 ? (
-          <AIMetadataPanel
-            metadata={entry.aiMetadata}
-            entryId={entry.id}
-            onApplyTags={(names) => {
-              const existing = state.tags.map((tag) => tag.name.toLowerCase())
-              const missing = names.filter((name) => !existing.includes(name.toLowerCase()))
-              if (!missing.length) return
-              void (async () => {
-                const created: Tag[] = []
-                for (const name of missing) {
-                  try {
-                    created.push(await api.createTag(name))
-                  } catch {
-                    // A tag that cannot be created is simply not suggested.
                   }
-                }
-                if (created.length) update({ tags: [...state.tags, ...created] })
-              })()
-            }}
-          />
-        ) : null}
+                  if (created.length) update({ tags: [...state.tags, ...created] })
+                })()
+              }}
+            />
+          ) : null}
+        </div>
       </div>
 
       <LocationPicker
@@ -559,7 +611,7 @@ export function EditorPage() {
       <ConfirmDialog
         open={confirmLeave}
         title={t('entries.unsaved')}
-        description={t('entries.saveFailed')}
+        description={t('entries.unsavedHint')}
         confirmLabel={t('entries.save')}
         onClose={() => setConfirmLeave(false)}
         onConfirm={() => {
@@ -567,6 +619,82 @@ export function EditorPage() {
           void save().then(() => navigate('/'))
         }}
       />
+
+      {gallery ? (
+        <MediaGallery
+          items={gallery.items}
+          index={gallery.index}
+          onIndexChange={(index) => setGallery({ ...gallery, index })}
+          onClose={() => setGallery(null)}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * The attachments of the entry while it is written.
+ *
+ * Every picture can be chosen as the one that leads the entry in the
+ * timeline.
+ */
+function EditorMedia({
+  media,
+  coverMediaId,
+  onSetCover,
+  onOpen,
+}: {
+  media: Media[]
+  coverMediaId: number | null
+  onSetCover: (id: number) => void
+  onOpen: (media: Media, index: number) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+      {media.map((item, index) => {
+        const picture = item.kind === 'image' || item.kind === 'live-still'
+        const isCover = coverMediaId === item.id
+        return (
+          <div
+            key={item.id}
+            className="group relative aspect-square overflow-hidden rounded-2xl bg-paper-sunken"
+          >
+            <button
+              type="button"
+              onClick={() => onOpen(item, index)}
+              className="block size-full"
+              aria-label={item.originalName}
+            >
+              <Thumb media={item} />
+            </button>
+
+            {picture ? (
+              <button
+                type="button"
+                onClick={() => onSetCover(item.id)}
+                aria-label={isCover ? t('entries.coverPicture') : t('entries.setCover')}
+                aria-pressed={isCover}
+                className={cn(
+                  'absolute top-1.5 right-1.5 flex size-7 items-center justify-center rounded-full transition-colors',
+                  isCover
+                    ? 'bg-accent text-white'
+                    : 'bg-black/40 text-white/90 backdrop-blur-sm hover:bg-black/60',
+                )}
+              >
+                <StarIcon size={14} filled={isCover} />
+              </button>
+            ) : null}
+
+            {isCover ? (
+              <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[0.625rem] font-semibold text-white backdrop-blur-sm">
+                <ImageIcon size={11} />
+                {t('entries.cover')}
+              </span>
+            ) : null}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -595,4 +723,3 @@ function SaveIndicator({
   }
   return null
 }
-

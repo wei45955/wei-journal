@@ -33,19 +33,12 @@
     /* The page itself must never zoom: a pinch magnifies a photo in the
        viewer, never the layout. Pan is still allowed so the page scrolls. */
     touch-action: pan-x pan-y;
-    /* How tall the fixed navigation bar is, so sticky content can sit
-       right underneath it. On the wide layout the bar is a sidebar, so
-       nothing is pinned to the top of the window. */
-    --header-h: 0px;
-    /* The same for the bar at the bottom of the window. */
-    --bottom-nav-h: 0px;
-  }
-
-  @media (max-width: 1023px) {
-    html {
-      --header-h: calc(3.5rem + env(safe-area-inset-top, 0px));
-      --bottom-nav-h: calc(5.5rem + env(safe-area-inset-bottom, 0px));
-    }
+    /* How tall the bar at the top of the page is, so sticky content can
+       sit right underneath it. The bar draws itself on every page, so the
+       number is the same everywhere. */
+    --header-h: calc(3rem + env(safe-area-inset-top, 0px));
+    /* The same for the space at the bottom of the window. */
+    --bottom-nav-h: env(safe-area-inset-bottom, 0px);
   }
 
   body {
@@ -245,6 +238,17 @@
   }
 }
 
+/* The change from one page to the next. Only the opacity moves, so the bar
+   of the page keeps its place while the content changes. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .animate-fade-rise {
   animation: fade-rise var(--duration-base) var(--ease-out) both;
 }
@@ -259,6 +263,10 @@
 
 .animate-pop-in {
   animation: pop-in var(--duration-base) var(--ease-out) both;
+}
+
+.animate-page-in {
+  animation: page-in 180ms var(--ease-out) both;
 }
 
 /* The rich text editor renders a Tiptap JSON document. */

@@ -36,7 +36,11 @@ type entryPayload struct {
 	Color     *string    `json:"color"`
 	IsPinned  *bool      `json:"isPinned"`
 	MediaIDs  []uint     `json:"mediaIds"`
-	Revision  *int       `json:"revision"`
+	// CoverMediaID is the picture that leads the entry in the timeline. It
+	// uses the optional shape, so a request that does not mention it leaves
+	// the current choice alone.
+	CoverMediaID optionalID `json:"coverMediaId"`
+	Revision     *int       `json:"revision"`
 }
 
 // optionalID is an identifier that tells "not mentioned" apart from
@@ -241,6 +245,12 @@ func (s *Server) handleCreateEntry(c *gin.Context) {
 		return
 	}
 
+	coverID, err := s.resolveCoverMedia(user.ID, payload.CoverMediaID.Value)
+	if err != nil {
+		httpx.ValidationError(c, "invalid cover image", map[string]string{"coverMediaId": err.Error()})
+		return
+	}
+
 	doc := journal.ParseDocument(payload.Document)
 	plain := journal.ExtractText(doc)
 	title := ""
@@ -265,6 +275,7 @@ func (s *Server) handleCreateEntry(c *gin.Context) {
 		IsPinned:     payload.IsPinned != nil && *payload.IsPinned,
 		WordCount:    journal.CountWords(plain),
 		Revision:     1,
+		CoverMediaID: coverID,
 	}
 
 	err = s.handle.DB().Transaction(func(tx *gorm.DB) error {
@@ -375,6 +386,20 @@ func (s *Server) handleUpdateEntry(c *gin.Context) {
 	}
 	if payload.IsPinned != nil {
 		updates["is_pinned"] = *payload.IsPinned
+	}
+	// The picture that leads the entry in the timeline. A request that does
+	// not mention it leaves the current choice alone.
+	if payload.CoverMediaID.Set {
+		coverID, cerr := s.resolveCoverMedia(user.ID, payload.CoverMediaID.Value)
+		if cerr != nil {
+			httpx.ValidationError(c, "invalid cover image", map[string]string{"coverMediaId": cerr.Error()})
+			return
+		}
+		if coverID == nil {
+			updates["cover_media_id"] = nil
+		} else {
+			updates["cover_media_id"] = *coverID
+		}
 	}
 	if payload.EventTime != nil && *payload.EventTime != "" {
 		parsed, perr := time.Parse(time.RFC3339, *payload.EventTime)
@@ -591,6 +616,23 @@ func (s *Server) attachMedia(tx *gorm.DB, userID uint, entry *models.Entry, medi
 		return err
 	}
 	return linkPlacePhoto(tx, userID, entry.ID)
+}
+
+// resolveCoverMedia checks that the picture chosen to lead an entry exists
+// and belongs to the account. A missing picture is not an error here: the
+// caller decides what to do with the answer.
+func (s *Server) resolveCoverMedia(userID uint, id *uint) (*uint, error) {
+	if id == nil || *id == 0 {
+		return nil, nil
+	}
+	var asset models.MediaAsset
+	if err := s.handle.DB().Where("id = ? AND user_id = ?", *id, userID).First(&asset).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("the picture does not belong to this account")
+		}
+		return nil, err
+	}
+	return id, nil
 }
 
 // collectMediaIDs finds the media assets referenced by a document.

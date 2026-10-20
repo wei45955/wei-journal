@@ -81,6 +81,48 @@ export const MenuIcon = (props: IconProps) => (
   </Icon>
 )
 
+/** The three dots that open a menu of actions. */
+export const MoreIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none" />
+  </Icon>
+)
+
+/** The two arrows that stand for the order of a list. */
+export const SortIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M7 4.5v15M7 4.5L4 8M7 4.5l3 3.5" />
+    <path d="M14 19.5v-15M14 19.5l-3-3.5M14 19.5l3-3.5" />
+  </Icon>
+)
+
+/** The funnel that stands for the filters. */
+export const FilterIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M4 5.5h16l-6.2 7.3V19l-3.6-2v-4.2L4 5.5z" />
+  </Icon>
+)
+
+/** The circle with a tick, for choosing entries. */
+export const SelectIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M8.5 12.2l2.4 2.4 4.6-4.9" />
+  </Icon>
+)
+
+/** The star that marks the picture which leads an entry. */
+export const StarIcon = ({ filled = false, ...props }: IconProps & { filled?: boolean }) => (
+  <Icon {...props}>
+    <path
+      d="M12 4.2l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.44l-4.7 2.47.9-5.23-3.8-3.7 5.25-.77L12 4.2z"
+      fill={filled ? 'currentColor' : 'none'}
+    />
+  </Icon>
+)
+
 export const ChevronLeftIcon = (props: IconProps) => (
   <Icon {...props}>
     <path d="M14.5 5.5L8 12l6.5 6.5" />

@@ -221,7 +221,8 @@ Creates an entry. Returns `201` with the entry object.
   "tagNames": ["rain"],
   "color": "#f5c542",
   "isPinned": false,
-  "mediaIds": [10, 11]
+  "mediaIds": [10, 11],
+  "coverMediaId": 10
 }
 ```
 
@@ -231,6 +232,7 @@ Creates an entry. Returns `201` with the entry object.
 - `folderId` is validated against the account. `null` means the default stream.
 - `tagIds` and `tagNames` can be combined. Names that do not exist yet are created.
 - `mediaIds` attaches previously uploaded assets.
+- `coverMediaId` names the picture that leads the entry in the timeline when it carries several. It must belong to the account; `null` clears the choice.
 - `drawing` is the vector stroke list, stored as structured data and never flattened to a bitmap.
 
 ### `GET /api/entries/:id`
@@ -344,7 +346,9 @@ curl -X POST https://journal.example.com/api/media \
   -F "files=@photo.jpg" -F "files=@clip.mov"
 ```
 
-Returns `201` with an array of media objects. A file above `WJ_MAX_UPLOAD_MB` returns `413 payload_too_large`.
+Returns `201` with an array of media objects. A file above `WJ_MAX_UPLOAD_MB` returns `413 payload_too_large` with `details.limitMB` holding the limit, so the interface can say what the limit is.
+
+The interface redraws the pictures in the browser before they are sent, so a photograph taken on a phone arrives as a JPEG every device can read. A HEIC file that reaches the server is kept as it is and served with its own type; the server makes a thumbnail only for the formats it can decode.
 
 ### `POST /api/media/live`
 
@@ -463,7 +467,8 @@ The search covers English and Chinese. The index is built from the title, the pl
     "totalEntries": 128, "totalPhotos": 64, "totalVideos": 12,
     "totalAudios": 1, "totalFiles": 3, "totalWords": 24500,
     "activeDays": 90, "currentStreak": 4, "longestStreak": 21,
-    "firstEntryDate": "2025-03-01", "lastEntryDate": "2026-01-20"
+    "firstEntryDate": "2025-03-01", "lastEntryDate": "2026-01-20",
+    "entriesThisYear": 46, "currentYear": 2026
   }
 }
 ```
@@ -548,7 +553,7 @@ Response `200`:
 ### `GET /api/settings`
 
 ```json
-{ "data": { "language": "en", "timezone": "UTC", "theme": "system", "dateFormat": "YYYY-MM-DD", "aiEnabled": false, "mapTileUrl": "" } }
+{ "data": { "language": "en", "timezone": "UTC", "theme": "system", "dateFormat": "YYYY-MM-DD", "aiEnabled": false, "mapTileUrl": "", "compressImages": true, "imageQuality": 80, "imageMaxDimension": 2048 } }
 ```
 
 ### `PATCH /api/settings`
@@ -556,8 +561,10 @@ Response `200`:
 Every field is optional and only the present ones are changed.
 
 ```json
-{ "language": "zh-CN", "timezone": "Asia/Shanghai", "theme": "light", "dateFormat": "YYYY-MM-DD", "aiEnabled": true, "mapTileUrl": "https://tile.example.com/{z}/{x}/{y}.png" }
+{ "language": "zh-CN", "timezone": "Asia/Shanghai", "theme": "light", "dateFormat": "YYYY-MM-DD", "aiEnabled": true, "mapTileUrl": "https://tile.example.com/{z}/{x}/{y}.png", "compressImages": true, "imageQuality": 80, "imageMaxDimension": 2048 }
 ```
+
+`compressImages`, `imageQuality` and `imageMaxDimension` decide how the interface treats the pictures before they are sent. The quality is a number from 30 to 95, the longest side is a number of pixels between 640 and 4096, and zero keeps the original size.
 
 `aiEnabled` is the per account consent. It is `false` by default, so no entry text leaves the server unless the user turns it on.
 

@@ -42,17 +42,25 @@ type User struct {
 
 // UserSettings holds per-account preferences.
 type UserSettings struct {
-	ID         uint           `gorm:"primaryKey" json:"id"`
-	UserID     uint           `gorm:"not null;uniqueIndex" json:"userId"`
-	Language   string         `gorm:"size:16;not null;default:'en'" json:"language"`
-	Timezone   string         `gorm:"size:64;not null;default:'UTC'" json:"timezone"`
-	Theme      string         `gorm:"size:16;not null;default:'system'" json:"theme"`
-	DateFormat string         `gorm:"size:32;not null;default:'YYYY-MM-DD'" json:"dateFormat"`
-	AIEnabled  bool           `gorm:"not null;default:false" json:"aiEnabled"`
-	MapTileURL string         `gorm:"size:512;not null;default:''" json:"mapTileUrl"`
-	CreatedAt  time.Time      `json:"createdAt"`
-	UpdatedAt  time.Time      `json:"updatedAt"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
+	ID         uint   `gorm:"primaryKey" json:"id"`
+	UserID     uint   `gorm:"not null;uniqueIndex" json:"userId"`
+	Language   string `gorm:"size:16;not null;default:'en'" json:"language"`
+	Timezone   string `gorm:"size:64;not null;default:'UTC'" json:"timezone"`
+	Theme      string `gorm:"size:16;not null;default:'system'" json:"theme"`
+	DateFormat string `gorm:"size:32;not null;default:'YYYY-MM-DD'" json:"dateFormat"`
+	AIEnabled  bool   `gorm:"not null;default:false" json:"aiEnabled"`
+	MapTileURL string `gorm:"size:512;not null;default:''" json:"mapTileUrl"`
+	// CompressImages turns the compression of the uploaded pictures on. The
+	// work is done in the browser, which keeps the original shape of a
+	// photograph off the wire and lets every device read what arrives.
+	CompressImages bool `gorm:"not null;default:true" json:"compressImages"`
+	// ImageQuality is the quality of the compressed picture, from 1 to 100.
+	ImageQuality int `gorm:"not null;default:80" json:"imageQuality"`
+	// ImageMaxDimension is the longest side a compressed picture may have.
+	ImageMaxDimension int            `gorm:"not null;default:2048" json:"imageMaxDimension"`
+	CreatedAt         time.Time      `json:"createdAt"`
+	UpdatedAt         time.Time      `json:"updatedAt"`
+	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // Folder groups entries. A nil FolderID means the entry lives in the
@@ -90,20 +98,24 @@ type EntryTag struct {
 
 // Entry is a single journal record.
 type Entry struct {
-	ID           uint           `gorm:"primaryKey" json:"id"`
-	UserID       uint           `gorm:"not null;index:idx_entry_user_time" json:"userId"`
-	FolderID     *uint          `gorm:"index:idx_entry_folder" json:"folderId,omitempty"`
-	Title        string         `gorm:"size:300;not null;default:''" json:"title"`
-	EventTime    time.Time      `gorm:"not null;index:idx_entry_user_time" json:"eventTime"`
-	EventDate    string         `gorm:"size:10;not null;index:idx_entry_user_date" json:"eventDate"`
-	Timezone     string         `gorm:"size:64;not null;default:'UTC'" json:"timezone"`
-	DocumentJSON string         `gorm:"type:text;not null;default:''" json:"document"`
-	DrawingJSON  string         `gorm:"type:text;not null;default:''" json:"drawing"`
-	PlainText    string         `gorm:"type:text;not null;default:''" json:"plainText"`
-	Color        string         `gorm:"size:32;not null;default:''" json:"color"`
-	IsPinned     bool           `gorm:"not null;default:false" json:"isPinned"`
-	WordCount    int            `gorm:"not null;default:0" json:"wordCount"`
-	Revision     int            `gorm:"not null;default:1" json:"revision"`
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	UserID       uint      `gorm:"not null;index:idx_entry_user_time" json:"userId"`
+	FolderID     *uint     `gorm:"index:idx_entry_folder" json:"folderId,omitempty"`
+	Title        string    `gorm:"size:300;not null;default:''" json:"title"`
+	EventTime    time.Time `gorm:"not null;index:idx_entry_user_time" json:"eventTime"`
+	EventDate    string    `gorm:"size:10;not null;index:idx_entry_user_date" json:"eventDate"`
+	Timezone     string    `gorm:"size:64;not null;default:'UTC'" json:"timezone"`
+	DocumentJSON string    `gorm:"type:text;not null;default:''" json:"document"`
+	DrawingJSON  string    `gorm:"type:text;not null;default:''" json:"drawing"`
+	PlainText    string    `gorm:"type:text;not null;default:''" json:"plainText"`
+	Color        string    `gorm:"size:32;not null;default:''" json:"color"`
+	IsPinned     bool      `gorm:"not null;default:false" json:"isPinned"`
+	WordCount    int       `gorm:"not null;default:0" json:"wordCount"`
+	Revision     int       `gorm:"not null;default:1" json:"revision"`
+	// CoverMediaID is the picture that leads the entry in the timeline when
+	// several photographs are attached. It is empty when the first one is
+	// used.
+	CoverMediaID *uint          `gorm:"index:idx_entries_cover" json:"coverMediaId,omitempty"`
 	CreatedAt    time.Time      `json:"createdAt"`
 	UpdatedAt    time.Time      `json:"updatedAt"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`

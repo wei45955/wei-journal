@@ -112,7 +112,7 @@ docker compose logs frontend
 docker compose exec frontend ls /usr/share/nginx/html
 ```
 
-If `index.html` is missing, the frontend build failed. Run it outside Docker to see the error:
+If `index.html` is missing, the frontend build failed. Run it outside Docker, from the root of the repository, to see the error:
 
 ```bash
 cd frontend && npm ci && npm run build

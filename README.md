@@ -12,6 +12,8 @@ The interface is built for a phone first and scales up to a desktop. It is meant
 
 **Media.** Images, videos, audio and arbitrary files, with a Live Photo mode that keeps the still image and the motion component together as one item. The thumbnails are generated in the background so an upload returns immediately. The original files are only reachable through an authenticated endpoint.
 
+**Pictures from a phone.** The pictures are redrawn in the browser before they are sent, so a photograph taken on an iPhone arrives as a JPEG every device can read, and as a much smaller file. The quality and the size can be changed in the settings, and the choice is remembered on the account.
+
 **Organisation.** Folders for named collections, with an explicit choice when a folder is deleted: move the entries into the default stream, or delete them for good. Tags are many to many, and the same tag written as `Travel`, `travel` or `  travel  ` is the same tag. Unicode names, Chinese included, work.
 
 **Search.** One box across the titles, the bodies, the tags, the folder names, the file names, the places and the AI descriptions. It handles English and Chinese properly, which needs a different tokeniser for each and a trigram index for the middle case.
@@ -44,10 +46,24 @@ For the full procedure, including the reverse proxy, PostgreSQL and the hardenin
 
 ### Without Docker
 
+Two terminals, each opened in the root of the repository.
+
+The first one runs the API on port 8080:
+
 ```bash
-cd backend && WJ_DATA_DIR=../data go run ./cmd/server   # the API on :8080
-cd frontend && npm ci && npm run dev                     # the interface on :5173
+cd backend
+WJ_DATA_DIR=../data go run ./cmd/server
 ```
+
+The second one runs the interface on port 5173:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+`make dev-backend` and `make dev-frontend` do the same and always run from the root of the repository.
 
 ## The layout
 

@@ -267,12 +267,15 @@ func (s *Server) handleGetSettings(c *gin.Context) {
 }
 
 type settingsPayload struct {
-	Language   *string `json:"language"`
-	Timezone   *string `json:"timezone"`
-	Theme      *string `json:"theme"`
-	DateFormat *string `json:"dateFormat"`
-	AIEnabled  *bool   `json:"aiEnabled"`
-	MapTileURL *string `json:"mapTileUrl"`
+	Language          *string `json:"language"`
+	Timezone          *string `json:"timezone"`
+	Theme             *string `json:"theme"`
+	DateFormat        *string `json:"dateFormat"`
+	AIEnabled         *bool   `json:"aiEnabled"`
+	MapTileURL        *string `json:"mapTileUrl"`
+	CompressImages    *bool   `json:"compressImages"`
+	ImageQuality      *int    `json:"imageQuality"`
+	ImageMaxDimension *int    `json:"imageMaxDimension"`
 	// AlignZone is the concrete zone the calendar days should be rewritten
 	// into. It is not stored. "auto" on the account follows the phone, and
 	// the phone tells the server which zone that is right now.
@@ -354,6 +357,33 @@ func (s *Server) handleUpdateSettings(c *gin.Context) {
 	}
 	if payload.MapTileURL != nil {
 		settings.MapTileURL = *payload.MapTileURL
+	}
+	// The compression of the uploaded pictures. The work happens in the
+	// browser, and these values decide how far it goes.
+	if payload.CompressImages != nil {
+		settings.CompressImages = *payload.CompressImages
+	}
+	if payload.ImageQuality != nil {
+		quality := *payload.ImageQuality
+		if quality < 30 || quality > 95 {
+			httpx.ValidationError(c, "invalid image quality", map[string]string{
+				"imageQuality": "must be between 30 and 95",
+			})
+			return
+		}
+		settings.ImageQuality = quality
+	}
+	if payload.ImageMaxDimension != nil {
+		dimension := *payload.ImageMaxDimension
+		// Zero keeps the original size. Anything else has to stay inside a
+		// range that is worth drawing on a phone.
+		if dimension != 0 && (dimension < 640 || dimension > 4096) {
+			httpx.ValidationError(c, "invalid image size", map[string]string{
+				"imageMaxDimension": "must be 0 or between 640 and 4096",
+			})
+			return
+		}
+		settings.ImageMaxDimension = dimension
 	}
 	if err := s.handle.DB().Save(settings).Error; err != nil {
 		httpx.Internal(c, s.log, err, "update settings")

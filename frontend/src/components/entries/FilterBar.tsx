@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { useFolders } from '../../hooks/useFolders'
@@ -12,19 +11,20 @@ const mediaTypes = ['image', 'video', 'audio', 'file', 'livephoto'] as const
 interface FilterBarProps {
   filters: TimelineFilters
   onChange: (next: TimelineFilters) => void
-  /** Hides the folder selector when the timeline is already scoped to a folder. */
-  showFolder?: boolean
+  /** Whether the panel of the filters is open. */
+  open: boolean
+  /** Opens or closes the panel of the filters. */
+  onOpenChange: (open: boolean) => void
 }
 
 /**
  * The filter strip above the timeline. It stays pinned to the top of the
  * screen so the filters are always one tap away.
  */
-export function FilterBar({ filters, onChange, showFolder = true }: FilterBarProps) {
+export function FilterBar({ filters, onChange, open, onOpenChange }: FilterBarProps) {
   const { t } = useTranslation()
   const { folders } = useFolders()
   const { tags } = useTags()
-  const [open, setOpen] = useState(false)
 
   const active = hasActiveFilters(filters)
 
@@ -44,7 +44,7 @@ export function FilterBar({ filters, onChange, showFolder = true }: FilterBarPro
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => onOpenChange(!open)}
           aria-expanded={open}
           className={cn(
             'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors',
@@ -62,33 +62,31 @@ export function FilterBar({ filters, onChange, showFolder = true }: FilterBarPro
         </button>
 
         <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {showFolder ? (
-            <span className="relative shrink-0">
-              <select
-                value={filters.folderId === undefined ? '' : String(filters.folderId)}
-                onChange={(event) => {
-                  const raw = event.target.value
-                  if (raw === '') set({ folderId: undefined })
-                  else if (raw === 'none') set({ folderId: 'none' })
-                  else set({ folderId: Number(raw) })
-                }}
-                className="cursor-pointer appearance-none rounded-full border border-line bg-paper-raised py-1.5 pr-7 pl-3 text-sm text-ink transition-colors hover:border-line-strong focus:border-accent focus:outline-none"
-                aria-label={t('entries.folder')}
-              >
-                <option value="">{t('common.all')}</option>
-                <option value="none">{t('entries.noFolder')}</option>
-                {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDownIcon
-                size={12}
-                className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-ink-faint"
-              />
-            </span>
-          ) : null}
+          <span className="relative shrink-0">
+            <select
+              value={filters.folderId === undefined ? '' : String(filters.folderId)}
+              onChange={(event) => {
+                const raw = event.target.value
+                if (raw === '') set({ folderId: undefined })
+                else if (raw === 'none') set({ folderId: 'none' })
+                else set({ folderId: Number(raw) })
+              }}
+              className="cursor-pointer appearance-none rounded-full border border-line bg-paper-raised py-1.5 pr-7 pl-3 text-sm text-ink transition-colors hover:border-line-strong focus:border-accent focus:outline-none"
+              aria-label={t('entries.folder')}
+            >
+              <option value="">{t('common.all')}</option>
+              <option value="none">{t('entries.noFolder')}</option>
+              {folders.map((folder) => (
+                <option key={folder.id} value={folder.id}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon
+              size={12}
+              className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-ink-faint"
+            />
+          </span>
 
           {tags.map((tag) => (
             <button

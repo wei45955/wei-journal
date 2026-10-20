@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import { api } from '../lib/api'
@@ -19,6 +20,7 @@ import type { AIStatus, Session, Settings } from '../lib/types'
 import { SettingsSection } from '../components/settings/SettingsSection'
 import { SessionList } from '../components/settings/SessionList'
 import { ChangePasswordForm } from '../components/settings/ChangePasswordForm'
+import { BackButton, TopBar } from '../components/layout/TopBar'
 
 const THEMES = [
   { value: 'system', key: 'settings.themeSystem', fallback: 'Follow the system' },
@@ -33,6 +35,9 @@ const DATE_FORMATS = [
   { value: 'MM/dd/yyyy', sample: 'MM/dd/yyyy' },
   { value: 'dd/MM/yyyy', sample: 'dd/MM/yyyy' },
 ]
+
+/** The longest side a compressed picture may have. Zero keeps the original. */
+const IMAGE_SIZES = [1280, 2048, 3072, 0]
 
 /** The theme is applied to the document, the way the sign in does it. */
 function applyTheme(theme: string) {
@@ -50,6 +55,7 @@ export function SettingsPage() {
   const { t, i18n } = useTranslation()
   const { notify, describe } = useToast()
   const { user, updateUser, signOut } = useAuth()
+  const navigate = useNavigate()
 
   const language = user?.settings.language ?? i18n.resolvedLanguage ?? 'en'
   const locale = localeFor(language)
@@ -64,10 +70,15 @@ export function SettingsPage() {
   const [includeMedia, setIncludeMedia] = useState(true)
 
   const [tileUrlDraft, setTileUrlDraft] = useState(settings?.mapTileUrl ?? '')
+  const [qualityDraft, setQualityDraft] = useState(settings?.imageQuality ?? 80)
 
   useEffect(() => {
     setTileUrlDraft(settings?.mapTileUrl ?? '')
   }, [settings?.mapTileUrl])
+
+  useEffect(() => {
+    setQualityDraft(settings?.imageQuality ?? 80)
+  }, [settings?.imageQuality])
 
   useEffect(() => {
     let cancelled = false
@@ -137,6 +148,12 @@ export function SettingsPage() {
     }
   }
 
+  function commitQuality() {
+    if (!settings) return
+    if (qualityDraft === settings.imageQuality) return
+    void saveSettings({ imageQuality: qualityDraft }, 'imageQuality')
+  }
+
   async function revokeSession(id: number) {
     setSessionBusy(true)
     try {
@@ -193,8 +210,13 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-8">
-      <header>
+    <div className="animate-page-in flex flex-col gap-4 pb-8">
+      <TopBar
+        title={t('settings.title')}
+        left={<BackButton label={t('nav.back')} onClick={() => navigate(-1)} />}
+      />
+
+      <header className="pt-2">
         <h1 className="title-large text-ink-strong">{t('settings.title')}</h1>
       </header>
 
@@ -348,6 +370,76 @@ export function SettingsPage() {
             }}
           />
         </Field>
+      </SettingsSection>
+
+      <SettingsSection
+        title={t('settings.sections.photos')}
+        description={t('settings.photosHint')}
+      >
+        <Toggle
+          id="settings-compress-images"
+          checked={settings.compressImages}
+          onChange={(value) => void saveSettings({ compressImages: value }, 'compressImages')}
+          label={t('settings.compressImages')}
+          description={t('settings.compressImagesHint')}
+          disabled={saving === 'compressImages'}
+        />
+
+        {settings.compressImages ? (
+          <>
+            <Field
+              label={t('settings.imageQuality')}
+              htmlFor="settings-image-quality"
+              hint={t('settings.imageQualityHint')}
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  id="settings-image-quality"
+                  type="range"
+                  min={30}
+                  max={95}
+                  step={5}
+                  value={qualityDraft}
+                  onChange={(event) => setQualityDraft(Number(event.target.value))}
+                  onPointerUp={commitQuality}
+                  onKeyUp={commitQuality}
+                  onBlur={commitQuality}
+                  className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-paper-sunken accent-[var(--accent)]"
+                />
+                <span className="w-9 text-right text-[0.9375rem] font-semibold text-ink tabular-nums">
+                  {qualityDraft}
+                </span>
+              </div>
+            </Field>
+
+            <Field
+              label={t('settings.imageSize')}
+              htmlFor="settings-image-size"
+              hint={t('settings.imageSizeHint')}
+            >
+              <select
+                id="settings-image-size"
+                className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+                value={settings.imageMaxDimension}
+                onChange={(event) =>
+                  void saveSettings(
+                    { imageMaxDimension: Number(event.target.value) },
+                    'imageMaxDimension',
+                  )
+                }
+                disabled={saving === 'imageMaxDimension'}
+              >
+                {IMAGE_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size === 0
+                      ? t('settings.imageSizeOriginal')
+                      : t('settings.imageSizeOption', { size })}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </>
+        ) : null}
       </SettingsSection>
 
       <SettingsSection title={t('settings.sections.privacy')}>

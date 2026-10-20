@@ -1,27 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { displayTimezone, formatTime, formatEventDate, formatDateTime, localDateKey } from '../lib/format'
 import { useToast } from '../state/toast'
 import { useAuth } from '../state/auth'
-import { cn } from '../lib/cn'
 import { ErrorState, Skeleton } from '../components/ui'
 import { ConfirmDialog } from '../components/ui/Dialog'
 import { RichText } from '../components/editor/RichText'
 import { DrawingView } from '../components/editor/DrawingView'
 import { MediaStrip } from '../components/media/MediaViewer'
+import { MediaGallery } from '../components/media/MediaViewer'
 import { AIMetadataPanel } from '../components/entries/AIMetadataPanel'
-import {
-  ChevronLeftIcon,
-  CopyIcon,
-  LocationIcon,
-  PencilIcon,
-  PinIcon,
-  TrashIcon,
-} from '../components/icons'
-import type { Entry, Stroke, Tag } from '../lib/types'
+import { BackButton, IconButton, TopBar } from '../components/layout/TopBar'
+import { Menu } from '../components/layout/Menu'
+import { CopyIcon, LocationIcon, MoreIcon, PencilIcon, PinIcon, TrashIcon } from '../components/icons'
+import type { Entry, Media, Stroke, Tag } from '../lib/types'
 
 /** The read view of one entry. */
 export function EntryPage() {
@@ -35,6 +29,7 @@ export function EntryPage() {
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [gallery, setGallery] = useState<{ items: Media[]; index: number } | null>(null)
 
   const load = useCallback(async () => {
     if (!entryId) return
@@ -106,7 +101,7 @@ export function EntryPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 pt-6">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-9 w-3/4" />
         <Skeleton className="h-40 w-full" />
@@ -115,47 +110,64 @@ export function EntryPage() {
   }
 
   if (error || !entry) {
-    return <ErrorState message={error || t('errors.notFound')} onRetry={() => void load()} />
+    return (
+      <div className="pt-6">
+        <ErrorState message={error || t('errors.notFound')} onRetry={() => void load()} />
+      </div>
+    )
   }
 
   const strokes = (entry.drawing ?? []) as Stroke[]
   const tags = entry.tags ?? ([] as Tag[])
+  const media = entry.media ?? []
+
+  const menuItems = [
+    {
+      id: 'pin',
+      label: entry.isPinned ? t('entries.unpin') : t('entries.pin'),
+      icon: <PinIcon size={17} />,
+      checked: entry.isPinned,
+      onSelect: () => void togglePin(),
+    },
+    {
+      id: 'duplicate',
+      label: t('entries.duplicate'),
+      icon: <CopyIcon size={17} />,
+      onSelect: () => void duplicate(),
+    },
+    {
+      id: 'delete',
+      label: t('entries.delete'),
+      icon: <TrashIcon size={17} />,
+      destructive: true,
+      onSelect: () => setConfirmDelete(true),
+    },
+  ]
 
   return (
-    <article className="flex flex-col gap-5 pb-10">
-      <div className="flex items-center gap-2">
-        <IconAction label={t('entries.backToTimeline')} onClick={() => navigate(-1)}>
-          <ChevronLeftIcon size={18} />
-        </IconAction>
-        <div className="ml-auto flex items-center gap-1.5">
-          <IconAction
-            label={entry.isPinned ? t('entries.unpin') : t('entries.pin')}
-            disabled={busy}
-            pressed={entry.isPinned}
-            onClick={() => void togglePin()}
-          >
-            <PinIcon size={17} />
-          </IconAction>
-          <IconAction label={t('entries.duplicate')} disabled={busy} onClick={() => void duplicate()}>
-            <CopyIcon size={17} />
-          </IconAction>
-          <IconAction
-            label={t('entries.editEntry')}
-            disabled={busy}
-            onClick={() => navigate(`/entries/${entry.id}/edit`)}
-          >
-            <PencilIcon size={17} />
-          </IconAction>
-          <IconAction
-            label={t('entries.delete')}
-            disabled={busy}
-            danger
-            onClick={() => setConfirmDelete(true)}
-          >
-            <TrashIcon size={17} />
-          </IconAction>
-        </div>
-      </div>
+    <article className="animate-page-in flex flex-col gap-5 pb-10">
+      <TopBar
+        title={entry.title || t('entries.untitled')}
+        left={<BackButton label={t('entries.backToTimeline')} onClick={() => navigate(-1)} />}
+        actions={
+          <>
+            <IconButton
+              label={t('entries.editEntry')}
+              disabled={busy}
+              onClick={() => navigate(`/entries/${entry.id}/edit`)}
+            >
+              <PencilIcon size={19} />
+            </IconButton>
+            <Menu items={menuItems} label={t('common.more')}>
+              {(props) => (
+                <IconButton {...props} label={t('common.more')}>
+                  <MoreIcon size={20} />
+                </IconButton>
+              )}
+            </Menu>
+          </>
+        }
+      />
 
       <header className="flex flex-col gap-2">
         <h1 className="title-large text-ink-strong">
@@ -216,12 +228,15 @@ export function EntryPage() {
         </section>
       ) : null}
 
-      {entry.media && entry.media.length > 0 ? (
+      {media.length > 0 ? (
         <section className="flex flex-col gap-2">
           <h2 className="px-1 text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
             {t('entries.attachments')}
           </h2>
-          <MediaStrip media={entry.media} />
+          <MediaStrip
+            media={media}
+            onOpen={(_, index) => setGallery({ items: media, index })}
+          />
         </section>
       ) : null}
 
@@ -276,45 +291,15 @@ export function EntryPage() {
         onClose={() => setConfirmDelete(false)}
         onConfirm={() => void remove()}
       />
-    </article>
-  )
-}
 
-/** A round action that stays the same size on a phone, with its name on the tooltip. */
-function IconAction({
-  label,
-  onClick,
-  disabled,
-  danger,
-  pressed,
-  children,
-}: {
-  label: string
-  onClick: () => void
-  disabled?: boolean
-  danger?: boolean
-  pressed?: boolean
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      aria-label={label}
-      aria-pressed={pressed}
-      title={label}
-      className={cn(
-        'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors',
-        'disabled:cursor-not-allowed disabled:opacity-50 active:scale-95',
-        danger
-          ? 'bg-danger-soft text-danger'
-          : pressed
-            ? 'bg-accent-soft text-accent'
-            : 'bg-paper-sunken text-ink hover:bg-line/70',
-      )}
-    >
-      {children}
-    </button>
+      {gallery ? (
+        <MediaGallery
+          items={gallery.items}
+          index={gallery.index}
+          onIndexChange={(index) => setGallery({ ...gallery, index })}
+          onClose={() => setGallery(null)}
+        />
+      ) : null}
+    </article>
   )
 }

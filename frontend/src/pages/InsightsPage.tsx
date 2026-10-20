@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
@@ -6,6 +7,7 @@ import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
 import { ErrorState, Skeleton } from '../components/ui'
 import { CoffeeIcon } from '../components/icons'
+import { BackButton, TopBar } from '../components/layout/TopBar'
 import { partsOf } from '../components/calendar/dates'
 import { displayTimezone, localDateKey } from '../lib/format'
 import type { Stats } from '../lib/types'
@@ -28,6 +30,7 @@ export function InsightsPage() {
   const { t } = useTranslation()
   const { describe } = useToast()
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   const [stats, setStats] = useState<Stats | null>(null)
   const [months, setMonths] = useState<MonthCount[]>([])
@@ -86,8 +89,13 @@ export function InsightsPage() {
   const peak = Math.max(1, ...months.map((month) => month.count))
 
   return (
-    <div className="pb-8">
-      <header className="mb-4">
+    <div className="animate-page-in pb-8">
+      <TopBar
+        title={t('stats.title')}
+        left={<BackButton label={t('nav.back')} onClick={() => navigate(-1)} />}
+      />
+
+      <header className="pt-2 pb-4">
         <h1 className="title-large text-ink-strong">{t('stats.title')}</h1>
       </header>
 

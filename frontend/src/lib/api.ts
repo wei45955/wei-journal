@@ -246,6 +246,8 @@ export interface EntryPayload {
   color?: string
   isPinned?: boolean
   mediaIds?: number[]
+  /** The picture that leads the entry in the timeline. Null clears it. */
+  coverMediaId?: number | null
   /** The revision the edit was based on; a mismatch is rejected with 409. */
   revision?: number
 }

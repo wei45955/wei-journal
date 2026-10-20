@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 
@@ -37,8 +38,8 @@ export function Dialog({ open, onClose, title, description, children, footer, si
 
   const widths = { sm: 'sm:max-w-sm', md: 'sm:max-w-md', lg: 'sm:max-w-2xl' }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-6">
       <div
         className="absolute inset-0 bg-ink/35 backdrop-blur-[2px] animate-fade-in"
         onClick={onClose}
@@ -88,7 +89,8 @@ export function Dialog({ open, onClose, title, description, children, footer, si
           </footer>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

@@ -11,6 +11,12 @@ export interface Settings {
   dateFormat: string
   aiEnabled: boolean
   mapTileUrl: string
+  /** Whether the uploaded pictures are compressed before they are sent. */
+  compressImages: boolean
+  /** The quality of a compressed picture, from 30 to 95. */
+  imageQuality: number
+  /** The longest side a compressed picture may have. Zero keeps the original. */
+  imageMaxDimension: number
 }
 
 export interface User {
@@ -139,6 +145,8 @@ export interface Entry {
   location?: Location | null
   aiMetadata: AIMetadata[]
   folderName?: string
+  /** The picture that leads the entry in the timeline. */
+  coverMediaId?: number | null
 }
 
 export interface Session {
@@ -190,6 +198,10 @@ export interface Stats {
   longestStreak: number
   firstEntryDate: string
   lastEntryDate: string
+  /** The entries written in the current year. */
+  entriesThisYear: number
+  /** The year the counts above belong to. */
+  currentYear: number
 }
 
 export interface AIStatus {

@@ -51,7 +51,7 @@ export function BulkBar({ selected, onClear, onDone }: BulkBarProps) {
 
   return (
     <>
-      <div className="glass-bar sticky bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] z-20 mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-line/60 bg-paper-overlay/90 p-2 shadow-float lg:bottom-4">
+      <div className="glass-bar sticky bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] z-20 mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-line/60 bg-paper-overlay/90 p-2 shadow-float lg:bottom-4">
         <span className="px-1 text-sm font-semibold text-ink">
           {selected.length === 1 ? t('batch.oneSelected') : t('batch.selected', { count: selected.length })}
         </span>
@@ -119,7 +119,11 @@ export function BulkBar({ selected, onClear, onDone }: BulkBarProps) {
 
       <ConfirmDialog
         open={confirmDelete}
-        title={t('batch.deleteConfirm', { count: selected.length })}
+        title={
+          selected.length === 1
+            ? t('batch.deleteConfirmOne')
+            : t('batch.deleteConfirm', { count: selected.length })
+        }
         description={t('batch.deleteWarning')}
         confirmLabel={t('batch.delete')}
         destructive

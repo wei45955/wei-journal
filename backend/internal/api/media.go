@@ -29,6 +29,10 @@ func (s *Server) handleUploadMedia(c *gin.Context) {
 
 	form, err := c.MultipartForm()
 	if err != nil {
+		if isBodyTooLarge(err) {
+			s.failTooLarge(c)
+			return
+		}
 		httpx.ValidationError(c, "invalid upload", map[string]string{"file": "could not read the upload"})
 		return
 	}
@@ -46,10 +50,7 @@ func (s *Server) handleUploadMedia(c *gin.Context) {
 		asset, err := s.storeUpload(user, fh)
 		if err != nil {
 			if errors.Is(err, media.ErrTooLarge) {
-				httpx.Fail(c, http.StatusRequestEntityTooLarge, &httpx.Error{
-					Code:    httpx.CodePayload,
-					Message: "the file is larger than the configured upload limit",
-				})
+				s.failTooLarge(c)
 				return
 			}
 			httpx.Internal(c, s.log, err, "store upload")
@@ -68,6 +69,10 @@ func (s *Server) handleUploadLivePhoto(c *gin.Context) {
 
 	form, err := c.MultipartForm()
 	if err != nil {
+		if isBodyTooLarge(err) {
+			s.failTooLarge(c)
+			return
+		}
 		httpx.ValidationError(c, "invalid upload", map[string]string{"file": "could not read the upload"})
 		return
 	}
@@ -130,6 +135,31 @@ func (s *Server) handleUploadLivePhoto(c *gin.Context) {
 // stable without an extra table.
 func (s *Server) newLivePhotoID() uint {
 	return uint(time.Now().UnixNano() & 0x7fffffff)
+}
+
+// failTooLarge reports an upload that did not fit through the door. The
+// message names the limit, so the interface can tell the reader what to do
+// instead of showing a bare failure.
+func (s *Server) failTooLarge(c *gin.Context) {
+	limitMB := s.cfg.MaxUploadBytes / (1024 * 1024)
+	httpx.Fail(c, http.StatusRequestEntityTooLarge, &httpx.Error{
+		Code:    httpx.CodePayload,
+		Message: "the file is larger than the upload limit of " + strconv.FormatInt(limitMB, 10) + " MB",
+		Details: map[string]string{"limitMB": strconv.FormatInt(limitMB, 10)},
+	})
+}
+
+// isBodyTooLarge reports whether the request body was cut off because it
+// passed the limit of the reader.
+func isBodyTooLarge(err error) bool {
+	if err == nil {
+		return false
+	}
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		return true
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "http: request body too large")
 }
 
 // storeUpload writes an uploaded file and records its metadata.

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useToast } from '../state/toast'
 import { Button, EmptyState, ErrorState, Skeleton } from '../components/ui'
 import { SearchIcon } from '../components/icons'
+import { BackButton, TopBar } from '../components/layout/TopBar'
 import type { SearchResult } from '../lib/types'
 import { SearchFilters } from '../components/search/SearchFilters'
 import { SearchResultCard } from '../components/search/SearchResultCard'
@@ -19,6 +21,7 @@ type Status = 'idle' | 'loading' | 'ready' | 'error'
 export function SearchPage() {
   const { t, i18n } = useTranslation()
   const { notify, describe } = useToast()
+  const navigate = useNavigate()
 
   const [query, setQuery] = useState('')
   const [type, setType] = useState('all')
@@ -99,8 +102,13 @@ export function SearchPage() {
   const dirty = type !== 'all' || from !== '' || to !== ''
 
   return (
-    <div className="pb-8">
-      <header className="mb-3">
+    <div className="animate-page-in pb-8">
+      <TopBar
+        title={t('search.title')}
+        left={<BackButton label={t('nav.back')} onClick={() => navigate(-1)} />}
+      />
+
+      <header className="pt-2 pb-3">
         <h1 className="title-large text-ink-strong">{t('search.title')}</h1>
       </header>
 

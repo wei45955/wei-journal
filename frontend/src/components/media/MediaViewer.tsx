@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { formatBytes } from '../../lib/format'
 import type { Media } from '../../lib/types'
 import { Button } from '../ui'
-import { CloseIcon, DownloadIcon, FileIcon, VideoIcon } from '../icons'
-
-interface MediaViewerProps {
-  media: Media | null
-  onClose: () => void
-  /** The motion component of a Live Photo, when one exists. */
-  motion?: Media | null
-}
+import { CloseIcon, DownloadIcon, FileIcon } from '../icons'
+import { Thumb } from './Thumb'
 
 const MAX_SCALE = 4
 
@@ -34,14 +29,106 @@ function midpoint(touches: React.TouchList): { x: number; y: number } {
   return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 }
 }
 
+/** Whether the file is a picture. */
+function isPicture(media: Media): boolean {
+  return media.kind === 'image' || media.kind === 'live-still'
+}
+
+/** Whether the file is a film. */
+function isFilm(media: Media): boolean {
+  return media.kind === 'video' || media.kind === 'live-motion'
+}
+
 /**
  * A full screen preview of one attachment. A photograph can be pinched,
  * dragged and double tapped to zoom, without the page around it ever zooming.
+ *
+ * The picture is drawn in the document itself, so it always covers the
+ * whole screen and never sits behind the bars of the page.
  */
-export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
+export function MediaViewer({
+  media,
+  onClose,
+  motion,
+}: {
+  media: Media | null
+  onClose: () => void
+  /** The motion component of a Live Photo, when one exists. */
+  motion?: Media | null
+}) {
+  if (!media) return null
+  return createPortal(
+    <MediaOverlay
+      items={[media]}
+      index={0}
+      motionFor={(item) =>
+        motion && motion.livePhotoId === item.livePhotoId ? motion : null
+      }
+      onIndexChange={() => undefined}
+      onClose={onClose}
+    />,
+    document.body,
+  )
+}
+
+/**
+ * The full screen preview of a set of attachments.
+ *
+ * The pictures can be changed with a swipe, with the arrows or with the
+ * strip at the bottom. The place the reader came from is kept, so closing
+ * the preview returns to the same spot in the list.
+ */
+export function MediaGallery({
+  items,
+  index,
+  onIndexChange,
+  onClose,
+}: {
+  items: Media[]
+  index: number
+  onIndexChange: (index: number) => void
+  onClose: () => void
+}) {
+  if (items.length === 0) return null
+
+  const motionFor = (item: Media) =>
+    item.livePhotoId
+      ? (items.find((candidate) => candidate.livePhotoId === item.livePhotoId && candidate.id !== item.id) ??
+        null)
+      : null
+
+  return createPortal(
+    <MediaOverlay
+      items={items}
+      index={index}
+      motionFor={motionFor}
+      onIndexChange={onIndexChange}
+      onClose={onClose}
+    />,
+    document.body,
+  )
+}
+
+/** The shared surface of the single and the multi picture preview. */
+function MediaOverlay({
+  items,
+  index,
+  motionFor,
+  onIndexChange,
+  onClose,
+}: {
+  items: Media[]
+  index: number
+  motionFor: (media: Media) => Media | null
+  onIndexChange: (index: number) => void
+  onClose: () => void
+}) {
   const { t } = useTranslation()
   const [playing, setPlaying] = useState(false)
   const [zoom, setZoom] = useState<ZoomState>(RESET)
+
+  const media = items[Math.min(Math.max(index, 0), items.length - 1)]
+  const motion = media ? motionFor(media) : null
 
   const surfaceRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<ZoomState>(RESET)
@@ -52,13 +139,15 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
     startMid: { x: number; y: number }
     startX: number
     startY: number
+    swipeX: number
   } | null>(null)
   const lastTap = useRef(0)
 
   useEffect(() => {
-    if (!media) return
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
+      if (event.key === 'ArrowRight' && items.length > 1) onIndexChange(index + 1)
+      if (event.key === 'ArrowLeft' && items.length > 1) onIndexChange(index - 1)
     }
     document.addEventListener('keydown', onKey)
     const previous = document.body.style.overflow
@@ -67,7 +156,7 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = previous
     }
-  }, [media, onClose])
+  }, [media, items.length, index, onClose, onIndexChange])
 
   useEffect(() => {
     setPlaying(false)
@@ -101,6 +190,7 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
         startMid: midpoint(event.touches),
         startX: zoom.x,
         startY: zoom.y,
+        swipeX: 0,
       }
       return
     }
@@ -121,6 +211,7 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
         startMid: { x: event.touches[0].clientX, y: event.touches[0].clientY },
         startX: zoom.x,
         startY: zoom.y,
+        swipeX: event.touches[0].clientX,
       }
     }
   }
@@ -154,7 +245,15 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
     }
   }
 
-  function onTouchEnd() {
+  function onTouchEnd(event: React.TouchEvent) {
+    const active = gesture.current
+    if (!active) return
+    if (event.touches.length === 0 && active.startDistance === 0 && zoom.scale === 1 && items.length > 1) {
+      // A horizontal swipe moves to the next picture.
+      const end = event.changedTouches[0]?.clientX ?? active.swipeX
+      const delta = end - active.swipeX
+      if (Math.abs(delta) > 56) onIndexChange(index + (delta < 0 ? 1 : -1))
+    }
     if (gesture.current) gesture.current.startDistance = 0
   }
 
@@ -177,23 +276,24 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
 
   if (!media) return null
 
-  const isImage = media.kind === 'image' || media.kind === 'live-still'
-  const isVideo = media.kind === 'video' || media.kind === 'live-motion'
+  const picture = isPicture(media)
+  const film = isFilm(media)
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95 animate-fade-in">
-      <header className="flex items-center gap-3 px-4 py-3 text-white">
-        <div className="min-w-0 flex-1">
+    <div className="fixed inset-0 z-[70] flex flex-col bg-black/95 animate-fade-in">
+      <header className="flex shrink-0 items-start gap-2 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 text-white">
+        <div className="min-w-0 flex-1 pt-1">
           <p className="truncate text-sm font-semibold">{media.originalName}</p>
           <p className="truncate text-xs text-white/60">
             {formatBytes(media.size)}
             {media.width && media.height ? ` · ${media.width}×${media.height}` : ''}
+            {items.length > 1 ? ` · ${index + 1}/${items.length}` : ''}
           </p>
         </div>
         <a
           href={media.url}
           download={media.originalName}
-          className="rounded-full p-2 text-white/80 transition-colors hover:bg-white/10"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
           aria-label={t('media.download')}
         >
           <DownloadIcon size={20} />
@@ -202,7 +302,7 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
           type="button"
           onClick={onClose}
           aria-label={t('media.close')}
-          className="rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/12 text-white transition-colors hover:bg-white/20"
         >
           <CloseIcon size={20} />
         </button>
@@ -214,9 +314,17 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        className="relative flex min-h-0 flex-1 touch-none items-center justify-center overflow-hidden p-4 select-none"
+        className="relative flex min-h-0 flex-1 touch-none items-center justify-center overflow-hidden select-none"
       >
-        {isImage ? (
+        {items.length > 1 ? (
+          <GalleryArrow
+            side="left"
+            disabled={index <= 0}
+            onClick={() => onIndexChange(index - 1)}
+          />
+        ) : null}
+
+        {picture ? (
           <div
             className="relative flex max-h-full max-w-full items-center justify-center"
             style={{
@@ -256,7 +364,7 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
           </div>
         ) : null}
 
-        {isVideo ? (
+        {film ? (
           <video
             src={media.url}
             controls
@@ -265,7 +373,7 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
           />
         ) : null}
 
-        {!isImage && !isVideo ? (
+        {!picture && !film ? (
           <div className="flex flex-col items-center gap-3 rounded-2xl bg-white/10 px-8 py-10 text-white">
             <FileIcon size={40} />
             <p className="text-sm">{media.mimeType || t('media.file')}</p>
@@ -279,7 +387,15 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
           </div>
         ) : null}
 
-        {isImage ? (
+        {items.length > 1 ? (
+          <GalleryArrow
+            side="right"
+            disabled={index >= items.length - 1}
+            onClick={() => onIndexChange(index + 1)}
+          />
+        ) : null}
+
+        {picture ? (
           <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-white/12 p-1 backdrop-blur-xl">
             <button
               type="button"
@@ -315,12 +431,66 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
         ) : null}
       </div>
 
-      {media.locationName || media.latitude ? (
-        <footer className="px-4 py-3 text-center text-xs text-white/70">
+      {items.length > 1 ? (
+        <div className="flex shrink-0 items-center gap-2 overflow-x-auto no-scrollbar px-3 pt-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+          {items.map((item, itemIndex) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onIndexChange(itemIndex)}
+              aria-label={item.originalName}
+              aria-current={itemIndex === index}
+              className={cn(
+                'relative size-14 shrink-0 overflow-hidden rounded-xl bg-white/10 transition-opacity',
+                itemIndex === index ? 'ring-2 ring-white' : 'opacity-55',
+              )}
+            >
+              <Thumb media={item} />
+            </button>
+          ))}
+        </div>
+      ) : media.locationName || media.latitude ? (
+        <footer className="shrink-0 px-4 pt-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] text-center text-xs text-white/70">
           {media.locationName || `${media.latitude?.toFixed(4)}, ${media.longitude?.toFixed(4)}`}
         </footer>
-      ) : null}
+      ) : (
+        <div className="h-[env(safe-area-inset-bottom,0px)]" aria-hidden="true" />
+      )}
     </div>
+  )
+}
+
+/** The arrow that moves to the picture next to the one on the screen. */
+function GalleryArrow({
+  side,
+  disabled,
+  onClick,
+}: {
+  side: 'left' | 'right'
+  disabled: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={side === 'left' ? 'Previous' : 'Next'}
+      className={cn(
+        'absolute top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-0',
+        side === 'left' ? 'left-2' : 'right-2',
+      )}
+    >
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden="true">
+        <path
+          d={side === 'left' ? 'M14.5 5.5L8 12l6.5 6.5' : 'M9.5 5.5L16 12l-6.5 6.5'}
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
   )
 }
 
@@ -328,52 +498,61 @@ export function MediaViewer({ media, onClose, motion }: MediaViewerProps) {
 export function MediaStrip({
   media,
   className,
+  onOpen,
 }: {
   media: Media[]
   className?: string
+  /** Called with the picture that was tapped and its place in the list. */
+  onOpen?: (media: Media, index: number) => void
 }) {
   const { t } = useTranslation()
-  const [active, setActive] = useState<Media | null>(null)
+  const [active, setActive] = useState<{ media: Media; index: number } | null>(null)
 
   if (media.length === 0) return null
 
   const motionFor = (item: Media) =>
     item.livePhotoId
-      ? (media.find((candidate) => candidate.livePhotoId === item.livePhotoId && candidate.id !== item.id) ?? null)
+      ? (media.find((candidate) => candidate.livePhotoId === item.livePhotoId && candidate.id !== item.id) ??
+        null)
       : null
+
+  function open(item: Media, index: number) {
+    if (onOpen) {
+      onOpen(item, index)
+      return
+    }
+    setActive({ media: item, index })
+  }
 
   return (
     <>
-      <div className={cn('grid grid-cols-2 gap-2 sm:grid-cols-3', className)}>
-        {media.map((item) => {
-          const isImage = item.kind === 'image' || item.kind === 'live-still'
-          const isVideo = item.kind === 'video' || item.kind === 'live-motion'
+      <div
+        className={cn(
+          'grid gap-2',
+          media.length === 1 ? 'grid-cols-1' : media.length <= 4 ? 'grid-cols-2' : 'grid-cols-3',
+          className,
+        )}
+      >
+        {media.map((item, index) => {
+          const picture = isPicture(item)
+          const film = isFilm(item)
           return (
             <button
               key={item.id}
               type="button"
-              onClick={() => setActive(item)}
-              className="group relative aspect-square overflow-hidden rounded-2xl bg-paper-sunken"
+              onClick={() => open(item, index)}
+              className={cn(
+                'group relative overflow-hidden rounded-2xl bg-paper-sunken',
+                media.length === 1 ? 'aspect-[4/3]' : 'aspect-square',
+              )}
               aria-label={item.originalName}
             >
-              {isImage ? (
-                <img
-                  src={item.hasThumb ? item.thumbUrl : item.url}
-                  alt={item.originalName}
-                  loading="lazy"
-                  decoding="async"
-                  className="size-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
+              {picture || film ? (
+                <Thumb
+                  media={item}
+                  className="transition-transform duration-200 group-hover:scale-[1.04]"
                 />
-              ) : isVideo ? (
-                <span className="flex size-full items-center justify-center text-ink-faint">
-                  <VideoIcon size={28} />
-                </span>
-              ) : (
-                <span className="flex size-full flex-col items-center justify-center gap-1 text-ink-faint">
-                  <FileIcon size={24} />
-                  <span className="px-2 text-[0.6875rem] break-all">{item.originalName}</span>
-                </span>
-              )}
+              ) : null}
               {item.kind === 'live-still' ? (
                 <span className="absolute top-1.5 left-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[0.625rem] font-semibold text-white backdrop-blur-sm">
                   {t('media.livePhoto')}
@@ -383,11 +562,13 @@ export function MediaStrip({
           )
         })}
       </div>
-      <MediaViewer
-        media={active}
-        motion={active ? motionFor(active) : null}
-        onClose={() => setActive(null)}
-      />
+      {active ? (
+        <MediaViewer
+          media={active.media}
+          motion={motionFor(active.media)}
+          onClose={() => setActive(null)}
+        />
+      ) : null}
     </>
   )
 }

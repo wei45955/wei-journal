@@ -6,8 +6,10 @@ import type { ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './state/auth'
 import { ToastProvider } from './state/toast'
-import { AppShell, NewEntryButton } from './components/layout/AppShell'
+import { TimelineProvider } from './state/timeline'
+import { AppShell } from './components/layout/AppShell'
 import { AuthPage } from './pages/AuthPage'
+import { OverviewPage } from './pages/OverviewPage'
 import { TimelinePage } from './pages/TimelinePage'
 import { EditorPage } from './pages/EditorPage'
 import { EntryPage } from './pages/EntryPage'
@@ -36,122 +38,126 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
 /** A page inside the application frame. */
 function Shell({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation()
-  // The map and the editor fill the screen; a compose button would only cover them.
-  const floating = pathname !== '/new' && !pathname.endsWith('/edit')
-  return (
-    <AppShell>
-      {children}
-      {floating ? <NewEntryButton /> : null}
-    </AppShell>
-  )
+  return <AppShell>{children}</AppShell>
 }
 
 export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Routes>
-          <Route path="/signin" element={<AuthPage mode="signin" />} />
-          <Route path="/signup" element={<AuthPage mode="signup" />} />
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <Shell>
-                  <TimelinePage />
-                </Shell>
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/folders/:folderId"
-            element={
-              <RequireAuth>
-                <Shell>
-                  <TimelinePage />
-                </Shell>
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/new"
-            element={
-              <RequireAuth>
-                <Shell>
-                  <EditorPage />
-                </Shell>
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/entries/:entryId"
-            element={
-              <RequireAuth>
-                <Shell>
-                  <EntryPage />
-                </Shell>
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/entries/:entryId/edit"
-            element={
-              <RequireAuth>
-                <Shell>
-                  <EditorPage />
-                </Shell>
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/search"
-            element={
-              <RequireAuth>
-                <Shell>
-                  <SearchPage />
-                </Shell>
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/calendar"
-            element={
-              <RequireAuth>
-                <Navigate to="/insights" replace />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/insights"
-            element={
-              <RequireAuth>
-                <Shell>
-                  <InsightsPage />
-                </Shell>
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/map"
-            element={
-              <RequireAuth>
-                <Navigate to="/insights" replace />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <RequireAuth>
-                <Shell>
-                  <SettingsPage />
-                </Shell>
-              </RequireAuth>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <TimelineProvider>
+          <Routes>
+            <Route path="/signin" element={<AuthPage mode="signin" />} />
+            <Route path="/signup" element={<AuthPage mode="signup" />} />
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <Shell>
+                    <TimelinePage />
+                  </Shell>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/overview"
+              element={
+                <RequireAuth>
+                  <Shell>
+                    <OverviewPage />
+                  </Shell>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/folders/:folderId"
+              element={
+                <RequireAuth>
+                  <Shell>
+                    <TimelinePage />
+                  </Shell>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/new"
+              element={
+                <RequireAuth>
+                  <Shell>
+                    <EditorPage />
+                  </Shell>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/entries/:entryId"
+              element={
+                <RequireAuth>
+                  <Shell>
+                    <EntryPage />
+                  </Shell>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/entries/:entryId/edit"
+              element={
+                <RequireAuth>
+                  <Shell>
+                    <EditorPage />
+                  </Shell>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/search"
+              element={
+                <RequireAuth>
+                  <Shell>
+                    <SearchPage />
+                  </Shell>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <RequireAuth>
+                  <Navigate to="/insights" replace />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/insights"
+              element={
+                <RequireAuth>
+                  <Shell>
+                    <InsightsPage />
+                  </Shell>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/map"
+              element={
+                <RequireAuth>
+                  <Navigate to="/insights" replace />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RequireAuth>
+                  <Shell>
+                    <SettingsPage />
+                  </Shell>
+                </RequireAuth>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </TimelineProvider>
       </ToastProvider>
     </AuthProvider>
   )

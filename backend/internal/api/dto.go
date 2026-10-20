@@ -27,6 +27,12 @@ type SettingsDTO struct {
 	DateFormat string `json:"dateFormat"`
 	AIEnabled  bool   `json:"aiEnabled"`
 	MapTileURL string `json:"mapTileUrl"`
+	// CompressImages turns the compression of the uploaded pictures on.
+	CompressImages bool `json:"compressImages"`
+	// ImageQuality is the quality of a compressed picture, from 1 to 100.
+	ImageQuality int `json:"imageQuality"`
+	// ImageMaxDimension is the longest side a compressed picture may have.
+	ImageMaxDimension int `json:"imageMaxDimension"`
 }
 
 // FolderDTO is a folder plus its entry count.
@@ -52,26 +58,28 @@ type TagDTO struct {
 
 // EntryDTO is a journal entry with its related records.
 type EntryDTO struct {
-	ID         uint            `json:"id"`
-	FolderID   *uint           `json:"folderId"`
-	Title      string          `json:"title"`
-	EventTime  time.Time       `json:"eventTime"`
-	EventDate  string          `json:"eventDate"`
-	Timezone   string          `json:"timezone"`
-	Document   json.RawMessage `json:"document"`
-	Drawing    json.RawMessage `json:"drawing"`
-	PlainText  string          `json:"plainText"`
-	Color      string          `json:"color"`
-	IsPinned   bool            `json:"isPinned"`
-	WordCount  int             `json:"wordCount"`
-	Revision   int             `json:"revision"`
-	CreatedAt  time.Time       `json:"createdAt"`
-	UpdatedAt  time.Time       `json:"updatedAt"`
-	Tags       []TagDTO        `json:"tags"`
-	Media      []MediaDTO      `json:"media"`
-	Location   *LocationDTO    `json:"location"`
-	AIMetadata []AIMetadataDTO `json:"aiMetadata"`
-	FolderName string          `json:"folderName,omitempty"`
+	ID        uint            `json:"id"`
+	FolderID  *uint           `json:"folderId"`
+	Title     string          `json:"title"`
+	EventTime time.Time       `json:"eventTime"`
+	EventDate string          `json:"eventDate"`
+	Timezone  string          `json:"timezone"`
+	Document  json.RawMessage `json:"document"`
+	Drawing   json.RawMessage `json:"drawing"`
+	PlainText string          `json:"plainText"`
+	Color     string          `json:"color"`
+	IsPinned  bool            `json:"isPinned"`
+	WordCount int             `json:"wordCount"`
+	Revision  int             `json:"revision"`
+	// CoverMediaID is the picture that leads the entry in the timeline.
+	CoverMediaID *uint           `json:"coverMediaId"`
+	CreatedAt    time.Time       `json:"createdAt"`
+	UpdatedAt    time.Time       `json:"updatedAt"`
+	Tags         []TagDTO        `json:"tags"`
+	Media        []MediaDTO      `json:"media"`
+	Location     *LocationDTO    `json:"location"`
+	AIMetadata   []AIMetadataDTO `json:"aiMetadata"`
+	FolderName   string          `json:"folderName,omitempty"`
 }
 
 // MediaDTO is an uploaded asset with ready to use URLs.
@@ -153,12 +161,15 @@ func toUserDTO(u *models.User, settings *models.UserSettings) UserDTO {
 	}
 	if settings != nil {
 		dto.Settings = SettingsDTO{
-			Language:   settings.Language,
-			Timezone:   settings.Timezone,
-			Theme:      settings.Theme,
-			DateFormat: settings.DateFormat,
-			AIEnabled:  settings.AIEnabled,
-			MapTileURL: settings.MapTileURL,
+			Language:          settings.Language,
+			Timezone:          settings.Timezone,
+			Theme:             settings.Theme,
+			DateFormat:        settings.DateFormat,
+			AIEnabled:         settings.AIEnabled,
+			MapTileURL:        settings.MapTileURL,
+			CompressImages:    settings.CompressImages,
+			ImageQuality:      settings.ImageQuality,
+			ImageMaxDimension: settings.ImageMaxDimension,
 		}
 	}
 	return dto
@@ -166,12 +177,15 @@ func toUserDTO(u *models.User, settings *models.UserSettings) UserDTO {
 
 func toSettingsDTO(s *models.UserSettings) SettingsDTO {
 	return SettingsDTO{
-		Language:   s.Language,
-		Timezone:   s.Timezone,
-		Theme:      s.Theme,
-		DateFormat: s.DateFormat,
-		AIEnabled:  s.AIEnabled,
-		MapTileURL: s.MapTileURL,
+		Language:          s.Language,
+		Timezone:          s.Timezone,
+		Theme:             s.Theme,
+		DateFormat:        s.DateFormat,
+		AIEnabled:         s.AIEnabled,
+		MapTileURL:        s.MapTileURL,
+		CompressImages:    s.CompressImages,
+		ImageQuality:      s.ImageQuality,
+		ImageMaxDimension: s.ImageMaxDimension,
 	}
 }
 
@@ -273,25 +287,26 @@ func toEntryDTO(e *models.Entry, tags []TagDTO, media []MediaDTO, loc *LocationD
 	doc := rawJSON(e.DocumentJSON, `{"type":"doc","content":[]}`)
 	drawing := rawJSON(e.DrawingJSON, `[]`)
 	return EntryDTO{
-		ID:         e.ID,
-		FolderID:   e.FolderID,
-		Title:      e.Title,
-		EventTime:  e.EventTime,
-		EventDate:  e.EventDate,
-		Timezone:   e.Timezone,
-		Document:   doc,
-		Drawing:    drawing,
-		PlainText:  e.PlainText,
-		Color:      e.Color,
-		IsPinned:   e.IsPinned,
-		WordCount:  e.WordCount,
-		Revision:   e.Revision,
-		CreatedAt:  e.CreatedAt,
-		UpdatedAt:  e.UpdatedAt,
-		Tags:       tags,
-		Media:      media,
-		Location:   loc,
-		AIMetadata: aiMeta,
+		ID:           e.ID,
+		FolderID:     e.FolderID,
+		Title:        e.Title,
+		EventTime:    e.EventTime,
+		EventDate:    e.EventDate,
+		Timezone:     e.Timezone,
+		Document:     doc,
+		Drawing:      drawing,
+		PlainText:    e.PlainText,
+		Color:        e.Color,
+		IsPinned:     e.IsPinned,
+		WordCount:    e.WordCount,
+		Revision:     e.Revision,
+		CoverMediaID: e.CoverMediaID,
+		CreatedAt:    e.CreatedAt,
+		UpdatedAt:    e.UpdatedAt,
+		Tags:         tags,
+		Media:        media,
+		Location:     loc,
+		AIMetadata:   aiMeta,
 	}
 }
 

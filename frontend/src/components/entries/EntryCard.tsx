@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { cn } from '../../lib/cn'
 import { formatTime } from '../../lib/format'
 import type { Entry, Media } from '../../lib/types'
-import { ImageIcon, LocationIcon, PinIcon, VideoIcon } from '../icons'
+import { MediaGrid, splitMedia } from '../media/MediaGrid'
+import { ImageIcon, LocationIcon, PinIcon } from '../icons'
 
 interface EntryCardProps {
   entry: Entry
@@ -13,21 +14,34 @@ interface EntryCardProps {
   selectable?: boolean
   selected?: boolean
   onToggleSelect?: (id: number) => void
+  /** Called with the picture that was tapped. */
+  onOpenMedia?: (media: Media, index: number) => void
 }
 
-function photoSrc(media: Media): string {
-  if (media.hasPreview && media.previewUrl) return media.previewUrl
-  if (media.hasThumb && media.thumbUrl) return media.thumbUrl
-  return media.url
+/** The picture that leads the entry, the chosen one when there is one. */
+function leadingPicture(entry: Entry, pictures: Media[]): Media[] {
+  if (pictures.length === 0) return pictures
+  if (!entry.coverMediaId) return pictures
+  const cover = pictures.find((item) => item.id === entry.coverMediaId)
+  if (!cover) return pictures
+  return [cover, ...pictures.filter((item) => item.id !== cover.id)]
 }
 
 /** One entry in the timeline. */
-export function EntryCard({ entry, language, timeZone, selectable, selected, onToggleSelect }: EntryCardProps) {
+export function EntryCard({
+  entry,
+  language,
+  timeZone,
+  selectable,
+  selected,
+  onToggleSelect,
+  onOpenMedia,
+}: EntryCardProps) {
   const { t } = useTranslation()
   const title = entry.title || t('entries.untitled')
   const excerpt = entry.plainText.slice(0, 220)
-  const images = entry.media.filter((m) => m.kind === 'image' || m.kind === 'live-still')
-  const videos = entry.media.filter((m) => m.kind === 'video')
+  const { pictures, films, files } = splitMedia(entry.media ?? [])
+  const ordered = leadingPicture(entry, pictures)
 
   return (
     <article
@@ -50,50 +64,42 @@ export function EntryCard({ entry, language, timeZone, selectable, selected, onT
       ) : null}
 
       <Link to={`/entries/${entry.id}`} className={cn('block', selectable && 'pl-8')}>
-        <h3 className="text-[1.5rem] leading-tight font-bold tracking-tight text-ink-strong transition-colors group-hover:text-accent-ink">
+        <h3 className="text-[1.375rem] leading-tight font-bold tracking-tight text-ink-strong transition-colors group-hover:text-accent-ink">
           {title}
         </h3>
         {excerpt ? (
-          <p className="mt-2 line-clamp-4 text-[1.0625rem] leading-relaxed text-ink">
-            {excerpt}
-          </p>
+          <p className="mt-1.5 line-clamp-4 text-[1.0625rem] leading-relaxed text-ink">{excerpt}</p>
         ) : null}
       </Link>
 
-      {images.length > 0 || videos.length > 0 ? (
+      {ordered.length > 0 ? (
         <div className={cn('mt-3', selectable && 'pl-8')}>
-          {images.length === 1 ? (
-            <img
-              src={photoSrc(images[0])}
-              alt={images[0].originalName}
-              loading="lazy"
-              decoding="async"
-              className="aspect-[4/3] w-full rounded-2xl bg-paper-sunken object-cover"
-            />
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {images.slice(0, 4).map((media) => (
-                <img
-                  key={media.id}
-                  src={photoSrc(media)}
-                  alt={media.originalName}
-                  loading="lazy"
-                  decoding="async"
-                  className="aspect-[4/3] w-full rounded-2xl bg-paper-sunken object-cover"
-                />
-              ))}
-            </div>
-          )}
-          {videos.length > 0 || images.length > 4 ? (
-            <div className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
-              {videos.length > 0 ? (
-                <span className="inline-flex items-center gap-1">
-                  <VideoIcon size={16} />
-                  {videos.length}
-                </span>
-              ) : null}
-              {images.length > 4 ? <span>+{images.length - 4}</span> : null}
-            </div>
+          <MediaGrid
+            media={ordered}
+            onOpen={(media, index) => {
+              const original = pictures.findIndex((item) => item.id === media.id)
+              onOpenMedia?.(media, original === -1 ? index : original)
+            }}
+          />
+        </div>
+      ) : null}
+
+      {films.length > 0 || files.length > 0 ? (
+        <div className={cn('mt-2 flex items-center gap-3 text-sm text-ink-muted', selectable && 'pl-8')}>
+          {films.length > 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden="true">
+                <rect x="3" y="6" width="12.5" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M15.5 10.5l5-3v9l-5-3" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+              </svg>
+              {films.length}
+            </span>
+          ) : null}
+          {files.length > 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <ImageIcon size={14} />
+              {files.length}
+            </span>
           ) : null}
         </div>
       ) : null}
@@ -112,12 +118,6 @@ export function EntryCard({ entry, language, timeZone, selectable, selected, onT
             <span className="inline-flex items-center gap-1 text-sm text-ink-muted">
               <LocationIcon size={15} />
               {entry.location.name || entry.location.address}
-            </span>
-          ) : null}
-          {entry.media.length > 0 && images.length === 0 && videos.length === 0 ? (
-            <span className="inline-flex items-center gap-1 text-xs text-ink-faint">
-              <ImageIcon size={13} />
-              {entry.media.length}
             </span>
           ) : null}
         </div>
