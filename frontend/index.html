@@ -9,6 +9,16 @@
     <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="A private, self-hosted journal for words, images and memories." />
+    <!-- Home-screen launch. The viewport already uses viewport-fit=cover, and
+         black-translucent lets the page run under the status bar. iOS still
+         draws the status bar and the Home Indicator; a site cannot hide them. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="微日记" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Wei Journal</title>
   </head>
   <body>

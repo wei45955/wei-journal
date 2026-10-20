@@ -7,7 +7,7 @@ import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
 import { Button, EmptyState, ErrorState, Skeleton } from '../components/ui'
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/icons'
-import { formatTime, localeFor, localDateKey } from '../lib/format'
+import { displayTimezone, formatTime, localeFor, localDateKey } from '../lib/format'
 import type { Entry } from '../lib/types'
 import { MonthGrid } from '../components/calendar/MonthGrid'
 import { YearGrid } from '../components/calendar/YearGrid'
@@ -32,7 +32,7 @@ export function CalendarPage({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth()
 
   const language = user?.settings.language ?? i18n.resolvedLanguage ?? 'en'
-  const timezone = user?.settings.timezone || undefined
+  const timezone = displayTimezone(user?.settings.timezone)
   const locale = localeFor(language)
 
   const [view, setView] = useState<View>('month')
@@ -310,7 +310,7 @@ export function CalendarPage({ embedded = false }: { embedded?: boolean }) {
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="text-[1.0625rem] font-semibold text-ink-strong">{title}</span>
                         <span className="shrink-0 text-xs text-ink-faint tabular-nums">
-                          {formatTime(entry.eventTime, language, entry.timezone)}
+                          {formatTime(entry.eventTime, language, timezone)}
                         </span>
                       </div>
                       {snippet ? (

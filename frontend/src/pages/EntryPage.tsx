@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
-import { formatTime, formatEventDate, formatDateTime } from '../lib/format'
+import { displayTimezone, formatTime, formatEventDate, formatDateTime, localDateKey } from '../lib/format'
 import { useToast } from '../state/toast'
 import { useAuth } from '../state/auth'
 import { cn } from '../lib/cn'
@@ -163,10 +163,19 @@ export function EntryPage() {
         </h1>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-faint">
           <time dateTime={entry.eventTime}>
-            {formatEventDate(entry.eventDate, user?.settings.language)}
+            {formatEventDate(
+              localDateKey(new Date(entry.eventTime), displayTimezone(user?.settings.timezone)),
+              user?.settings.language,
+            )}
           </time>
           <span aria-hidden="true">·</span>
-          <span>{formatTime(entry.eventTime, user?.settings.language, entry.timezone)}</span>
+          <span>
+            {formatTime(
+              entry.eventTime,
+              user?.settings.language,
+              displayTimezone(user?.settings.timezone),
+            )}
+          </span>
           {entry.folderName ? (
             <>
               <span aria-hidden="true">·</span>

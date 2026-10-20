@@ -53,7 +53,7 @@ func EnsureAdmin(db *gorm.DB, log *slog.Logger, admin Admin) error {
 		return tx.Create(&models.UserSettings{
 			UserID:   user.ID,
 			Language: "en",
-			Timezone: "UTC",
+			Timezone: "auto",
 			Theme:    "system",
 		}).Error
 	})
@@ -81,7 +81,7 @@ func EnsureSettings(db *gorm.DB, userID uint) error {
 	return db.Create(&models.UserSettings{
 		UserID:   userID,
 		Language: "en",
-		Timezone: "UTC",
+		Timezone: "auto",
 		Theme:    "system",
 	}).Error
 }

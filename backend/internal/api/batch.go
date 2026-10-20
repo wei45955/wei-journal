@@ -273,6 +273,10 @@ type settingsPayload struct {
 	DateFormat *string `json:"dateFormat"`
 	AIEnabled  *bool   `json:"aiEnabled"`
 	MapTileURL *string `json:"mapTileUrl"`
+	// AlignZone is the concrete zone the calendar days should be rewritten
+	// into. It is not stored. "auto" on the account follows the phone, and
+	// the phone tells the server which zone that is right now.
+	AlignZone *string `json:"alignZone"`
 }
 
 // handleUpdateSettings updates the account preferences.
@@ -300,15 +304,31 @@ func (s *Server) handleUpdateSettings(c *gin.Context) {
 		}
 	}
 	if payload.Timezone != nil {
-		if *payload.Timezone != "" {
-			if _, err := time.LoadLocation(*payload.Timezone); err != nil {
-				httpx.ValidationError(c, "unknown timezone", map[string]string{
-					"timezone": "must be a valid IANA timezone name",
-				})
-				return
-			}
+		zone := strings.TrimSpace(*payload.Timezone)
+		if zone == "" || zone == "auto" {
+			settings.Timezone = "auto"
+		} else if _, err := time.LoadLocation(zone); err != nil {
+			httpx.ValidationError(c, "unknown timezone", map[string]string{
+				"timezone": "must be a valid IANA timezone name",
+			})
+			return
+		} else {
+			settings.Timezone = zone
 		}
-		settings.Timezone = *payload.Timezone
+	}
+	alignZone := ""
+	if payload.AlignZone != nil {
+		alignZone = strings.TrimSpace(*payload.AlignZone)
+	} else if payload.Timezone != nil && settings.Timezone != "auto" {
+		alignZone = settings.Timezone
+	}
+	if alignZone != "" {
+		if _, err := time.LoadLocation(alignZone); err != nil {
+			httpx.ValidationError(c, "unknown timezone", map[string]string{
+				"alignZone": "must be a valid IANA timezone name",
+			})
+			return
+		}
 	}
 	if payload.Theme != nil {
 		switch *payload.Theme {
@@ -339,5 +359,38 @@ func (s *Server) handleUpdateSettings(c *gin.Context) {
 		httpx.Internal(c, s.log, err, "update settings")
 		return
 	}
+	if alignZone != "" {
+		if err := s.alignEntryDays(user.ID, alignZone); err != nil {
+			httpx.Internal(c, s.log, err, "align entry days")
+			return
+		}
+	}
 	httpx.OK(c, toSettingsDTO(settings))
+}
+
+// alignEntryDays rewrites each entry's calendar day into zone. The instant
+// stays in UTC; only the civil date and the zone label move.
+func (s *Server) alignEntryDays(userID uint, zone string) error {
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return err
+	}
+	var entries []models.Entry
+	if err := s.handle.DB().Where("user_id = ?", userID).Find(&entries).Error; err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		date := entry.EventTime.UTC().In(loc).Format("2006-01-02")
+		if date == entry.EventDate && entry.Timezone == zone {
+			continue
+		}
+		err := s.handle.DB().Model(&models.Entry{}).Where("id = ?", entry.ID).Updates(map[string]any{
+			"event_date": date,
+			"timezone":   zone,
+		}).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

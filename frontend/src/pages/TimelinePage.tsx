@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
-import { dayHeading } from '../lib/format'
+import { dayHeading, displayTimezone, localDateKey } from '../lib/format'
 import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
 import { useFolders } from '../hooks/useFolders'
@@ -35,6 +35,7 @@ export function TimelinePage() {
   const [selected, setSelected] = useState<number[]>([])
 
   const language = user?.settings.language ?? 'en'
+  const zone = displayTimezone(user?.settings.timezone)
 
   // A folder route scopes the timeline; an explicit folder filter wins.
   const effectiveFilters = useMemo<TimelineFilters>(() => {
@@ -91,13 +92,13 @@ export function TimelinePage() {
   const groups = useMemo(() => {
     const map = new Map<string, Entry[]>()
     for (const entry of entries) {
-      const key = entry.eventDate
+      const key = localDateKey(new Date(entry.eventTime), zone)
       const list = map.get(key)
       if (list) list.push(entry)
       else map.set(key, [entry])
     }
     return Array.from(map.entries())
-  }, [entries])
+  }, [entries, zone])
 
   function toggleSelect(id: number) {
     setSelected((current) =>
@@ -161,7 +162,7 @@ export function TimelinePage() {
           <div className="flex flex-col gap-7">
             {groups.map(([date, group]) => (
               <section key={date} aria-label={dayHeading(date, language)}>
-                <h2 className="mb-2.5 px-1 text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
+                <h2 className="mb-2.5 px-1 text-sm font-semibold tracking-wide text-ink-faint">
                   {dayHeading(date, language)}
                 </h2>
                 <div className="flex flex-col gap-2.5">
@@ -170,6 +171,7 @@ export function TimelinePage() {
                       key={entry.id}
                       entry={entry}
                       language={language}
+                      timeZone={zone}
                       selectable={selecting}
                       selected={selected.includes(entry.id)}
                       onToggleSelect={toggleSelect}

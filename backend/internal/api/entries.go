@@ -226,8 +226,8 @@ func (s *Server) handleCreateEntry(c *gin.Context) {
 		eventTime = parsed.UTC()
 	}
 	tz := payload.Timezone
-	if tz == "" {
-		tz = "UTC"
+	if tz == "" || tz == "auto" {
+		tz = "Asia/Shanghai"
 	}
 	loc, err := time.LoadLocation(tz)
 	if err != nil {

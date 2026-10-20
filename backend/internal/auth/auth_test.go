@@ -896,16 +896,15 @@ func TestARenewedSessionWorksAgain(t *testing.T) {
 	}
 }
 
-// TestARenewalCannotOutliveTheRefreshWindow checks that renewing a session
-// over and over does not push its expiry further into the future than the
-// window that was allowed when the session was created.
-func TestARenewalCannotOutliveTheRefreshWindow(t *testing.T) {
+// TestRenewalSlidesTheExpiryForward checks that renewing a session measures
+// the new deadline from the renewal itself, not from the original sign-in.
+func TestRenewalSlidesTheExpiryForward(t *testing.T) {
 	rig := newRig(t)
 	user := rig.createUser("alice")
 	value, _, session := rig.createSession(user)
 
-	// The session was created a day ago and the refresh window of the rig is
-	// 24 hours, so the session is at the end of its life.
+	// The session was created almost a full refresh window ago. Renewing it
+	// has to hand out another full window, not the sliver that remains.
 	created := time.Now().UTC().Add(-23 * time.Hour)
 	rig.db.Model(&models.Session{}).Where("id = ?", session.ID).Updates(map[string]any{
 		"created_at":   created,
@@ -917,22 +916,20 @@ func TestARenewalCannotOutliveTheRefreshWindow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RotateSession: %v", err)
 	}
-	limit := created.Add(24 * time.Hour)
-	if info.ExpiresAt.After(limit) {
-		t.Fatalf("the renewed session expires at %s, after the limit %s", info.ExpiresAt, limit)
+	if !info.ExpiresAt.After(created.Add(24 * time.Hour)) {
+		t.Fatalf("the renewed session expires at %s, which does not slide past the original window", info.ExpiresAt)
 	}
 }
 
-// TestASessionThatOutlivedItsWindowIsRevoked checks that a session cannot
-// be renewed once its refresh window has passed.
-func TestASessionThatOutlivedItsWindowIsRevoked(t *testing.T) {
+// TestASessionPastItsExpiryCannotBeRenewed checks that a cookie whose
+// deadline has already passed is not given a new life.
+func TestASessionPastItsExpiryCannotBeRenewed(t *testing.T) {
 	rig := newRig(t)
 	user := rig.createUser("alice")
 	value, _, session := rig.createSession(user)
 
-	created := time.Now().UTC().Add(-25 * time.Hour)
 	rig.db.Model(&models.Session{}).Where("id = ?", session.ID).Updates(map[string]any{
-		"created_at":   created,
+		"expires_at":   time.Now().UTC().Add(-time.Hour),
 		"last_seen_at": time.Now().UTC(),
 	})
 
@@ -940,12 +937,34 @@ func TestASessionThatOutlivedItsWindowIsRevoked(t *testing.T) {
 	if _, err := rig.svc.RotateSession(c); !errors.Is(err, ErrSessionExpired) {
 		t.Fatalf("RotateSession error = %v, want %v", err, ErrSessionExpired)
 	}
+}
+
+// TestActivitySlidesTheSession checks that ordinary use, not only an explicit
+// renewal, pushes the deadline forward and rewrites the cookie to match.
+func TestActivitySlidesTheSession(t *testing.T) {
+	rig := newRig(t)
+	user := rig.createUser("alice")
+	value, _, session := rig.createSession(user)
+
+	earlier := time.Now().UTC().Add(-30 * time.Minute)
+	rig.db.Model(&models.Session{}).Where("id = ?", session.ID).Updates(map[string]any{
+		"last_seen_at": earlier,
+		"expires_at":   earlier.Add(24 * time.Hour),
+	})
+
+	rec := rig.do(http.MethodGet, "/auth/probe", map[string]string{SessionCookie: value}, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("an active session was refused: %d", rec.Code)
+	}
+	if cookiesByName(rec, SessionCookie)[SessionCookie] == nil {
+		t.Fatal("activity did not rewrite the session cookie")
+	}
 
 	var row models.Session
 	if err := rig.db.Where("id = ?", session.ID).First(&row).Error; err != nil {
 		t.Fatalf("load session: %v", err)
 	}
-	if row.RevokedAt == nil {
-		t.Fatal("the session was not revoked")
+	if !row.ExpiresAt.After(time.Now().UTC().Add(23 * time.Hour)) {
+		t.Fatalf("expires_at = %s, want it slid by a refresh window", row.ExpiresAt)
 	}
 }

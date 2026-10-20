@@ -2,19 +2,27 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { cn } from '../../lib/cn'
 import { formatTime } from '../../lib/format'
-import type { Entry } from '../../lib/types'
+import type { Entry, Media } from '../../lib/types'
 import { ImageIcon, LocationIcon, PinIcon, VideoIcon } from '../icons'
 
 interface EntryCardProps {
   entry: Entry
   language: string
+  /** Zone the clock and the day are shown in. */
+  timeZone?: string
   selectable?: boolean
   selected?: boolean
   onToggleSelect?: (id: number) => void
 }
 
+function photoSrc(media: Media): string {
+  if (media.hasPreview && media.previewUrl) return media.previewUrl
+  if (media.hasThumb && media.thumbUrl) return media.thumbUrl
+  return media.url
+}
+
 /** One entry in the timeline. */
-export function EntryCard({ entry, language, selectable, selected, onToggleSelect }: EntryCardProps) {
+export function EntryCard({ entry, language, timeZone, selectable, selected, onToggleSelect }: EntryCardProps) {
   const { t } = useTranslation()
   const title = entry.title || t('entries.untitled')
   const excerpt = entry.plainText.slice(0, 220)
@@ -41,51 +49,50 @@ export function EntryCard({ entry, language, selectable, selected, onToggleSelec
         </label>
       ) : null}
 
-      <div className={cn('flex items-center gap-2', selectable && 'pl-8')}>
-        <time dateTime={entry.eventTime} className="text-xs font-medium text-ink-faint tabular-nums">
-          {formatTime(entry.eventTime, language, entry.timezone)}
-        </time>
-        {entry.isPinned ? (
-          <span title={t('entries.pinned')} className="text-accent">
-            <PinIcon size={13} />
-          </span>
-        ) : null}
-        {entry.folderName ? (
-          <span className="truncate text-xs text-ink-faint">{entry.folderName}</span>
-        ) : null}
-      </div>
-
-      <Link to={`/entries/${entry.id}`} className={cn('mt-1 block', selectable && 'pl-8')}>
-        <h3 className="text-[1.0625rem] leading-snug font-semibold text-ink-strong transition-colors group-hover:text-accent-ink">
+      <Link to={`/entries/${entry.id}`} className={cn('block', selectable && 'pl-8')}>
+        <h3 className="text-[1.5rem] leading-tight font-bold tracking-tight text-ink-strong transition-colors group-hover:text-accent-ink">
           {title}
         </h3>
         {excerpt ? (
-          <p className="mt-1.5 line-clamp-3 text-[0.9375rem] leading-relaxed text-ink-muted">
+          <p className="mt-2 line-clamp-4 text-[1.0625rem] leading-relaxed text-ink">
             {excerpt}
           </p>
         ) : null}
       </Link>
 
       {images.length > 0 || videos.length > 0 ? (
-        <div className={cn('mt-3 flex gap-1.5 overflow-hidden', selectable && 'pl-8')}>
-          {images.slice(0, 4).map((media) => (
+        <div className={cn('mt-3', selectable && 'pl-8')}>
+          {images.length === 1 ? (
             <img
-              key={media.id}
-              src={media.hasThumb ? media.thumbUrl : media.url}
-              alt={media.originalName}
+              src={photoSrc(images[0])}
+              alt={images[0].originalName}
               loading="lazy"
               decoding="async"
-              className="size-[4.5rem] shrink-0 rounded-xl bg-paper-sunken object-cover"
+              className="aspect-[4/3] w-full rounded-2xl bg-paper-sunken object-cover"
             />
-          ))}
-          {videos.length > 0 ? (
-            <div className="flex size-[4.5rem] shrink-0 items-center justify-center rounded-xl bg-paper-sunken text-ink-faint">
-              <VideoIcon size={20} />
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {images.slice(0, 4).map((media) => (
+                <img
+                  key={media.id}
+                  src={photoSrc(media)}
+                  alt={media.originalName}
+                  loading="lazy"
+                  decoding="async"
+                  className="aspect-[4/3] w-full rounded-2xl bg-paper-sunken object-cover"
+                />
+              ))}
             </div>
-          ) : null}
-          {images.length + videos.length > 4 ? (
-            <div className="flex size-[4.5rem] shrink-0 items-center justify-center rounded-xl bg-paper-sunken text-xs font-medium text-ink-muted">
-              +{images.length + videos.length - 4}
+          )}
+          {videos.length > 0 || images.length > 4 ? (
+            <div className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
+              {videos.length > 0 ? (
+                <span className="inline-flex items-center gap-1">
+                  <VideoIcon size={16} />
+                  {videos.length}
+                </span>
+              ) : null}
+              {images.length > 4 ? <span>+{images.length - 4}</span> : null}
             </div>
           ) : null}
         </div>
@@ -102,8 +109,8 @@ export function EntryCard({ entry, language, selectable, selected, onToggleSelec
             </span>
           ))}
           {entry.location ? (
-            <span className="inline-flex items-center gap-1 text-xs text-ink-faint">
-              <LocationIcon size={13} />
+            <span className="inline-flex items-center gap-1 text-sm text-ink-muted">
+              <LocationIcon size={15} />
               {entry.location.name || entry.location.address}
             </span>
           ) : null}
@@ -115,6 +122,18 @@ export function EntryCard({ entry, language, selectable, selected, onToggleSelec
           ) : null}
         </div>
       ) : null}
+
+      <div className={cn('mt-3 flex items-center gap-2 text-sm text-ink-faint', selectable && 'pl-8')}>
+        <time dateTime={entry.eventTime} className="font-medium tabular-nums">
+          {formatTime(entry.eventTime, language, timeZone || entry.timezone)}
+        </time>
+        {entry.isPinned ? (
+          <span title={t('entries.pinned')} className="text-accent">
+            <PinIcon size={14} />
+          </span>
+        ) : null}
+        {entry.folderName ? <span className="truncate">{entry.folderName}</span> : null}
+      </div>
     </article>
   )
 }

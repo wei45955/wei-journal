@@ -6,7 +6,15 @@ import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
 import { setLanguage, type LanguageCode } from '../i18n'
 import { Button, Field, TextInput, Toggle } from '../components/ui'
-import { COMMON_TIMEZONES, formatDate, localeFor, localDateKey } from '../lib/format'
+import {
+  AUTO_TIMEZONE,
+  browserTimezone,
+  displayTimezone,
+  formatDate,
+  localeFor,
+  localDateKey,
+  TIMEZONE_CHOICES,
+} from '../lib/format'
 import type { AIStatus, Session, Settings } from '../lib/types'
 import { SettingsSection } from '../components/settings/SettingsSection'
 import { SessionList } from '../components/settings/SessionList'
@@ -55,13 +63,11 @@ export function SettingsPage() {
   const [exporting, setExporting] = useState(false)
   const [includeMedia, setIncludeMedia] = useState(true)
 
-  const [timezoneDraft, setTimezoneDraft] = useState(settings?.timezone ?? '')
   const [tileUrlDraft, setTileUrlDraft] = useState(settings?.mapTileUrl ?? '')
 
   useEffect(() => {
-    setTimezoneDraft(settings?.timezone ?? '')
     setTileUrlDraft(settings?.mapTileUrl ?? '')
-  }, [settings?.timezone, settings?.mapTileUrl])
+  }, [settings?.mapTileUrl])
 
   useEffect(() => {
     let cancelled = false
@@ -109,7 +115,12 @@ export function SettingsPage() {
     [locale],
   )
 
-  async function saveSettings(patch: Partial<Settings>, key: string) {
+  const timezoneValue = !settings?.timezone ? AUTO_TIMEZONE : settings.timezone
+  const timezoneOptions = TIMEZONE_CHOICES.some((zone) => zone.value === timezoneValue)
+    ? TIMEZONE_CHOICES
+    : [...TIMEZONE_CHOICES, { value: timezoneValue, zh: timezoneValue, en: timezoneValue }]
+
+  async function saveSettings(patch: Partial<Settings> & { alignZone?: string }, key: string) {
     setSaving(key)
     try {
       const updated = await api.updateSettings(patch)
@@ -295,23 +306,28 @@ export function SettingsPage() {
         </Field>
 
         <Field label={t('settings.timezone')} hint={t('settings.timezoneHint')} htmlFor="settings-timezone">
-          <TextInput
+          <select
             id="settings-timezone"
-            list="settings-timezone-list"
-            value={timezoneDraft}
-            onChange={(event) => setTimezoneDraft(event.target.value)}
-            onBlur={() => {
-              const value = timezoneDraft.trim()
-              if (value !== (settings.timezone ?? '')) {
-                void saveSettings({ timezone: value }, 'timezone')
-              }
+            className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            value={timezoneValue}
+            onChange={(event) => {
+              const value = event.target.value
+              void saveSettings(
+                { timezone: value, alignZone: value === AUTO_TIMEZONE ? browserTimezone() : value },
+                'timezone',
+              )
             }}
-          />
-          <datalist id="settings-timezone-list">
-            {COMMON_TIMEZONES.map((zone) => (
-              <option key={zone} value={zone} />
+            disabled={saving === 'timezone'}
+          >
+            <option value={AUTO_TIMEZONE}>
+              {t('settings.timezoneAuto', { zone: displayTimezone(AUTO_TIMEZONE) })}
+            </option>
+            {timezoneOptions.map((zone) => (
+              <option key={zone.value} value={zone.value}>
+                {language.startsWith('zh') ? zone.zh : zone.en}
+              </option>
             ))}
-          </datalist>
+          </select>
         </Field>
 
         <Field

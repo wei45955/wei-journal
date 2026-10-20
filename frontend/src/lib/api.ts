@@ -409,7 +409,7 @@ export const api = {
 
   // --- account ------------------------------------------------------------
   settings: () => request<Settings>('/api/settings'),
-  updateSettings: (payload: Partial<Settings>) =>
+  updateSettings: (payload: Partial<Settings> & { alignZone?: string }) =>
     request<Settings>('/api/settings', { method: 'PATCH', body: payload }),
   aiStatus: () => request<AIStatus>('/api/ai/status'),
   aiMetadata: (query?: { entryId?: number; mediaId?: number }) =>

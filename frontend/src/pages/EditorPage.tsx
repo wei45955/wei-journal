@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ApiError, api } from '../lib/api'
 import { cn } from '../lib/cn'
-import { formatTime } from '../lib/format'
+import { displayTimezone, formatTime, isoToWallInput, wallInputToISO } from '../lib/format'
 import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
 import { useFolders } from '../hooks/useFolders'
@@ -62,7 +62,7 @@ export function EditorPage() {
     document: { type: 'doc', content: [{ type: 'paragraph' }] },
     drawing: [],
     eventTime: new Date().toISOString(),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    timezone: displayTimezone(),
     folderId: null,
     tags: [],
     color: '',
@@ -95,9 +95,7 @@ export function EditorPage() {
     // A new entry starts in the user's own time zone; an existing entry
     // keeps the zone it was written in.
     if (entryId) return
-    const zone = user?.settings.timezone
-    if (!zone) return
-    setState((current) => ({ ...current, timezone: zone }))
+    setState((current) => ({ ...current, timezone: displayTimezone(user?.settings.timezone) }))
   }, [entryId, user?.settings.timezone])
 
   // Load the entry when editing.
@@ -116,7 +114,7 @@ export function EditorPage() {
           document: loaded.document,
           drawing: loaded.drawing ?? [],
           eventTime: loaded.eventTime,
-          timezone: loaded.timezone || 'UTC',
+          timezone: displayTimezone(user?.settings.timezone),
           folderId: loaded.folderId ?? null,
           tags: loaded.tags,
           color: loaded.color,
@@ -368,8 +366,10 @@ export function EditorPage() {
                 <input
                   id="event-time"
                   type="datetime-local"
-                  value={toLocalInput(state.eventTime)}
-                  onChange={(event) => update({ eventTime: fromLocalInput(event.target.value) })}
+                  value={isoToWallInput(state.eventTime, state.timezone)}
+                  onChange={(event) =>
+                    update({ eventTime: wallInputToISO(event.target.value, state.timezone) })
+                  }
                   className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
@@ -596,17 +596,3 @@ function SaveIndicator({
   return null
 }
 
-/** Converts an ISO timestamp to the value a datetime-local input expects. */
-function toLocalInput(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ''
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-/** Converts a datetime-local value back to an ISO timestamp. */
-function fromLocalInput(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return new Date().toISOString()
-  return date.toISOString()
-}

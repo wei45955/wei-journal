@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api, ApiError } from '../lib/api'
 import type { User } from '../lib/types'
+import { browserTimezone } from '../lib/format'
 import { setLanguage } from '../i18n'
 import type { LanguageCode } from '../i18n'
 
@@ -58,6 +59,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false
     }
   }, [refreshUser])
+
+  // Opening the journal, or coming back to it, slides the session forward.
+  // A network failure leaves the signed-in state alone; only a rejected
+  // session sends the reader to sign in.
+  const fixingTimezone = useRef(false)
+  useEffect(() => {
+    if (!user || fixingTimezone.current) return
+    if (localStorage.getItem('wj-tz-default-fixed') === '1') return
+    const tz = user.settings?.timezone ?? ''
+    if (tz && tz !== 'UTC') {
+      localStorage.setItem('wj-tz-default-fixed', '1')
+      return
+    }
+    // The old default was UTC, which made every clock eight hours off in
+    // China. Follow the phone from now on, and move existing days with it.
+    fixingTimezone.current = true
+    const zone = browserTimezone()
+    void api
+      .updateSettings({ timezone: 'auto', alignZone: zone })
+      .then((settings) => {
+        localStorage.setItem('wj-tz-default-fixed', '1')
+        setUser((current) => (current ? { ...current, settings } : current))
+      })
+      .catch(() => {
+        fixingTimezone.current = false
+      })
+  }, [user])
+
+  const signedIn = user !== null
+  useEffect(() => {
+    if (!signedIn) return
+    let pending = false
+    const keepAlive = () => {
+      if (pending || document.visibilityState === 'hidden') return
+      pending = true
+      void api
+        .me()
+        .then((me) => {
+          setUser(me.user)
+          applyPreferences(me.user)
+        })
+        .catch((error: unknown) => {
+          if (error instanceof ApiError && error.isUnauthorized) setUser(null)
+        })
+        .finally(() => {
+          pending = false
+        })
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') keepAlive()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pageshow', onVisible)
+    const timer = window.setInterval(keepAlive, 6 * 60 * 60 * 1000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pageshow', onVisible)
+      window.clearInterval(timer)
+    }
+  }, [signedIn])
 
   const signIn = useCallback(async (username: string, password: string) => {
     const result = await api.login(username, password)

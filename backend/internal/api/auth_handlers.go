@@ -94,7 +94,7 @@ func (s *Server) handleRegister(c *gin.Context) {
 		return tx.Create(&models.UserSettings{
 			UserID:   user.ID,
 			Language: "en",
-			Timezone: "UTC",
+			Timezone: "auto",
 			Theme:    "system",
 		}).Error
 	})

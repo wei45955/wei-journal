@@ -142,7 +142,7 @@ func TestLoadFallsBackWhenAValueIsUnparseable(t *testing.T) {
 	if cfg.RateLimitPerMin != 120 {
 		t.Errorf("RateLimitPerMin = %d, want the default", cfg.RateLimitPerMin)
 	}
-	if cfg.SessionTTL != 12*time.Hour {
+	if cfg.SessionTTL != 7*24*time.Hour {
 		t.Errorf("SessionTTL = %v, want the default", cfg.SessionTTL)
 	}
 	if cfg.CookieSecure {

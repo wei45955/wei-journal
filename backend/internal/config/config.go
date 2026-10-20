@@ -53,7 +53,7 @@ func Load() (*Config, error) {
 		Addr:               env("WJ_ADDR", ":8080"),
 		DatabaseURL:        env("WJ_DATABASE_URL", ""),
 		DataDir:            env("WJ_DATA_DIR", "./data"),
-		SessionTTL:         envDuration("WJ_SESSION_TTL", 12*time.Hour),
+		SessionTTL:         envDuration("WJ_SESSION_TTL", 7*24*time.Hour),
 		RefreshTTL:         envDuration("WJ_REFRESH_TTL", 30*24*time.Hour),
 		CookieSecure:       envBool("WJ_COOKIE_SECURE", false),
 		CookieDomain:       env("WJ_COOKIE_DOMAIN", ""),

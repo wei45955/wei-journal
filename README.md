@@ -95,7 +95,7 @@ Everything is read from the environment, in two files.
 | `WJ_DATA_DIR` | `./data` | The directory with the database, the uploads and the derived assets. |
 | `WJ_DATABASE_URL` | `sqlite://<data dir>/journal.db` | The database. `postgres://...` also works. |
 | `WJ_MAX_UPLOAD_MB` | `256` | The size limit of a single upload. |
-| `WJ_SESSION_TTL` | `12h` | How long a session lasts before it is renewed. |
+| `WJ_SESSION_TTL` | `168h` | How long an unused session lasts before it has to be renewed. Use slides the deadline forward. |
 | `OPENAI_API_KEY` | — | The key of the model provider. Optional. |
 | `WJ_AI_ENABLED` | `true` | The server side switch of the AI features. |
 | `WJ_VERSION` | `dev` | The build version. Not `dev` in production, that turns the debug mode on. |

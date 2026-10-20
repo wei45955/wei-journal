@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Wei Journal">
+  <defs>
+    <linearGradient id="bg" x1="48" y1="24" x2="470" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9b99f2"/>
+      <stop offset="1" stop-color="#3e3bb6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <path fill="#ffffff" d="M256 132c-52-22-112-20-164 8l-8 214c58-26 122-22 172 22V132z"/>
+  <path fill="#ffffff" fill-opacity="0.92" d="M256 132c52-22 112-20 164 8l8 214c-58-26-122-22-172 22V132z"/>
+  <path d="M256 148v212" stroke="#4a47c4" stroke-width="10" stroke-linecap="round" opacity="0.45"/>
+  <path d="M156 196h62M148 230h54M294 196h62M310 230h54" stroke="#4a47c4" stroke-width="10" stroke-linecap="round" opacity="0.28"/>
+</svg>

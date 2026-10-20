@@ -7,7 +7,7 @@ import { useToast } from '../state/toast'
 import { ErrorState, Skeleton } from '../components/ui'
 import { CoffeeIcon } from '../components/icons'
 import { partsOf } from '../components/calendar/dates'
-import { localDateKey } from '../lib/format'
+import { displayTimezone, localDateKey } from '../lib/format'
 import type { Stats } from '../lib/types'
 import { CalendarPage } from './CalendarPage'
 import { MapPage } from './MapPage'
@@ -37,7 +37,7 @@ export function InsightsPage() {
   const [reloadToken, setReloadToken] = useState(0)
 
   const today = useMemo(
-    () => localDateKey(new Date(), user?.settings.timezone),
+    () => localDateKey(new Date(), displayTimezone(user?.settings.timezone)),
     [user?.settings.timezone],
   )
 

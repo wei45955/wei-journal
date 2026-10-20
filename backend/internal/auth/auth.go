@@ -124,19 +124,11 @@ func (s *Service) CreateSession(c *gin.Context, user *models.User) (*SessionInfo
 	return &SessionInfo{CSRFToken: csrf, ExpiresAt: expires}, nil
 }
 
-// absoluteExpiry is the moment a session dies for good. A session may be
-// renewed until then, but never beyond, so a stolen cookie cannot be kept
-// alive forever.
-func (s *Service) absoluteExpiry(session *models.Session) time.Time {
-	return session.CreatedAt.Add(s.refreshTTL)
-}
-
-// RotateSession exchanges the session secret for a fresh one, extending the
-// session lifetime. It is the server side half of token renewal.
-//
-// The renewed session never lives longer than the refresh window that was
-// allowed when it was created, so repeated renewals cannot push the expiry
-// further and further into the future.
+// RotateSession exchanges the session secret for a fresh one and slides the
+// expiry forward. A session that is still within its current deadline can
+// always be renewed, including by someone who has kept using the journal,
+// so the deadline is measured from the renewal and not from the original
+// sign-in.
 func (s *Service) RotateSession(c *gin.Context) (*SessionInfo, error) {
 	session, secret, ok := s.readSession(c)
 	if !ok {
@@ -147,19 +139,7 @@ func (s *Service) RotateSession(c *gin.Context) (*SessionInfo, error) {
 		return nil, err
 	}
 	now := time.Now().UTC()
-	limit := s.absoluteExpiry(session)
-	if !now.Before(limit) {
-		// The session outlived its window. It is revoked so the cookie
-		// cannot be used again.
-		s.db.Model(&models.Session{}).Where("id = ?", session.ID).
-			Update("revoked_at", now)
-		s.clearCookies(c)
-		return nil, ErrSessionExpired
-	}
 	expires := now.Add(s.refreshTTL)
-	if expires.After(limit) {
-		expires = limit
-	}
 	err = s.db.Model(&models.Session{}).
 		Where("id = ? AND secret_hash = ?", session.ID, hashSecret(secret)).
 		Updates(map[string]any{
@@ -297,10 +277,20 @@ func (s *Service) Authenticate() gin.HandlerFunc {
 			httpx.Forbidden(c, "account disabled")
 			return
 		}
-		// Touch the session at most once a minute to avoid a write per request.
+		// Touch the session at most once a minute. The expiry slides forward
+		// with that touch, and the cookies are rewritten to match, so a
+		// journal that is in use does not sign the reader out.
 		if time.Since(session.LastSeenAt) > time.Minute {
+			now := time.Now().UTC()
+			expires := now.Add(s.refreshTTL)
 			s.db.Model(&models.Session{}).Where("id = ?", session.ID).
-				Update("last_seen_at", time.Now().UTC())
+				Updates(map[string]any{
+					"last_seen_at": now,
+					"expires_at":   expires,
+				})
+			if raw, err := c.Cookie(SessionCookie); err == nil {
+				s.setCookies(c, raw, session.CSRFToken, expires)
+			}
 		}
 		c.Set(ctxUser, &user)
 		c.Set(ctxSession, session)
