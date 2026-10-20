@@ -5,6 +5,12 @@
 FROM golang:1.27-alpine AS builder
 
 ARG VERSION=dev
+# Optional module mirror. The defaults are the public Go endpoints; pass
+# another GOPROXY at build time when those endpoints are unreachable.
+ARG GOPROXY=https://proxy.golang.org,direct
+ARG GOSUMDB=sum.golang.org
+ENV GOPROXY=${GOPROXY} \
+    GOSUMDB=${GOSUMDB}
 
 WORKDIR /src
 
