@@ -13,6 +13,7 @@ import { RichTextEditor } from '../components/editor/RichTextEditor'
 import { DrawingCanvas } from '../components/editor/DrawingCanvas'
 import { MediaUploader } from '../components/media/MediaUploader'
 import { MediaStrip } from '../components/media/MediaViewer'
+import { NewFolderForm } from '../components/entries/NewFolderForm'
 import { TagInput } from '../components/entries/TagInput'
 import { LocationPicker } from '../components/entries/LocationPicker'
 import { AIMetadataPanel } from '../components/entries/AIMetadataPanel'
@@ -390,6 +391,10 @@ export function EditorPage() {
                   </option>
                 ))}
               </select>
+              <NewFolderForm
+                className="mt-2"
+                onCreated={(folder) => update({ folderId: folder.id })}
+              />
             </Field>
 
             <Field label={t('entries.tags')} htmlFor="entry-tags">

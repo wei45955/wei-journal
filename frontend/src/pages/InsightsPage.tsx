@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { format } from 'date-fns'
 import { api } from '../lib/api'
 import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
-import { Button, ErrorState, Skeleton } from '../components/ui'
-import { ChevronLeftIcon, ChevronRightIcon, CoffeeIcon } from '../components/icons'
-import { MonthGrid } from '../components/calendar/MonthGrid'
-import { addMonths, partsOf } from '../components/calendar/dates'
-import { localeFor, localDateKey } from '../lib/format'
+import { ErrorState, Skeleton } from '../components/ui'
+import { CoffeeIcon } from '../components/icons'
+import { partsOf } from '../components/calendar/dates'
+import { localDateKey } from '../lib/format'
 import type { Stats } from '../lib/types'
+import { CalendarPage } from './CalendarPage'
+import { MapPage } from './MapPage'
 
 interface MonthCount {
   /** `YYYY-MM`. */
@@ -25,17 +25,13 @@ const MONTH_LETTERS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D
  * from and how the days of the year were spent.
  */
 export function InsightsPage() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { describe } = useToast()
   const { user } = useAuth()
-
-  const language = user?.settings.language ?? i18n.resolvedLanguage ?? 'en'
 
   const [stats, setStats] = useState<Stats | null>(null)
   const [months, setMonths] = useState<MonthCount[]>([])
   const [placeCount, setPlaceCount] = useState(0)
-  const [dayCounts, setDayCounts] = useState<Record<string, number>>({})
-  const [anchor, setAnchor] = useState(() => localDateKey(new Date(), user?.settings.timezone))
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
   const [reloadToken, setReloadToken] = useState(0)
@@ -50,7 +46,7 @@ export function InsightsPage() {
     setStatus('loading')
     void (async () => {
       try {
-        const { year } = partsOf(anchor)
+        const { year } = partsOf(today)
         const [summary, places, calendar] = await Promise.all([
           api.stats(),
           api.locations(),
@@ -70,13 +66,9 @@ export function InsightsPage() {
           series.push({ key, count: buckets.get(key) ?? 0 })
         }
 
-        const days: Record<string, number> = {}
-        for (const day of calendar.days) days[day.date] = day.count
-
         setStats(summary)
         setMonths(series)
         setPlaceCount(places.items.length)
-        setDayCounts(days)
         setError('')
         setStatus('ready')
       } catch (err) {
@@ -88,19 +80,10 @@ export function InsightsPage() {
     return () => {
       cancelled = true
     }
-  }, [anchor, reloadToken, describe, t])
+  }, [today, reloadToken, describe, t])
 
   const yearTotal = months.reduce((sum, month) => sum + month.count, 0)
   const peak = Math.max(1, ...months.map((month) => month.count))
-
-  const monthTitle = useMemo(
-    () => format(new Date(`${anchor}T00:00:00`), 'MMMM yyyy', { locale: localeFor(language) }),
-    [anchor, language],
-  )
-
-  function shift(direction: number) {
-    setAnchor((current) => addMonths(current, direction))
-  }
 
   return (
     <div className="pb-8">
@@ -166,46 +149,8 @@ export function InsightsPage() {
             />
           </section>
 
-          {/* --- the calendar --- */}
           <section className="mt-7">
-            <h2 className="mb-2.5 px-1 title-section text-ink-muted">
-              {t('calendar.title')}
-            </h2>
-
-            <div className="card p-4 sm:p-5">
-              <div className="mb-1 flex items-center justify-between gap-3">
-                <h3 className="text-[1.375rem] font-bold tracking-tight text-ink-strong">
-                  {monthTitle}
-                </h3>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => shift(-1)}
-                    aria-label={t('calendar.previous')}
-                    className="text-accent"
-                  >
-                    <ChevronLeftIcon size={20} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => shift(1)}
-                    aria-label={t('calendar.next')}
-                    className="text-accent"
-                  >
-                    <ChevronRightIcon size={20} />
-                  </Button>
-                </div>
-              </div>
-
-              <MonthGrid
-                month={anchor}
-                counts={dayCounts}
-                language={language}
-                today={today}
-              />
-            </div>
+            <CalendarPage embedded />
           </section>
 
           {/* --- the rest of the numbers --- */}
@@ -238,6 +183,10 @@ export function InsightsPage() {
                 value={stats?.lastEntryDate || t('stats.never')}
               />
             </dl>
+          </section>
+
+          <section className="mt-7">
+            <MapPage embedded />
           </section>
         </>
       )}

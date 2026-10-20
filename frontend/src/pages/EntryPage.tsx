@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { formatTime, formatEventDate, formatDateTime } from '../lib/format'
 import { useToast } from '../state/toast'
 import { useAuth } from '../state/auth'
-import { Button, ErrorState, Skeleton } from '../components/ui'
+import { cn } from '../lib/cn'
+import { ErrorState, Skeleton } from '../components/ui'
 import { ConfirmDialog } from '../components/ui/Dialog'
 import { RichText } from '../components/editor/RichText'
 import { DrawingView } from '../components/editor/DrawingView'
@@ -15,6 +17,7 @@ import {
   ChevronLeftIcon,
   CopyIcon,
   LocationIcon,
+  PencilIcon,
   PinIcon,
   TrashIcon,
 } from '../components/icons'
@@ -121,36 +124,36 @@ export function EntryPage() {
   return (
     <article className="flex flex-col gap-5 pb-10">
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(-1)}
-          aria-label={t('entries.backToTimeline')}
-        >
-          <ChevronLeftIcon size={16} />
-          {t('entries.backToTimeline')}
-        </Button>
+        <IconAction label={t('entries.backToTimeline')} onClick={() => navigate(-1)}>
+          <ChevronLeftIcon size={18} />
+        </IconAction>
         <div className="ml-auto flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => void togglePin()}>
-            <PinIcon size={15} />
-            {entry.isPinned ? t('entries.unpin') : t('entries.pin')}
-          </Button>
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => void duplicate()}>
-            <CopyIcon size={15} />
-            {t('entries.duplicate')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
+          <IconAction
+            label={entry.isPinned ? t('entries.unpin') : t('entries.pin')}
+            disabled={busy}
+            pressed={entry.isPinned}
+            onClick={() => void togglePin()}
+          >
+            <PinIcon size={17} />
+          </IconAction>
+          <IconAction label={t('entries.duplicate')} disabled={busy} onClick={() => void duplicate()}>
+            <CopyIcon size={17} />
+          </IconAction>
+          <IconAction
+            label={t('entries.editEntry')}
             disabled={busy}
             onClick={() => navigate(`/entries/${entry.id}/edit`)}
           >
-            {t('entries.editEntry')}
-          </Button>
-          <Button variant="danger" size="sm" disabled={busy} onClick={() => setConfirmDelete(true)}>
-            <TrashIcon size={15} />
-            {t('entries.delete')}
-          </Button>
+            <PencilIcon size={17} />
+          </IconAction>
+          <IconAction
+            label={t('entries.delete')}
+            disabled={busy}
+            danger
+            onClick={() => setConfirmDelete(true)}
+          >
+            <TrashIcon size={17} />
+          </IconAction>
         </div>
       </div>
 
@@ -265,5 +268,44 @@ export function EntryPage() {
         onConfirm={() => void remove()}
       />
     </article>
+  )
+}
+
+/** A round action that stays the same size on a phone, with its name on the tooltip. */
+function IconAction({
+  label,
+  onClick,
+  disabled,
+  danger,
+  pressed,
+  children,
+}: {
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  danger?: boolean
+  pressed?: boolean
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={pressed}
+      title={label}
+      className={cn(
+        'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors',
+        'disabled:cursor-not-allowed disabled:opacity-50 active:scale-95',
+        danger
+          ? 'bg-danger-soft text-danger'
+          : pressed
+            ? 'bg-accent-soft text-accent'
+            : 'bg-paper-sunken text-ink hover:bg-line/70',
+      )}
+    >
+      {children}
+    </button>
   )
 }

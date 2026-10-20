@@ -26,7 +26,7 @@ const VIEWS: { value: View; key: string; fallback: string }[] = [
  * The calendar: a day, a month or a year of writing, shaded by how much was
  * written and linked to the entries themselves.
  */
-export function CalendarPage() {
+export function CalendarPage({ embedded = false }: { embedded?: boolean }) {
   const { t, i18n } = useTranslation()
   const { describe } = useToast()
   const { user } = useAuth()
@@ -122,7 +122,11 @@ export function CalendarPage() {
     <div className="pb-8">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="title-large text-ink-strong">{t('calendar.title')}</h1>
+          {embedded ? (
+            <h2 className="title-section text-ink-muted">{t('calendar.title')}</h2>
+          ) : (
+            <h1 className="title-large text-ink-strong">{t('calendar.title')}</h1>
+          )}
           <p className="mt-1 text-sm text-ink-muted">{title}</p>
         </div>
 

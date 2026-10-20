@@ -4,11 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { useAuth } from '../../state/auth'
 import { useFolders } from '../../hooks/useFolders'
+import { NewFolderForm } from '../entries/NewFolderForm'
 import {
-  CalendarIcon,
   ChartIcon,
   FolderIcon,
-  MapIcon,
   MenuIcon,
   PlusIcon,
   SearchIcon,
@@ -21,8 +20,6 @@ const primaryLinks = [
   { to: '/', labelKey: 'nav.timeline', icon: TimelineIcon, end: true },
   { to: '/search', labelKey: 'nav.search', icon: SearchIcon },
   { to: '/insights', labelKey: 'nav.insights', icon: ChartIcon },
-  { to: '/calendar', labelKey: 'nav.calendar', icon: CalendarIcon },
-  { to: '/map', labelKey: 'nav.map', icon: MapIcon },
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -31,8 +28,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
-  // The map draws itself over the whole window, so it gets no frame.
-  const isMap = location.pathname.startsWith('/map')
 
   useEffect(() => {
     setMenuOpen(false)
@@ -117,14 +112,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* --- content --- */}
       <main className="pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:ml-72 lg:pb-0">
-        {isMap ? (
-          /* The map runs under the bars, the way the native one does. */
-          <div className="w-full">{children}</div>
-        ) : (
-          <div className="mx-auto w-full max-w-3xl px-4 pt-[calc(var(--header-h)+1rem)] sm:px-6 lg:max-w-4xl lg:pt-10">
-            {children}
-          </div>
-        )}
+        <div className="mx-auto w-full max-w-3xl px-4 pt-[calc(var(--header-h)+1rem)] sm:px-6 lg:max-w-4xl lg:pt-10">
+          {children}
+        </div>
       </main>
 
       {/* --- mobile bottom navigation --- */}
@@ -152,12 +142,10 @@ function CompactTitle() {
         folders.find((folder) => folder.id === Number(folderId))?.name ?? t('nav.timeline')
       ) : pathname.startsWith('/search') ? (
         t('nav.search')
-      ) : pathname.startsWith('/insights') ? (
+      ) : pathname.startsWith('/insights') ||
+        pathname.startsWith('/calendar') ||
+        pathname.startsWith('/map') ? (
         t('nav.insights')
-      ) : pathname.startsWith('/calendar') ? (
-        t('nav.calendar')
-      ) : pathname.startsWith('/map') ? (
-        t('nav.map')
       ) : pathname.startsWith('/settings') ? (
         t('nav.settings')
       ) : pathname.startsWith('/new') ? (
@@ -215,6 +203,7 @@ function SidebarNav() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { folders } = useFolders()
+  const [addingFolder, setAddingFolder] = useState(false)
 
   const items = useMemo(
     () =>
@@ -244,11 +233,27 @@ function SidebarNav() {
     <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-6">
       <ul className="flex flex-col gap-1">{items}</ul>
 
-      {folders.length > 0 ? (
-        <div>
-          <h2 className="px-3.5 pb-1.5 text-[0.6875rem] font-semibold tracking-wide text-ink-faint uppercase">
+      <div>
+        <div className="flex items-center justify-between gap-2 px-3.5 pb-1.5">
+          <h2 className="text-[0.6875rem] font-semibold tracking-wide text-ink-faint uppercase">
             {t('nav.folders')}
           </h2>
+          <button
+            type="button"
+            onClick={() => setAddingFolder((open) => !open)}
+            aria-label={t('folders.new')}
+            aria-expanded={addingFolder}
+            className="flex size-6 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-paper-sunken hover:text-ink"
+          >
+            <PlusIcon size={15} />
+          </button>
+        </div>
+        {addingFolder ? (
+          <NewFolderForm className="mb-2 px-1" onCreated={() => setAddingFolder(false)} />
+        ) : null}
+        {folders.length === 0 ? (
+          <p className="px-3.5 text-xs text-ink-faint">{t('folders.empty')}</p>
+        ) : (
           <ul className="flex flex-col gap-1">
             {folders.map((folder) => (
               <li key={folder.id}>
@@ -270,8 +275,8 @@ function SidebarNav() {
               </li>
             ))}
           </ul>
-        </div>
-      ) : null}
+        )}
+      </div>
 
       <div className="mt-auto">
         <NavLink

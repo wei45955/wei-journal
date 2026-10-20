@@ -166,6 +166,7 @@ export const zhCN: TranslationSchema = {
   folders: {
     title: '文件夹',
     new: '新建文件夹',
+    created: '文件夹已创建',
     name: '文件夹名称',
     empty: '还没有文件夹',
     emptyBody: '文件夹可以把相关的日记归在一起，也可以全部留在主时间线里。',

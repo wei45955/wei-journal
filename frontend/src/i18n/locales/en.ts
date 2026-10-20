@@ -164,6 +164,7 @@ export const en = {
   folders: {
     title: 'Folders',
     new: 'New folder',
+    created: 'Folder created',
     name: 'Folder name',
     empty: 'No folders yet',
     emptyBody: 'Folders group related entries. You can also leave everything in the main stream.',

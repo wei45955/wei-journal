@@ -39,7 +39,7 @@ function attributionFor(tileUrl: string): string {
  * edge to edge, the way the native one does, and the places are listed
  * underneath it.
  */
-export function MapPage() {
+export function MapPage({ embedded = false }: { embedded?: boolean }) {
   const { t, i18n } = useTranslation()
   const { describe } = useToast()
   const { user } = useAuth()
@@ -132,7 +132,13 @@ export function MapPage() {
   return (
     <div>
       {/* --- the map, edge to edge --- */}
-      <div className="relative h-[100dvh] overflow-hidden">
+      <div
+        className={
+          embedded
+            ? 'relative h-80 overflow-hidden rounded-3xl sm:h-96'
+            : 'relative h-[100dvh] overflow-hidden'
+        }
+      >
         {status === 'loading' ? (
           <Skeleton className="h-full w-full rounded-none" />
         ) : status === 'error' ? (
@@ -159,18 +165,24 @@ export function MapPage() {
         )}
 
         {/* --- the round glass button in the corner --- */}
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          aria-label={t('map.back', 'Back')}
-          title={t('map.back', 'Back')}
-          className="absolute top-[calc(var(--header-h)+0.75rem)] left-3 z-10 flex size-10 items-center justify-center rounded-full bg-white/80 text-ink-strong shadow-float backdrop-blur-xl transition-transform active:scale-90"
-        >
-          <ChevronLeftIcon size={20} />
-        </button>
+        {embedded ? null : (
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label={t('map.back', 'Back')}
+            title={t('map.back', 'Back')}
+            className="absolute top-[calc(var(--header-h)+0.75rem)] left-3 z-10 flex size-10 items-center justify-center rounded-full bg-white/80 text-ink-strong shadow-float backdrop-blur-xl transition-transform active:scale-90"
+          >
+            <ChevronLeftIcon size={20} />
+          </button>
+        )}
 
         {/* --- the pill of controls --- */}
-        <div className="absolute top-[calc(var(--header-h)+0.75rem)] right-3 z-10 flex items-center gap-0.5 rounded-full bg-white/80 p-1 shadow-float backdrop-blur-xl">
+        <div
+          className={`absolute right-3 z-10 flex items-center gap-0.5 rounded-full bg-white/80 p-1 shadow-float backdrop-blur-xl ${
+            embedded ? 'top-3' : 'top-[calc(var(--header-h)+0.75rem)]'
+          }`}
+        >
           <button
             type="button"
             onClick={() => setFocusToken((token) => token + 1)}
@@ -192,15 +204,24 @@ export function MapPage() {
         </div>
 
         {selected ? (
-          <PlaceSheet place={selected} language={language} onClose={() => setSelected(null)} />
+          <PlaceSheet
+            place={selected}
+            language={language}
+            embedded={embedded}
+            onClose={() => setSelected(null)}
+          />
         ) : null}
       </div>
 
       {/* --- everything the map does not show --- */}
-      <div className="mx-auto w-full max-w-3xl px-4 pt-5 sm:px-6 lg:max-w-4xl">
+      <div className={embedded ? 'pt-4' : 'mx-auto w-full max-w-3xl px-4 pt-5 sm:px-6 lg:max-w-4xl'}>
         <header className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="title-large text-ink-strong">{t('map.title')}</h1>
+            {embedded ? (
+              <h2 className="title-section text-ink-muted">{t('map.title')}</h2>
+            ) : (
+              <h1 className="title-large text-ink-strong">{t('map.title')}</h1>
+            )}
             <p className="mt-1 text-sm text-ink-muted">
               {visiblePlaces.length === 1
                 ? t('map.onePlace')
@@ -347,17 +368,23 @@ export function MapPage() {
 function PlaceSheet({
   place,
   language,
+  embedded,
   onClose,
 }: {
   place: MapPlace
   language: string
+  embedded?: boolean
   onClose: () => void
 }) {
   const { t } = useTranslation()
   const title = place.name || place.title || t('map.unnamedPlace', 'Unnamed place')
 
   return (
-    <div className="absolute inset-x-0 bottom-[calc(var(--bottom-nav-h)+0.5rem)] z-20 px-3 animate-sheet-up">
+    <div
+      className={`absolute inset-x-0 z-20 px-3 animate-sheet-up ${
+        embedded ? 'bottom-3' : 'bottom-[calc(var(--bottom-nav-h)+0.5rem)]'
+      }`}
+    >
       <div className="rounded-3xl bg-paper-overlay/95 p-2.5 shadow-lift backdrop-blur-2xl">
         <div className="relative mb-2">
           <span className="mx-auto block h-1 w-10 rounded-full bg-line-strong" aria-hidden="true" />

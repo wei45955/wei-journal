@@ -12,9 +12,7 @@ import { TimelinePage } from './pages/TimelinePage'
 import { EditorPage } from './pages/EditorPage'
 import { EntryPage } from './pages/EntryPage'
 import { SearchPage } from './pages/SearchPage'
-import { CalendarPage } from './pages/CalendarPage'
 import { InsightsPage } from './pages/InsightsPage'
-import { MapPage } from './pages/MapPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { Spinner } from './components/ui'
 
@@ -40,7 +38,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function Shell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   // The map and the editor fill the screen; a compose button would only cover them.
-  const floating = pathname !== '/map' && pathname !== '/new' && !pathname.endsWith('/edit')
+  const floating = pathname !== '/new' && !pathname.endsWith('/edit')
   return (
     <AppShell>
       {children}
@@ -120,9 +118,7 @@ export default function App() {
             path="/calendar"
             element={
               <RequireAuth>
-                <Shell>
-                  <CalendarPage />
-                </Shell>
+                <Navigate to="/insights" replace />
               </RequireAuth>
             }
           />
@@ -140,9 +136,7 @@ export default function App() {
             path="/map"
             element={
               <RequireAuth>
-                <Shell>
-                  <MapPage />
-                </Shell>
+                <Navigate to="/insights" replace />
               </RequireAuth>
             }
           />
