@@ -1,0 +1,12 @@
+# The dependency tree is installed inside the image, never copied from the host.
+node_modules/
+
+# Build output of a local build.
+dist/
+.vite/
+
+# Local configuration and logs.
+.env
+.env.local
+npm-debug.log*
+yarn-error.log*

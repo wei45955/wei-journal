@@ -1,0 +1,45 @@
+# The local environment file. It holds the secrets of the installation, so it
+# is not committed; the example of it is .env.example. The settings that hold
+# no secret live in config.env, which is committed on purpose.
+.env
+.env.local
+.env.*.local
+!.env.example
+
+
+# Data directories: the SQLite database, uploaded originals and derived assets.
+data/
+backend/data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Go
+backend/server
+backend/bin/
+*.exe
+*.test
+coverage.out
+coverage.html
+
+# Build output
+build/
+dist/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

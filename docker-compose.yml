@@ -1,0 +1,100 @@
+name: wei-journal
+
+services:
+  backend:
+    build:
+      context: ./backend
+      args:
+        VERSION: ${WJ_VERSION:-1.0.0}
+    image: wei-journal-backend:${WJ_VERSION:-1.0.0}
+    restart: unless-stopped
+    env_file:
+      # The settings of the installation. Committed, no secret in it, so it
+      # travels with the code.
+      - path: config.env
+        required: true
+      # The secrets and the values of this machine. Local, not committed.
+      # A value here overrides the same value in config.env.
+      - path: .env
+        required: false
+    environment:
+      # These four are fixed by the image and are the same on every machine,
+      # so they are not in config.env. The paths have to point inside the
+      # container, and the address has to be the one the frontend proxies to.
+      WJ_ADDR: ":8080"
+      WJ_DATA_DIR: /data
+      WJ_UPLOAD_DIR: /data/uploads
+      WJ_DERIVED_DIR: /data/derived
+      # The version decides the Gin mode. "dev" turns the debug mode on, so
+      # the default here is a real version. It is also the build stamp, so it
+      # is taken from the same place as the image tag.
+      WJ_VERSION: ${WJ_VERSION:-1.0.0}
+    volumes:
+      - journal-data:/data
+    # The database is never published to the host. Only the web frontend is
+    # reachable, and it reaches the API through the internal compose network.
+    expose:
+      - "8080"
+    healthcheck:
+      # A GET, not a HEAD: the router only registers the GET method, so a
+      # spider request would get a 404 and the service would never be seen
+      # as healthy, which in turn keeps the frontend from starting.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "-O", "/dev/null", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ./frontend
+    image: wei-journal-frontend:${WJ_VERSION:-1.0.0}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${WJ_HTTP_PORT:-8088}:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional alternative to the embedded SQLite database. Enable it with
+  # `docker compose --profile postgres up` and set
+  # WJ_DATABASE_URL=postgres://journal:change-me@postgres:5432/journal?sslmode=disable
+  # and POSTGRES_PASSWORD in the .env file. There is no default password, so
+  # the database refuses to start until one is set. The database is never
+  # published to the host either.
+  postgres:
+    image: postgres:17-alpine
+    profiles: ["postgres"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-journal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-journal}
+    volumes:
+      - journal-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-journal} -d ${POSTGRES_DB:-journal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  # The SQLite database, the uploaded originals and the derived assets.
+  journal-data:
+  journal-postgres:

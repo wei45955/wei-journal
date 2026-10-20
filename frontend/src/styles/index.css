@@ -1,0 +1,281 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@theme {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-sunken: var(--paper-sunken);
+  --color-paper-overlay: var(--paper-overlay);
+  --color-ink: var(--ink);
+  --color-ink-strong: var(--ink-strong);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-wrap: break-word;
+  }
+
+  /* Never let a long word or a wide table push the page sideways. */
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--ink-strong);
+  }
+
+  /* Scrollbars that do not shout. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  .paper-grain {
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgb(0 0 0 / 0.014) 1px,
+      transparent 0
+    );
+    background-size: 4px 4px;
+  }
+
+  .hairline {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .focus-ring {
+    transition: box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  .focus-ring:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.animate-fade-rise {
+  animation: fade-rise var(--duration-base) var(--ease-out) both;
+}
+
+.animate-fade-in {
+  animation: fade-in var(--duration-base) var(--ease-out) both;
+}
+
+.animate-sheet-up {
+  animation: sheet-up var(--duration-base) var(--ease-out) both;
+}
+
+/* The rich text editor renders a Tiptap JSON document. */
+.rte {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  line-height: 1.75;
+  color: var(--ink-strong);
+  outline: none;
+  min-height: 8rem;
+}
+
+.rte > * + * {
+  margin-top: 0.85em;
+}
+
+.rte h1 {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 1.2em;
+}
+
+.rte h2 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.1em;
+}
+
+.rte h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin-top: 1em;
+}
+
+.rte ul,
+.rte ol {
+  padding-left: 1.4em;
+}
+
+.rte ul {
+  list-style: disc;
+}
+
+.rte ol {
+  list-style: decimal;
+}
+
+.rte li + li {
+  margin-top: 0.3em;
+}
+
+.rte blockquote {
+  border-left: 2px solid var(--accent-soft);
+  padding-left: 1em;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.rte code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--paper-sunken);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+}
+
+.rte pre {
+  font-family: var(--font-mono);
+  background: var(--paper-sunken);
+  padding: 0.9em 1.1em;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  font-size: var(--text-sm);
+}
+
+.rte pre code {
+  background: none;
+  padding: 0;
+}
+
+.rte hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 1.6em 0;
+}
+
+.rte a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.rte p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--ink-faint);
+}

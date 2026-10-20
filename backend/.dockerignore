@@ -1,0 +1,18 @@
+# Only the sources the build needs.
+.git
+.gitignore
+Dockerfile
+.dockerignore
+
+# Local development artefacts.
+data/
+*.db
+*.db-wal
+*.db-shm
+server
+coverage.out
+coverage.html
+
+# Nothing in this directory is a Node project.
+package-lock.json
+node_modules/
