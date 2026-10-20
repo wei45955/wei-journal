@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { NavLink, useLocation, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { useAuth } from '../../state/auth'
 import { useFolders } from '../../hooks/useFolders'
 import {
   CalendarIcon,
+  ChartIcon,
   FolderIcon,
   MapIcon,
   MenuIcon,
@@ -19,6 +20,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 const primaryLinks = [
   { to: '/', labelKey: 'nav.timeline', icon: TimelineIcon, end: true },
   { to: '/search', labelKey: 'nav.search', icon: SearchIcon },
+  { to: '/insights', labelKey: 'nav.insights', icon: ChartIcon },
   { to: '/calendar', labelKey: 'nav.calendar', icon: CalendarIcon },
   { to: '/map', labelKey: 'nav.map', icon: MapIcon },
 ]
@@ -26,55 +28,85 @@ const primaryLinks = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
+  // The map draws itself over the whole window, so it gets no frame.
+  const isMap = location.pathname.startsWith('/map')
 
   useEffect(() => {
     setMenuOpen(false)
   }, [location.pathname])
 
+  // The compact title in the bar only appears once the large title in the
+  // page has scrolled away, the way the native app does it.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 28)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
     <div className="min-h-dvh bg-paper text-ink">
       {/* --- desktop sidebar --- */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-paper-raised/60 lg:flex">
-        <div className="flex h-16 items-center px-6">
-          <span className="font-serif text-lg tracking-tight text-ink-strong">{t('app.name')}</span>
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col border-r border-line bg-paper-raised/70 backdrop-blur-xl lg:flex">
+        <div className="flex h-20 items-center px-7">
+          <span className="font-display text-[1.375rem] font-bold tracking-tight text-ink-strong">
+            {t('app.name')}
+          </span>
         </div>
         <SidebarNav />
       </aside>
 
       {/* --- mobile top bar --- */}
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line bg-paper/85 px-3 backdrop-blur-md safe-top lg:hidden">
-        <button
-          type="button"
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-label={t('nav.openMenu')}
-          aria-expanded={menuOpen}
-          className="rounded-md p-2 text-ink-muted transition-colors hover:bg-paper-sunken hover:text-ink"
-        >
-          <MenuIcon size={22} />
-        </button>
-        <span className="flex-1 truncate font-serif text-base text-ink-strong">{t('app.name')}</span>
+      <header className="glass-bar safe-top fixed inset-x-0 top-0 z-40 border-b border-line/50 lg:hidden">
+        <div className="flex h-14 items-center gap-2 px-3">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={t('nav.openMenu')}
+            aria-expanded={menuOpen}
+            className="flex size-9 items-center justify-center rounded-full text-ink transition-colors active:bg-paper-sunken"
+          >
+            <MenuIcon size={21} />
+          </button>
+          <span
+            className={cn(
+              'flex-1 truncate text-[1.0625rem] font-semibold tracking-tight text-ink-strong transition-opacity duration-200',
+              scrolled ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            <CompactTitle />
+          </span>
+        </div>
       </header>
 
       {menuOpen && !isDesktop ? (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="absolute inset-0 bg-ink/30 animate-fade-in"
+            className="absolute inset-0 bg-ink/25 animate-fade-in"
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
-          <div className="relative flex h-full w-72 max-w-[85vw] flex-col border-r border-line bg-paper animate-fade-in">
-            <div className="flex h-14 items-center justify-between px-5">
-              <span className="font-serif text-base text-ink-strong">{t('app.name')}</span>
+          <div className="glass-bar relative flex h-full w-72 max-w-[85vw] flex-col border-r border-line animate-fade-in">
+            <div className="flex h-14 items-center justify-between px-5 safe-top">
+              <span className="font-display text-[1.0625rem] font-bold text-ink-strong">
+                {t('app.name')}
+              </span>
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}
                 aria-label={t('nav.closeMenu')}
-                className="rounded-md p-2 text-ink-muted hover:bg-paper-sunken"
+                className="flex size-8 items-center justify-center rounded-full text-ink-muted active:bg-paper-sunken"
               >
                 <svg viewBox="0 0 20 20" className="size-5" fill="none" aria-hidden="true">
-                  <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path
+                    d="M5 5l10 10M15 5L5 15"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
             </div>
@@ -84,23 +116,58 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ) : null}
 
       {/* --- content --- */}
-      <main className="pb-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] lg:ml-64 lg:pb-0">
-        <div className="mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6 sm:pt-8 lg:max-w-4xl">{children}</div>
+      <main className="pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:ml-72 lg:pb-0">
+        {isMap ? (
+          /* The map runs under the bars, the way the native one does. */
+          <div className="w-full">{children}</div>
+        ) : (
+          <div className="mx-auto w-full max-w-3xl px-4 pt-[calc(var(--header-h)+1rem)] sm:px-6 lg:max-w-4xl lg:pt-10">
+            {children}
+          </div>
+        )}
       </main>
 
       {/* --- mobile bottom navigation --- */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/90 backdrop-blur-md safe-bottom lg:hidden">
-        <div className="mx-auto flex max-w-md items-stretch justify-around px-2">
-          {primaryLinks.slice(0, 2).map((link) => (
-            <TabLink key={link.to} {...link} />
-          ))}
-          <div className="w-16" />
-          {primaryLinks.slice(2).map((link) => (
+      <nav className="glass-bar safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line/50 lg:hidden">
+        <div className="mx-auto flex max-w-md items-stretch justify-around px-1 pt-1.5 pb-1">
+          {primaryLinks.map((link) => (
             <TabLink key={link.to} {...link} />
           ))}
         </div>
       </nav>
     </div>
+  )
+}
+
+/** The name of the section the reader is in, shown in the collapsed bar. */
+function CompactTitle() {
+  const { t } = useTranslation()
+  const { pathname } = useLocation()
+  const { folderId } = useParams()
+  const { folders } = useFolders()
+
+  return (
+    <>
+      {folderId ? (
+        folders.find((folder) => folder.id === Number(folderId))?.name ?? t('nav.timeline')
+      ) : pathname.startsWith('/search') ? (
+        t('nav.search')
+      ) : pathname.startsWith('/insights') ? (
+        t('nav.insights')
+      ) : pathname.startsWith('/calendar') ? (
+        t('nav.calendar')
+      ) : pathname.startsWith('/map') ? (
+        t('nav.map')
+      ) : pathname.startsWith('/settings') ? (
+        t('nav.settings')
+      ) : pathname.startsWith('/new') ? (
+        t('entries.newEntry')
+      ) : pathname.startsWith('/entries') ? (
+        t('nav.timeline')
+      ) : (
+        t('nav.timeline')
+      )}
+    </>
   )
 }
 
@@ -122,13 +189,24 @@ function TabLink({
       end={end}
       className={({ isActive }) =>
         cn(
-          'flex flex-1 flex-col items-center gap-0.5 py-2 text-[0.6875rem] font-medium transition-colors',
-          isActive ? 'text-accent' : 'text-ink-faint hover:text-ink-muted',
+          'flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[0.625rem] font-semibold transition-colors',
+          isActive ? 'text-accent' : 'text-ink-faint',
         )
       }
     >
-      <Icon size={21} />
-      <span className="truncate">{t(labelKey)}</span>
+      {({ isActive }) => (
+        <>
+          <span
+            className={cn(
+              'flex h-7 w-12 items-center justify-center rounded-full transition-colors',
+              isActive ? 'bg-accent-soft' : 'bg-transparent',
+            )}
+          >
+            <Icon size={21} />
+          </span>
+          <span className="truncate">{t(labelKey)}</span>
+        </>
+      )}
     </NavLink>
   )
 }
@@ -138,50 +216,54 @@ function SidebarNav() {
   const { user } = useAuth()
   const { folders } = useFolders()
 
+  const items = useMemo(
+    () =>
+      primaryLinks.map((link) => (
+        <li key={link.to}>
+          <NavLink
+            to={link.to}
+            end={link.end}
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[0.9375rem] font-medium transition-colors',
+                isActive
+                  ? 'bg-accent-soft text-accent-ink'
+                  : 'text-ink-muted hover:bg-paper-sunken hover:text-ink',
+              )
+            }
+          >
+            <link.icon size={20} />
+            {t(link.labelKey)}
+          </NavLink>
+        </li>
+      )),
+    [t],
+  )
+
   return (
     <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-6">
-      <ul className="flex flex-col gap-0.5">
-        {primaryLinks.map((link) => (
-          <li key={link.to}>
-            <NavLink
-              to={link.to}
-              end={link.end}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-[0.9375rem] transition-colors',
-                  isActive
-                    ? 'bg-accent-soft text-accent-ink font-medium'
-                    : 'text-ink-muted hover:bg-paper-sunken hover:text-ink',
-                )
-              }
-            >
-              <link.icon size={19} />
-              {t(link.labelKey)}
-            </NavLink>
-          </li>
-        ))}
-      </ul>
+      <ul className="flex flex-col gap-1">{items}</ul>
 
       {folders.length > 0 ? (
         <div>
-          <h2 className="px-3 pb-1.5 text-xs font-semibold tracking-wide text-ink-faint uppercase">
+          <h2 className="px-3.5 pb-1.5 text-[0.6875rem] font-semibold tracking-wide text-ink-faint uppercase">
             {t('nav.folders')}
           </h2>
-          <ul className="flex flex-col gap-0.5">
+          <ul className="flex flex-col gap-1">
             {folders.map((folder) => (
               <li key={folder.id}>
                 <NavLink
                   to={`/folders/${folder.id}`}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-3 rounded-md px-3 py-2 text-[0.9375rem] transition-colors',
+                      'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[0.9375rem] transition-colors',
                       isActive
                         ? 'bg-accent-soft text-accent-ink font-medium'
                         : 'text-ink-muted hover:bg-paper-sunken hover:text-ink',
                     )
                   }
                 >
-                  <FolderIcon size={18} />
+                  <FolderIcon size={19} />
                   <span className="min-w-0 flex-1 truncate">{folder.name}</span>
                   <span className="text-xs text-ink-faint tabular-nums">{folder.entryCount}</span>
                 </NavLink>
@@ -196,18 +278,18 @@ function SidebarNav() {
           to="/settings"
           className={({ isActive }) =>
             cn(
-              'flex items-center gap-3 rounded-md px-3 py-2 text-[0.9375rem] transition-colors',
+              'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[0.9375rem] transition-colors',
               isActive
                 ? 'bg-accent-soft text-accent-ink font-medium'
                 : 'text-ink-muted hover:bg-paper-sunken hover:text-ink',
             )
           }
         >
-          <SettingsIcon size={19} />
+          <SettingsIcon size={20} />
           {t('nav.settings')}
         </NavLink>
         {user ? (
-          <p className="mt-2 truncate px-3 text-xs text-ink-faint">
+          <p className="mt-2 truncate px-3.5 text-xs text-ink-faint">
             {user.username}
             {user.role === 'admin' ? ` · ${t('settings.admin')}` : ''}
           </p>
@@ -225,12 +307,13 @@ export function NewEntryButton() {
       to="/new"
       aria-label={t('nav.newEntry')}
       className={cn(
-        'fixed right-5 z-30 flex size-14 items-center justify-center rounded-full bg-accent text-accent-contrast',
-        'shadow-lg transition-transform duration-150 hover:bg-accent-ink active:scale-95',
-        'bottom-[calc(env(safe-area-inset-bottom,0px)+5.25rem)] lg:bottom-8 lg:right-8',
+        'fixed right-4 z-30 flex size-14 items-center justify-center rounded-full text-white',
+        'shadow-float transition-transform duration-150 active:scale-95',
+        'bottom-[calc(env(safe-area-inset-bottom,0px)+5.75rem)] lg:bottom-8 lg:right-8',
       )}
+      style={{ background: 'linear-gradient(160deg, #7b7ae4 0%, #4f4cc4 100%)' }}
     >
-      <PlusIcon size={26} />
+      <PlusIcon size={26} strokeWidth={2} />
     </NavLink>
   )
 }

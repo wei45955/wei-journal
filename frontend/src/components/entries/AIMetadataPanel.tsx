@@ -42,10 +42,12 @@ export function AIMetadataPanel({ metadata, onApplyTags, entryId }: AIMetadataPa
   }
 
   return (
-    <section className="rounded-lg border border-line bg-paper-raised/70 p-4">
+    <section className="card p-4 sm:p-5">
       <header className="mb-2 flex items-center gap-2">
         <SparkIcon size={16} className="text-accent" />
-        <h3 className="text-sm font-semibold text-ink">{t('entries.aiSummary')}</h3>
+        <h3 className="text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
+          {t('entries.aiSummary')}
+        </h3>
         {entryId ? (
           <Button
             variant="ghost"

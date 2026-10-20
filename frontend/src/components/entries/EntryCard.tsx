@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { cn } from '../../lib/cn'
 import { formatTime } from '../../lib/format'
 import type { Entry } from '../../lib/types'
-import { Badge } from '../ui'
 import { ImageIcon, LocationIcon, PinIcon, VideoIcon } from '../icons'
 
 interface EntryCardProps {
@@ -25,29 +24,26 @@ export function EntryCard({ entry, language, selectable, selected, onToggleSelec
   return (
     <article
       className={cn(
-        'group relative rounded-lg border bg-paper-raised p-4 transition-shadow duration-150',
-        'hover:shadow-[0_1px_12px_rgb(35_32_27/0.06)]',
-        selected ? 'border-accent ring-1 ring-accent/30' : 'border-line',
+        'group relative rounded-2xl bg-paper-raised p-4 transition-shadow duration-200',
+        'shadow-[0_1px_2px_rgb(0_0_0/0.04)] hover:shadow-[0_2px_10px_rgb(0_0_0/0.07)]',
+        selected && 'ring-2 ring-accent',
       )}
     >
       {selectable ? (
-        <label className="absolute top-3 left-3 z-10 flex size-6 cursor-pointer items-center justify-center">
+        <label className="absolute top-3.5 left-3.5 z-10 flex size-6 cursor-pointer items-center justify-center">
           <input
             type="checkbox"
             checked={Boolean(selected)}
             onChange={() => onToggleSelect?.(entry.id)}
-            className="size-4 accent-[var(--accent)]"
+            className="size-[1.15rem] accent-[var(--accent)]"
             aria-label={t('batch.select')}
           />
         </label>
       ) : null}
 
-      <div className={cn('flex items-baseline gap-2', selectable && 'pl-7')}>
-        <time
-          dateTime={entry.eventTime}
-          className="font-mono text-xs tabular-nums text-ink-faint"
-        >
-          {formatTime(entry.eventTime, language)}
+      <div className={cn('flex items-center gap-2', selectable && 'pl-8')}>
+        <time dateTime={entry.eventTime} className="text-xs font-medium text-ink-faint tabular-nums">
+          {formatTime(entry.eventTime, language, entry.timezone)}
         </time>
         {entry.isPinned ? (
           <span title={t('entries.pinned')} className="text-accent">
@@ -59,20 +55,19 @@ export function EntryCard({ entry, language, selectable, selected, onToggleSelec
         ) : null}
       </div>
 
-      <Link
-        to={`/entries/${entry.id}`}
-        className={cn('mt-1 block', selectable && 'pl-7')}
-      >
-        <h3 className="font-serif text-lg leading-snug text-ink-strong transition-colors group-hover:text-accent-ink">
+      <Link to={`/entries/${entry.id}`} className={cn('mt-1 block', selectable && 'pl-8')}>
+        <h3 className="text-[1.0625rem] leading-snug font-semibold text-ink-strong transition-colors group-hover:text-accent-ink">
           {title}
         </h3>
         {excerpt ? (
-          <p className="mt-1.5 line-clamp-3 text-[0.9375rem] text-ink-muted">{excerpt}</p>
+          <p className="mt-1.5 line-clamp-3 text-[0.9375rem] leading-relaxed text-ink-muted">
+            {excerpt}
+          </p>
         ) : null}
       </Link>
 
       {images.length > 0 || videos.length > 0 ? (
-        <div className={cn('mt-3 flex gap-1.5 overflow-hidden', selectable && 'pl-7')}>
+        <div className={cn('mt-3 flex gap-1.5 overflow-hidden', selectable && 'pl-8')}>
           {images.slice(0, 4).map((media) => (
             <img
               key={media.id}
@@ -80,16 +75,16 @@ export function EntryCard({ entry, language, selectable, selected, onToggleSelec
               alt={media.originalName}
               loading="lazy"
               decoding="async"
-              className="size-16 shrink-0 rounded-md border border-line object-cover"
+              className="size-[4.5rem] shrink-0 rounded-xl bg-paper-sunken object-cover"
             />
           ))}
           {videos.length > 0 ? (
-            <div className="flex size-16 shrink-0 items-center justify-center rounded-md border border-line bg-paper-sunken text-ink-faint">
+            <div className="flex size-[4.5rem] shrink-0 items-center justify-center rounded-xl bg-paper-sunken text-ink-faint">
               <VideoIcon size={20} />
             </div>
           ) : null}
           {images.length + videos.length > 4 ? (
-            <div className="flex size-16 shrink-0 items-center justify-center rounded-md border border-line bg-paper-sunken text-xs text-ink-muted">
+            <div className="flex size-[4.5rem] shrink-0 items-center justify-center rounded-xl bg-paper-sunken text-xs font-medium text-ink-muted">
               +{images.length + videos.length - 4}
             </div>
           ) : null}
@@ -97,11 +92,14 @@ export function EntryCard({ entry, language, selectable, selected, onToggleSelec
       ) : null}
 
       {entry.tags.length > 0 || entry.location ? (
-        <div className={cn('mt-3 flex flex-wrap items-center gap-1.5', selectable && 'pl-7')}>
+        <div className={cn('mt-3 flex flex-wrap items-center gap-1.5', selectable && 'pl-8')}>
           {entry.tags.map((tag) => (
-            <Badge key={tag.id} tone="accent">
+            <span
+              key={tag.id}
+              className="inline-flex items-center rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent-ink"
+            >
               {tag.name}
-            </Badge>
+            </span>
           ))}
           {entry.location ? (
             <span className="inline-flex items-center gap-1 text-xs text-ink-faint">

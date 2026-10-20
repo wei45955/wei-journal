@@ -223,6 +223,10 @@ export interface MapPlace {
   title: string
   date: string
   mediaKind: string
+  /** The photo taken at this place, when there is one. */
+  thumbUrl?: string
+  /** How many entries were written at this place. */
+  entryCount: number
 }
 
 export interface GeocodeResult {

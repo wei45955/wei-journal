@@ -119,13 +119,13 @@ export function TimelinePage() {
 
   return (
     <div className="pb-8">
-      <header className="mb-4 flex items-end justify-between gap-3">
+      <header className="mb-3 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-serif text-2xl text-ink-strong">
+          <h1 className="title-large text-ink-strong">
             {currentFolder ? currentFolder.name : t('nav.timeline')}
           </h1>
           {currentFolder ? (
-            <p className="mt-0.5 text-sm text-ink-muted">
+            <p className="mt-1 text-sm text-ink-muted">
               {currentFolder.entryCount === 1
                 ? t('folders.oneEntry')
                 : t('folders.entries', { count: currentFolder.entryCount })}
@@ -141,14 +141,12 @@ export function TimelinePage() {
         </Button>
       </header>
 
-      <div className="mb-4">
-        <FilterBar filters={filters} onChange={setFilters} showFolder={routeFolderId === undefined} />
-      </div>
+      <FilterBar filters={filters} onChange={setFilters} showFolder={routeFolderId === undefined} />
 
       {loading ? (
         <div className="flex flex-col gap-3">
           {[0, 1, 2].map((index) => (
-            <Skeleton key={index} className="h-32 w-full" />
+            <Skeleton key={index} className="h-32 w-full rounded-2xl" />
           ))}
         </div>
       ) : error ? (
@@ -160,12 +158,11 @@ export function TimelinePage() {
         />
       ) : (
         <>
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-7">
             {groups.map(([date, group]) => (
               <section key={date} aria-label={dayHeading(date, language)}>
-                <h2 className="mb-2 flex items-center gap-3 text-sm font-semibold tracking-wide text-ink-faint uppercase">
+                <h2 className="mb-2.5 px-1 text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
                   {dayHeading(date, language)}
-                  <span className="h-px flex-1 bg-line" aria-hidden="true" />
                 </h2>
                 <div className="flex flex-col gap-2.5">
                   {group.map((entry) => (

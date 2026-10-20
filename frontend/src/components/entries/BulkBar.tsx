@@ -51,8 +51,8 @@ export function BulkBar({ selected, onClear, onDone }: BulkBarProps) {
 
   return (
     <>
-      <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] z-20 mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-paper-overlay/95 p-2 shadow-lg backdrop-blur-md lg:bottom-4">
-        <span className="px-1 text-sm font-medium text-ink">
+      <div className="glass-bar sticky bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] z-20 mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-line/60 bg-paper-overlay/90 p-2 shadow-float lg:bottom-4">
+        <span className="px-1 text-sm font-semibold text-ink">
           {selected.length === 1 ? t('batch.oneSelected') : t('batch.selected', { count: selected.length })}
         </span>
 
@@ -67,7 +67,7 @@ export function BulkBar({ selected, onClear, onDone }: BulkBarProps) {
                 event.target.value = ''
                 void run('moveToFolder', { folderId })
               }}
-              className="rounded-md border border-line bg-paper-raised px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
+              className="rounded-xl border border-line bg-paper-raised px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
               aria-label={t('batch.moveToFolder')}
             >
               <option value="">{t('batch.moveToFolder')}…</option>
@@ -89,7 +89,7 @@ export function BulkBar({ selected, onClear, onDone }: BulkBarProps) {
                 event.target.value = ''
                 void run('addTags', { tagIds: [tagId] })
               }}
-              className="rounded-md border border-line bg-paper-raised px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
+              className="rounded-xl border border-line bg-paper-raised px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
               aria-label={t('batch.addTags')}
             >
               <option value="">{t('batch.addTags')}…</option>

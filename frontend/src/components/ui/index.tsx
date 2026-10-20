@@ -18,15 +18,16 @@ const buttonVariants: Record<ButtonVariant, string> = {
   primary:
     'bg-accent text-accent-contrast hover:bg-accent-ink active:bg-accent-ink border border-transparent shadow-sm',
   secondary:
-    'bg-paper-raised text-ink border border-line hover:border-line-strong hover:bg-paper-sunken',
-  ghost: 'bg-transparent text-ink-muted hover:text-ink hover:bg-paper-sunken border border-transparent',
-  danger: 'bg-transparent text-danger border border-danger/30 hover:bg-danger-soft',
+    'bg-paper-sunken text-ink border border-transparent hover:bg-line/60 active:bg-line',
+  ghost:
+    'bg-transparent text-accent hover:bg-accent-soft border border-transparent font-medium',
+  danger: 'bg-danger-soft text-danger border border-transparent hover:bg-danger/15',
 }
 
 const buttonSizes: Record<ButtonSize, string> = {
-  sm: 'text-sm px-3 py-1.5 gap-1.5',
-  md: 'text-[0.9375rem] px-4 py-2 gap-2',
-  lg: 'text-base px-5 py-2.5 gap-2',
+  sm: 'text-sm px-3.5 py-1.5 gap-1.5',
+  md: 'text-[0.9375rem] px-4.5 py-2.5 gap-2',
+  lg: 'text-base px-6 py-3 gap-2',
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -39,8 +40,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type="button"
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center rounded-md font-medium transition-colors duration-150',
-        'disabled:opacity-50 disabled:cursor-not-allowed select-none',
+        'inline-flex items-center justify-center rounded-full font-semibold transition-all duration-150',
+        'disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.97]',
         buttonVariants[variant],
         buttonSizes[size],
         className,
@@ -83,7 +84,7 @@ interface FieldProps {
 export function Field({ label, htmlFor, error, hint, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium text-ink">
+      <label htmlFor={htmlFor} className="text-sm font-semibold text-ink">
         {label}
       </label>
       {children}
@@ -99,7 +100,7 @@ export function Field({ label, htmlFor, error, hint, children }: FieldProps) {
 }
 
 const controlClasses =
-  'w-full rounded-md border bg-paper-raised px-3 py-2 text-[0.9375rem] text-ink placeholder:text-ink-faint ' +
+  'w-full rounded-xl border bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink placeholder:text-ink-faint ' +
   'transition-colors duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 ' +
   'disabled:opacity-60 disabled:cursor-not-allowed'
 
@@ -161,14 +162,14 @@ export function Toggle({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-50',
+          'relative mt-0.5 h-[1.75rem] w-[3.125rem] shrink-0 rounded-full transition-colors duration-200 disabled:opacity-50',
           checked ? 'bg-accent' : 'bg-line-strong',
         )}
       >
         <span
           className={cn(
-            'absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform duration-200',
-            checked ? 'translate-x-[1.375rem]' : 'translate-x-0.5',
+            'absolute top-0.5 size-[1.5rem] rounded-full bg-white shadow-sm transition-transform duration-200',
+            checked ? 'translate-x-[1.625rem]' : 'translate-x-0.5',
           )}
         />
       </button>
@@ -193,7 +194,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap',
+        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
         tones[tone],
         className,
       )}
@@ -215,10 +216,23 @@ export function EmptyState({
   illustration?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-      {illustration}
-      <h2 className="font-serif text-xl text-ink-strong">{title}</h2>
-      {body ? <p className="max-w-sm text-sm text-ink-muted">{body}</p> : null}
+    <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
+      {illustration ?? (
+        <span className="mb-1 flex size-16 items-center justify-center rounded-full bg-accent-soft text-accent">
+          <svg viewBox="0 0 24 24" className="size-8" fill="none" aria-hidden="true">
+            <path
+              d="M5 4.5h9.5L19 9v10.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <path d="M14 4.5V9h5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M7.5 13.5h8M7.5 16.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </span>
+      )}
+      <h2 className="text-[1.25rem] font-bold text-ink-strong">{title}</h2>
+      {body ? <p className="max-w-sm text-[0.9375rem] text-ink-muted">{body}</p> : null}
       {action}
     </div>
   )
@@ -226,13 +240,15 @@ export function EmptyState({
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-      <svg viewBox="0 0 24 24" className="size-8 text-danger" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M12 7.5v5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <circle cx="12" cy="16.4" r="0.9" fill="currentColor" />
-      </svg>
-      <p className="max-w-sm text-sm text-ink-muted">{message}</p>
+    <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
+      <span className="flex size-14 items-center justify-center rounded-full bg-danger-soft text-danger">
+        <svg viewBox="0 0 24 24" className="size-7" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M12 7.5v5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="12" cy="16.4" r="0.9" fill="currentColor" />
+        </svg>
+      </span>
+      <p className="max-w-sm text-[0.9375rem] text-ink-muted">{message}</p>
       {onRetry ? (
         <Button onClick={onRetry} variant="secondary" size="sm">
           Retry
@@ -243,5 +259,5 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-paper-sunken', className)} />
+  return <div className={cn('animate-pulse rounded-2xl bg-paper-sunken', className)} />
 }

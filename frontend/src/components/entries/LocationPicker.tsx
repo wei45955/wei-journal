@@ -84,13 +84,13 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
         />
 
         {unavailable ? (
-          <p className="rounded-md bg-paper-sunken px-3 py-2 text-sm text-ink-muted">
+          <p className="rounded-xl bg-paper-sunken px-3.5 py-2.5 text-sm text-ink-muted">
             {t('entries.locationUnavailable')}
           </p>
         ) : null}
 
         {error ? (
-          <p className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">
+          <p className="rounded-xl bg-danger-soft px-3.5 py-2.5 text-sm text-danger" role="alert">
             {error}
           </p>
         ) : null}
@@ -115,7 +115,7 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
                   })
                   onClose()
                 }}
-                className="flex w-full items-start gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-paper-sunken"
+                className="flex w-full items-start gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-paper-sunken"
               >
                 <LocationIcon size={16} className="mt-0.5 shrink-0 text-ink-faint" />
                 <span className="min-w-0">

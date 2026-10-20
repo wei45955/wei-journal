@@ -175,7 +175,7 @@ export function SettingsPage() {
   if (!user || !settings) {
     return (
       <div className="pb-8">
-        <h1 className="font-serif text-2xl text-ink-strong">{t('settings.title')}</h1>
+        <h1 className="title-large text-ink-strong">{t('settings.title')}</h1>
         <p className="mt-2 text-sm text-ink-muted">{t('common.loading')}</p>
       </div>
     )
@@ -184,7 +184,7 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-4 pb-8">
       <header>
-        <h1 className="font-serif text-2xl text-ink-strong">{t('settings.title')}</h1>
+        <h1 className="title-large text-ink-strong">{t('settings.title')}</h1>
       </header>
 
       <SettingsSection title={t('settings.sections.account')}>
@@ -239,10 +239,10 @@ export function SettingsPage() {
                 onClick={() => void saveSettings({ language: code }, 'language')}
                 disabled={saving === 'language'}
                 aria-pressed={active}
-                className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm transition-colors disabled:opacity-60 ${
+                className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
                   active
                     ? 'border-accent bg-accent text-accent-contrast'
-                    : 'border-line bg-paper text-ink-muted hover:border-line-strong hover:text-ink-strong'
+                    : 'border-line bg-paper-raised text-ink-muted hover:border-line-strong hover:text-ink-strong'
                 }`}
               >
                 {code === 'en' ? t('settings.english') : t('settings.chinese')}
@@ -268,7 +268,7 @@ export function SettingsPage() {
                   className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm transition-colors disabled:opacity-60 ${
                     active
                       ? 'border-accent bg-accent text-accent-contrast'
-                      : 'border-line bg-paper text-ink-muted hover:border-line-strong hover:text-ink-strong'
+                      : 'border-line bg-paper-raised text-ink-muted hover:border-line-strong hover:text-ink-strong'
                   }`}
                 >
                   {t(theme.key, theme.fallback)}
@@ -281,7 +281,7 @@ export function SettingsPage() {
         <Field label={t('settings.dateFormat')} htmlFor="settings-date-format">
           <select
             id="settings-date-format"
-            className="w-full cursor-pointer rounded-md border border-line bg-paper-raised px-3 py-2 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             value={settings.dateFormat || 'PPP'}
             onChange={(event) => void saveSettings({ dateFormat: event.target.value }, 'dateFormat')}
             disabled={saving === 'dateFormat'}

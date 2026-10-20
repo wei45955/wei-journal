@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ApiError, api } from '../lib/api'
+import { cn } from '../lib/cn'
 import { formatTime } from '../lib/format'
 import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
 import { useFolders } from '../hooks/useFolders'
-import { Button, Field, Skeleton, TextInput } from '../components/ui'
+import { Button, Field, Skeleton } from '../components/ui'
 import { ConfirmDialog } from '../components/ui/Dialog'
 import { RichTextEditor } from '../components/editor/RichTextEditor'
 import { DrawingCanvas } from '../components/editor/DrawingCanvas'
@@ -23,6 +24,13 @@ const AUTOSAVE_DELAY = 1200
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict'
 
 const COLORS = ['#b8542f', '#5c7a63', '#3f6b47', '#8a6412', '#2f5d8a', '#7a4b86', '#23201b']
+
+/** Whether a node of the document holds nothing worth storing. */
+function isBlankNode(node: DocNode): boolean {
+  if (node.type && node.type !== 'paragraph' && node.type !== 'text') return false
+  if ((node.text ?? '').trim()) return false
+  return (node.content ?? []).every(isBlankNode)
+}
 
 interface EditorState {
   title: string
@@ -132,13 +140,14 @@ export function EditorPage() {
       pending.current = true
       return
     }
-    if (!dirty.current && revision.current !== undefined) return
+    if (!dirty.current) return
 
     const snapshot = stateRef.current
     const isEmpty =
       !snapshot.title.trim() &&
       !snapshot.mediaIds.length &&
-      (snapshot.document.content ?? []).length === 0
+      !snapshot.drawing.length &&
+      !(snapshot.document.content ?? []).some((node) => !isBlankNode(node))
 
     // Nothing worth storing yet: an untouched new entry stays unsaved.
     if (revision.current === undefined && isEmpty) return
@@ -276,13 +285,13 @@ export function EditorPage() {
 
   return (
     <div className="pb-24">
-      <header className="mb-4 flex items-center gap-2">
+      <header className="mb-5 flex items-center gap-2">
         <button
           type="button"
           onClick={leave}
-          className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink"
+          className="inline-flex items-center gap-0.5 rounded-full py-1 pr-3 pl-1 text-[0.9375rem] text-ink-muted transition-colors active:bg-paper-sunken hover:text-ink"
         >
-          <ChevronLeftIcon size={16} />
+          <ChevronLeftIcon size={18} />
           {t('nav.back')}
         </button>
         <div className="ml-auto">
@@ -292,7 +301,7 @@ export function EditorPage() {
 
       {conflict ? (
         <div
-          className="mb-4 flex flex-wrap items-center gap-3 rounded-md bg-danger-soft px-3 py-2.5 text-sm text-danger"
+          className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-danger-soft px-3.5 py-2.5 text-sm text-danger"
           role="alert"
         >
           <span className="flex-1">{t('errors.conflict')}</span>
@@ -309,13 +318,13 @@ export function EditorPage() {
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-4">
-        <TextInput
+      <div className="flex flex-col gap-5">
+        <input
           value={state.title}
           placeholder={t('entries.placeholder')}
           aria-label={t('entries.title')}
           onChange={(event) => update({ title: event.target.value })}
-          className="border-0 bg-transparent px-0 font-serif text-2xl focus:ring-0"
+          className="w-full border-0 bg-transparent px-0 font-serif text-[1.75rem] leading-tight text-ink-strong placeholder:text-ink-faint/70 focus:ring-0 focus:outline-none"
         />
 
         <RichTextEditor
@@ -327,7 +336,9 @@ export function EditorPage() {
 
         <section>
           <div className="mb-2 flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-ink">{t('entries.attachments')}</h2>
+            <h2 className="text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
+              {t('entries.attachments')}
+            </h2>
             <div className="ml-auto">
               <MediaUploader
                 onUploaded={(uploaded) => {
@@ -344,10 +355,12 @@ export function EditorPage() {
           )}
         </section>
 
-        <section className="rounded-lg border border-line bg-paper-raised/60 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-ink">{t('editor.details')}</h2>
+        <section className="card p-4 sm:p-5">
+          <h2 className="mb-4 text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
+            {t('editor.details')}
+          </h2>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             <Field label={t('entries.eventTime')} htmlFor="event-time" hint={t('entries.eventTimeHint')}>
               <div className="flex items-center gap-2">
                 <ClockIcon size={16} className="shrink-0 text-ink-faint" />
@@ -356,7 +369,7 @@ export function EditorPage() {
                   type="datetime-local"
                   value={toLocalInput(state.eventTime)}
                   onChange={(event) => update({ eventTime: fromLocalInput(event.target.value) })}
-                  className="w-full rounded-md border border-line bg-paper-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+                  className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
             </Field>
@@ -368,7 +381,7 @@ export function EditorPage() {
                 onChange={(event) =>
                   update({ folderId: event.target.value === '' ? null : Number(event.target.value) })
                 }
-                className="w-full rounded-md border border-line bg-paper-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+                className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
                 <option value="">{t('entries.noFolder')}</option>
                 {folders.map((folder) => (
@@ -420,7 +433,7 @@ export function EditorPage() {
             <Field label={t('entries.color')} htmlFor="entry-color">
               <div className="flex items-center gap-2">
                 <PaletteIcon size={16} className="shrink-0 text-ink-faint" />
-                <div className="flex flex-wrap gap-1.5" id="entry-color">
+                <div className="flex flex-wrap gap-2" id="entry-color">
                   {COLORS.map((color) => (
                     <button
                       key={color}
@@ -428,11 +441,12 @@ export function EditorPage() {
                       onClick={() => update({ color: state.color === color ? '' : color })}
                       aria-label={color}
                       aria-pressed={state.color === color}
-                      className={
+                      className={cn(
+                        'size-7 rounded-full transition-transform duration-150',
                         state.color === color
-                          ? 'size-6 rounded-full border-2 border-ink'
-                          : 'size-6 rounded-full border-2 border-transparent'
-                      }
+                          ? 'ring-2 ring-ink ring-offset-2 ring-offset-paper-raised'
+                          : 'ring-1 ring-black/5',
+                      )}
                       style={{ backgroundColor: color }}
                     />
                   ))}
@@ -453,7 +467,9 @@ export function EditorPage() {
 
         <section>
           <div className="mb-2 flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-ink">{t('drawing.title')}</h2>
+            <h2 className="text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
+              {t('drawing.title')}
+            </h2>
             <Button
               size="sm"
               variant="ghost"
@@ -469,7 +485,7 @@ export function EditorPage() {
               onChange={(drawing) => update({ drawing })}
             />
           ) : state.drawing.length > 0 ? (
-            <div className="overflow-hidden rounded-lg border border-line bg-paper-raised">
+            <div className="overflow-hidden rounded-2xl border border-line bg-paper-raised">
               <svg
                 viewBox="0 0 1000 750"
                 preserveAspectRatio="none"

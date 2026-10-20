@@ -18,7 +18,7 @@ export const SEARCH_TYPES = [
 ] as const
 
 const selectClasses =
-  'w-full cursor-pointer rounded-md border border-line bg-paper-raised px-3 py-2 text-[0.9375rem] text-ink ' +
+  'w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink ' +
   'transition-colors duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20'
 
 interface SearchFiltersProps {

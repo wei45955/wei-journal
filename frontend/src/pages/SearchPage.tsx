@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useToast } from '../state/toast'
-import { Button, EmptyState, ErrorState, Skeleton, TextInput } from '../components/ui'
+import { Button, EmptyState, ErrorState, Skeleton } from '../components/ui'
 import { SearchIcon } from '../components/icons'
 import type { SearchResult } from '../lib/types'
 import { SearchFilters } from '../components/search/SearchFilters'
@@ -100,29 +100,29 @@ export function SearchPage() {
 
   return (
     <div className="pb-8">
-      <header className="mb-4">
-        <h1 className="font-serif text-2xl text-ink-strong">{t('search.title')}</h1>
+      <header className="mb-3">
+        <h1 className="title-large text-ink-strong">{t('search.title')}</h1>
       </header>
 
       <div className="relative">
         <SearchIcon
           size={18}
-          className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-faint"
+          className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-faint"
         />
-        <TextInput
+        <input
           ref={inputRef}
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t('search.placeholder')}
           aria-label={t('search.title')}
-          className="pl-9"
+          className="w-full rounded-full border-0 bg-paper-sunken py-3 pr-4 pl-11 text-[0.9375rem] text-ink placeholder:text-ink-faint focus:bg-paper-raised focus:outline-none"
         />
       </div>
 
-      <div className="mt-3">
+      <div className="mt-2.5">
         <Button
-          variant="ghost"
+          variant={showFilters ? 'primary' : 'secondary'}
           size="sm"
           onClick={() => setShowFilters((open) => !open)}
           aria-expanded={showFilters}
@@ -132,7 +132,7 @@ export function SearchPage() {
       </div>
 
       {showFilters ? (
-        <div className="mt-3 rounded-lg border border-line bg-paper-raised p-4">
+        <div className="card mt-3 p-4 animate-sheet-up">
           <SearchFilters
             type={type}
             from={from}
@@ -165,11 +165,11 @@ export function SearchPage() {
           <EmptyState title={t('search.noResults')} body={t('search.noResultsBody')} />
         ) : (
           <>
-            <p className="mb-3 text-sm text-ink-muted">
+            <p className="mb-3 px-1 text-sm text-ink-muted">
               {results.length === 1 ? t('search.oneResult') : t('search.results', { count: results.length })}
               {hasMore ? ' ·' : ''}
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               {results.map((result) => (
                 <SearchResultCard
                   key={result.entry.id}

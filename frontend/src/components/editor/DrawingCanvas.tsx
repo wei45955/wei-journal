@@ -139,14 +139,16 @@ export function DrawingCanvas({ strokes, onChange }: DrawingCanvasProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-md border border-line p-0.5">
+        <div className="flex rounded-xl bg-paper-sunken p-0.5">
           <button
             type="button"
             onClick={() => setTool('pen')}
             aria-pressed={tool === 'pen'}
             className={cn(
-              'rounded px-2.5 py-1 text-xs font-medium transition-colors',
-              tool === 'pen' ? 'bg-accent-soft text-accent-ink' : 'text-ink-muted hover:text-ink',
+              'rounded-[0.625rem] px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors',
+              tool === 'pen'
+                ? 'bg-paper-raised text-accent-ink shadow-sm'
+                : 'text-ink-muted hover:text-ink',
             )}
           >
             {t('drawing.pen')}
@@ -156,8 +158,10 @@ export function DrawingCanvas({ strokes, onChange }: DrawingCanvasProps) {
             onClick={() => setTool('eraser')}
             aria-pressed={tool === 'eraser'}
             className={cn(
-              'rounded px-2.5 py-1 text-xs font-medium transition-colors',
-              tool === 'eraser' ? 'bg-accent-soft text-accent-ink' : 'text-ink-muted hover:text-ink',
+              'rounded-[0.625rem] px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors',
+              tool === 'eraser'
+                ? 'bg-paper-raised text-accent-ink shadow-sm'
+                : 'text-ink-muted hover:text-ink',
             )}
           >
             {t('drawing.eraser')}
@@ -230,7 +234,7 @@ export function DrawingCanvas({ strokes, onChange }: DrawingCanvasProps) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-line bg-paper-raised">
+      <div className="overflow-hidden rounded-2xl border border-line bg-paper-raised">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}

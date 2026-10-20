@@ -52,19 +52,27 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-paper px-5 py-10 text-ink">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-paper px-5 py-12 text-ink">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <Logo size={44} />
-          <h1 className="font-serif text-2xl text-ink-strong">
+        <div className="mb-8 flex flex-col items-center gap-4 text-center">
+          <span className="flex size-[4.5rem] items-center justify-center rounded-[1.75rem] shadow-float">
+            <span className="flex size-full items-center justify-center rounded-[1.75rem]">
+              <Logo size={46} />
+            </span>
+          </span>
+          <h1 className="font-display text-[1.75rem] font-bold tracking-tight text-ink-strong">
             {isSignUp ? t('auth.signUpTitle') : t('auth.signInTitle')}
           </h1>
-          <p className="text-sm text-ink-muted">
+          <p className="max-w-xs text-[0.9375rem] text-ink-muted">
             {isSignUp ? t('auth.signUpSubtitle') : t('auth.signInSubtitle')}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        <form
+          onSubmit={handleSubmit}
+          className="card flex flex-col gap-4 p-5 sm:p-6"
+          noValidate
+        >
           <Field label={t('auth.username')} htmlFor="username">
             <TextInput
               id="username"
@@ -108,7 +116,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
           </Field>
 
           {error ? (
-            <p className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">
+            <p className="rounded-xl bg-danger-soft px-3.5 py-2.5 text-sm text-danger" role="alert">
               {error}
             </p>
           ) : null}
@@ -119,7 +127,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
         </form>
 
         {isSignUp ? (
-          <p className="mt-4 rounded-md bg-paper-sunken px-3 py-2 text-xs text-ink-muted">
+          <p className="mt-4 rounded-xl bg-paper-sunken px-3.5 py-2.5 text-xs leading-relaxed text-ink-muted">
             {t('auth.firstAccountAdmin')}
           </p>
         ) : null}

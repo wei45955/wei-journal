@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
+import { cn } from '../../lib/cn'
 import { localeFor } from '../../lib/format'
 import { monthMatrix, partsOf } from './dates'
-import { intensityClass, intensityOf } from './intensity'
+import { intensityOf } from './intensity'
 
 interface MonthGridProps {
   /** Any day inside the month that is shown. */
@@ -17,7 +18,7 @@ interface MonthGridProps {
 }
 
 /**
- * A month as a grid of days, shaded by how much was written that day.
+ * A month as a grid of days, with a dot under every day that was written on.
  */
 export function MonthGrid({ month, counts, language, today, selected, onSelect }: MonthGridProps) {
   const { t } = useTranslation()
@@ -40,43 +41,61 @@ export function MonthGrid({ month, counts, language, today, selected, onSelect }
 
   return (
     <div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[0.6875rem] font-medium tracking-wide text-ink-faint uppercase">
+      <div className="grid grid-cols-7 text-center text-[0.6875rem] font-semibold tracking-wide text-ink-faint uppercase">
         {weekdays.map((label, index) => (
-          <span key={`${label}-${index}`} className="py-1">
+          <span key={`${label}-${index}`} className="py-2">
             {label}
           </span>
         ))}
       </div>
 
-      <div className="mt-1 grid grid-cols-7 gap-1">
+      <div className="mt-0.5 grid grid-cols-7">
         {cells.map((cell) => {
           const count = counts[cell.key] ?? 0
           const level = intensityOf(count, max)
           const isToday = cell.key === today
           const isSelected = cell.key === selected
+          const isFuture = cell.key > today
           const day = partsOf(cell.key).day
           const label =
             count === 0
               ? `${cell.key}`
               : `${cell.key}, ${count === 1 ? t('calendar.oneEntry') : t('calendar.entriesOn', { count })}`
 
-          const className = [
-            'flex aspect-square w-full flex-col items-center justify-center rounded-md border text-sm transition-colors',
-            intensityClass(level),
-            cell.inMonth ? 'border-transparent' : 'border-line opacity-45',
-            isToday ? 'font-semibold ring-1 ring-accent' : '',
-            isSelected ? 'ring-2 ring-accent' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')
+          // Only one colour reaches the day: two of them would settle it by
+          // the order of the stylesheet, not by the order written here.
+          const numberClass = cn(
+            'mx-auto flex size-9 items-center justify-center rounded-full text-[1.0625rem] leading-none transition-colors',
+            isToday
+              ? 'bg-accent-soft font-semibold text-accent'
+              : isSelected
+                ? 'bg-paper-sunken font-semibold text-ink-strong'
+                : !cell.inMonth || isFuture
+                  ? 'text-ink-faint/50'
+                  : 'text-ink-strong',
+          )
+
+          const body = (
+            <>
+              <span className={numberClass}>{day}</span>
+              {count > 0 && cell.inMonth ? (
+                <span
+                  className={cn(
+                    'mt-1 size-1.5 rounded-full',
+                    level >= 4 ? 'bg-accent' : level >= 2 ? 'bg-accent/70' : 'bg-accent/45',
+                  )}
+                  aria-hidden="true"
+                />
+              ) : (
+                <span className="mt-1 size-1.5" aria-hidden="true" />
+              )}
+            </>
+          )
 
           if (!onSelect) {
             return (
-              <div key={cell.key} className={className} title={label} aria-label={label}>
-                <span>{day}</span>
-                {count > 0 ? (
-                  <span className="text-[0.625rem] leading-none opacity-80">{count}</span>
-                ) : null}
+              <div key={cell.key} className="py-1 text-center" title={label} aria-label={label}>
+                {body}
               </div>
             )
           }
@@ -86,15 +105,12 @@ export function MonthGrid({ month, counts, language, today, selected, onSelect }
               key={cell.key}
               type="button"
               onClick={() => onSelect(cell.key)}
-              className={`${className} cursor-pointer hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent`}
+              className="cursor-pointer py-1 text-center transition-transform active:scale-90"
               title={label}
               aria-label={label}
               aria-current={isToday ? 'date' : undefined}
             >
-              <span>{day}</span>
-              {count > 0 ? (
-                <span className="text-[0.625rem] leading-none opacity-80">{count}</span>
-              ) : null}
+              {body}
             </button>
           )
         })}

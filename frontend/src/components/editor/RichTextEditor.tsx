@@ -72,11 +72,11 @@ export function RichTextEditor({
   }, [editor, editable])
 
   if (!editor) {
-    return <div className="min-h-[16rem] rounded-lg border border-line bg-paper-raised" />
+    return <div className="min-h-[16rem] rounded-2xl bg-paper-raised" />
   }
 
   return (
-    <div className="rounded-lg border border-line bg-paper-raised focus-within:border-accent">
+    <div className="overflow-hidden rounded-2xl bg-paper-raised shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
       <Toolbar editor={editor} />
       <EditorContent editor={editor} />
     </div>
@@ -154,7 +154,7 @@ function Toolbar({ editor }: { editor: Editor }) {
   ]
 
   return (
-    <div className="flex items-center gap-0.5 overflow-x-auto border-b border-line px-1.5 py-1 no-scrollbar">
+    <div className="flex items-center gap-0.5 overflow-x-auto border-b border-line/70 bg-paper-sunken/40 px-2 py-1.5 no-scrollbar">
       {items.map((item) => (
         <button
           key={item.key}
@@ -164,8 +164,8 @@ function Toolbar({ editor }: { editor: Editor }) {
           aria-label={item.label}
           aria-pressed={item.active}
           className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded transition-colors disabled:opacity-30',
-            item.active ? 'bg-accent-soft text-accent-ink' : 'text-ink-muted hover:bg-paper-sunken hover:text-ink',
+            'flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-30',
+            item.active ? 'bg-paper-raised text-accent-ink shadow-sm' : 'text-ink-muted hover:bg-paper-raised hover:text-ink',
           )}
         >
           {item.icon}
@@ -179,7 +179,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         onClick={() => editor.chain().focus().undo().run()}
         disabled={!editor.can().chain().focus().undo().run()}
         aria-label={t('drawing.undo')}
-        className="flex size-8 shrink-0 items-center justify-center rounded text-ink-muted transition-colors hover:bg-paper-sunken hover:text-ink disabled:opacity-30"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-paper-raised hover:text-ink disabled:opacity-30"
       >
         <UndoIcon size={16} />
       </button>
@@ -188,7 +188,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         onClick={() => editor.chain().focus().redo().run()}
         disabled={!editor.can().chain().focus().redo().run()}
         aria-label={t('drawing.redo')}
-        className="flex size-8 shrink-0 items-center justify-center rounded text-ink-muted transition-colors hover:bg-paper-sunken hover:text-ink disabled:opacity-30"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-paper-raised hover:text-ink disabled:opacity-30"
       >
         <RedoIcon size={16} />
       </button>

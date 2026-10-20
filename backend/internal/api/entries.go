@@ -25,18 +25,18 @@ type entryPayload struct {
 	// Title and Color are pointers so that "not sent" is distinguishable
 	// from "sent as empty". A partial update must not clear a field the
 	// caller never mentioned.
-	Title     *string  `json:"title"`
-	Document  string   `json:"document"`
-	Drawing   string   `json:"drawing"`
-	EventTime *string  `json:"eventTime"`
-	Timezone  string   `json:"timezone"`
+	Title     *string    `json:"title"`
+	Document  string     `json:"document"`
+	Drawing   string     `json:"drawing"`
+	EventTime *string    `json:"eventTime"`
+	Timezone  string     `json:"timezone"`
 	FolderID  optionalID `json:"folderId"`
-	TagIDs    []uint   `json:"tagIds"`
-	TagNames  []string `json:"tagNames"`
-	Color     *string  `json:"color"`
-	IsPinned  *bool    `json:"isPinned"`
-	MediaIDs  []uint   `json:"mediaIds"`
-	Revision  *int     `json:"revision"`
+	TagIDs    []uint     `json:"tagIds"`
+	TagNames  []string   `json:"tagNames"`
+	Color     *string    `json:"color"`
+	IsPinned  *bool      `json:"isPinned"`
+	MediaIDs  []uint     `json:"mediaIds"`
+	Revision  *int       `json:"revision"`
 }
 
 // optionalID is an identifier that tells "not mentioned" apart from
@@ -581,13 +581,16 @@ func (s *Server) attachMedia(tx *gorm.DB, userID uint, entry *models.Entry, medi
 	for id := range ids {
 		list = append(list, id)
 	}
-	return tx.Model(&models.MediaAsset{}).
+	if err := tx.Model(&models.MediaAsset{}).
 		Where("user_id = ? AND id IN ?", userID, list).
 		Updates(map[string]any{
 			"entry_id":   entry.ID,
 			"attached":   true,
 			"updated_at": time.Now().UTC(),
-		}).Error
+		}).Error; err != nil {
+		return err
+	}
+	return linkPlacePhoto(tx, userID, entry.ID)
 }
 
 // collectMediaIDs finds the media assets referenced by a document.

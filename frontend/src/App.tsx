@@ -13,6 +13,7 @@ import { EditorPage } from './pages/EditorPage'
 import { EntryPage } from './pages/EntryPage'
 import { SearchPage } from './pages/SearchPage'
 import { CalendarPage } from './pages/CalendarPage'
+import { InsightsPage } from './pages/InsightsPage'
 import { MapPage } from './pages/MapPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { Spinner } from './components/ui'
@@ -37,10 +38,13 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
 /** A page inside the application frame. */
 function Shell({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation()
+  // The map and the editor fill the screen; a compose button would only cover them.
+  const floating = pathname !== '/map' && pathname !== '/new' && !pathname.endsWith('/edit')
   return (
     <AppShell>
       {children}
-      <NewEntryButton />
+      {floating ? <NewEntryButton /> : null}
     </AppShell>
   )
 }
@@ -118,6 +122,16 @@ export default function App() {
               <RequireAuth>
                 <Shell>
                   <CalendarPage />
+                </Shell>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/insights"
+            element={
+              <RequireAuth>
+                <Shell>
+                  <InsightsPage />
                 </Shell>
               </RequireAuth>
             }

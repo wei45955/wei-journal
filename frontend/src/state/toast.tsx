@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:items-end sm:px-6"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 px-4 pb-[calc(var(--bottom-nav-h)+1rem)] sm:items-end sm:px-6"
         role="status"
         aria-live="polite"
       >
@@ -57,12 +57,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={[
-              'pointer-events-auto max-w-sm rounded-lg border px-4 py-2.5 text-sm shadow-lg animate-fade-rise',
+              'pointer-events-auto max-w-sm rounded-2xl border px-4 py-3 text-sm shadow-float backdrop-blur-xl animate-fade-rise',
               toast.tone === 'error'
                 ? 'border-danger/30 bg-danger-soft text-danger'
                 : toast.tone === 'success'
                   ? 'border-success/30 bg-sage-soft text-success'
-                  : 'border-line bg-paper-overlay text-ink',
+                  : 'border-line/60 bg-paper-overlay/90 text-ink',
             ].join(' ')}
           >
             {toast.message}

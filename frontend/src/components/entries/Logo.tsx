@@ -1,5 +1,9 @@
+import { useId } from 'react'
+
 /** The app mark: a small open book rendered as vector strokes. */
 export function Logo({ size = 32, className }: { size?: number; className?: string }) {
+  const gradientId = useId()
+
   return (
     <svg
       viewBox="0 0 48 48"
@@ -10,14 +14,27 @@ export function Logo({ size = 32, className }: { size?: number; className?: stri
       role="img"
       aria-label="Wei Journal"
     >
-      <rect x="3" y="5" width="42" height="38" rx="6" className="fill-accent-soft" />
+      <defs>
+        <linearGradient id={gradientId} x1="4" y1="6" x2="44" y2="42" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#8f8dee" />
+          <stop offset="1" stopColor="#4f4cc4" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="5" width="42" height="38" rx="12" fill={`url(#${gradientId})`} />
       <path
-        d="M24 13c-3.6-2.4-7.6-3.4-12-3v24c4.4-.4 8.4.6 12 3 3.6-2.4 7.6-3.4 12-3V10c-4.4-.4-8.4.6-12 3Z"
-        className="stroke-accent"
-        strokeWidth="1.8"
+        d="M24 14.5c-3.2-2.2-6.8-3-10.8-2.7v20.4c4-.3 7.6.5 10.8 2.7 3.2-2.2 6.8-3 10.8-2.7V11.8c-4-.3-7.6.5-10.8 2.7Z"
+        stroke="white"
+        strokeOpacity="0.95"
+        strokeWidth="1.9"
         strokeLinejoin="round"
       />
-      <path d="M24 13v24" className="stroke-accent" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M24 14.5v20.4"
+        stroke="white"
+        strokeOpacity="0.95"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }

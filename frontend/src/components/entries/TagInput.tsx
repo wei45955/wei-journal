@@ -104,7 +104,7 @@ export function TagInput({ value, onChange, id }: TagInputProps) {
             }
           }}
           list="wj-tag-suggestions"
-          className="w-full rounded-md border border-line bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+          className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
         />
         <datalist id="wj-tag-suggestions">
           {suggestions.map((tag) => (

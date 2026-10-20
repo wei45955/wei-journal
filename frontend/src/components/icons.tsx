@@ -168,6 +168,13 @@ export const LocationIcon = (props: IconProps) => (
   </Icon>
 )
 
+/** The arrow that points at the place the map is centred on. */
+export const NavigationIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="m20.4 3.6-6.8 16.3a.6.6 0 0 1-1.11.06L9.4 13.2l-6.7-3.6a.6.6 0 0 1 .05-1.12L20.4 3.6Z" />
+  </Icon>
+)
+
 export const SparkIcon = (props: IconProps) => (
   <Icon {...props}>
     <path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9L12 3.5z" />
@@ -280,5 +287,20 @@ export const ClockIcon = (props: IconProps) => (
   <Icon {...props}>
     <circle cx="12" cy="12" r="8.5" />
     <path d="M12 7.5V12l3 2" />
+  </Icon>
+)
+
+export const ChartIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M4 20h16" />
+    <path d="M6.5 20v-5.5M11.5 20V8M16.5 20v-8.5" />
+  </Icon>
+)
+
+export const CoffeeIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M4.5 8h12v6a4.5 4.5 0 0 1-4.5 4.5H9A4.5 4.5 0 0 1 4.5 14V8z" />
+    <path d="M16.5 9.5h1.5a2.5 2.5 0 0 1 0 5h-1.5" />
+    <path d="M3.5 21h14" />
   </Icon>
 )

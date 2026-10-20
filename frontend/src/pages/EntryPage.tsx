@@ -155,7 +155,7 @@ export function EntryPage() {
       </div>
 
       <header className="flex flex-col gap-2">
-        <h1 className="font-serif text-2xl leading-tight text-ink-strong">
+        <h1 className="title-large text-ink-strong">
           {entry.title || t('entries.untitled')}
         </h1>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-faint">
@@ -163,7 +163,7 @@ export function EntryPage() {
             {formatEventDate(entry.eventDate, user?.settings.language)}
           </time>
           <span aria-hidden="true">·</span>
-          <span>{formatTime(entry.eventTime, user?.settings.language)}</span>
+          <span>{formatTime(entry.eventTime, user?.settings.language, entry.timezone)}</span>
           {entry.folderName ? (
             <>
               <span aria-hidden="true">·</span>
@@ -194,17 +194,19 @@ export function EntryPage() {
         ) : null}
       </header>
 
-      <RichText document={entry.document} />
+      <div className="card p-5 sm:p-6">
+        <RichText document={entry.document} />
+      </div>
 
       {strokes.length > 0 ? (
-        <section className="overflow-hidden rounded-lg border border-line bg-paper-raised">
+        <section className="overflow-hidden rounded-2xl bg-paper-raised shadow-sm">
           <DrawingView strokes={strokes} className="block w-full" />
         </section>
       ) : null}
 
       {entry.media && entry.media.length > 0 ? (
         <section className="flex flex-col gap-2">
-          <h2 className="text-xs font-semibold tracking-wide text-ink-faint uppercase">
+          <h2 className="px-1 text-[0.8125rem] font-semibold tracking-wide text-ink-faint uppercase">
             {t('entries.attachments')}
           </h2>
           <MediaStrip media={entry.media} />
@@ -212,10 +214,12 @@ export function EntryPage() {
       ) : null}
 
       {entry.location ? (
-        <section className="flex items-center gap-2 rounded-lg border border-line bg-paper-raised px-3 py-2">
-          <LocationIcon size={16} className="shrink-0 text-ink-faint" />
+        <section className="flex items-center gap-2.5 rounded-2xl bg-paper-raised px-3.5 py-3 shadow-sm">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <LocationIcon size={17} />
+          </span>
           <div className="min-w-0">
-            <p className="truncate text-sm text-ink">
+            <p className="truncate text-[0.9375rem] font-medium text-ink">
               {entry.location.name || entry.location.address}
             </p>
             {entry.location.address && entry.location.address !== entry.location.name ? (

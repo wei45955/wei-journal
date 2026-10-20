@@ -1,26 +1,28 @@
 /*
  * Design tokens for Wei Journal.
  *
- * The light theme is a warm, paper-inspired palette. The dark theme is not a
- * naive inversion: the surfaces stay warm and low contrast so that photographs
- * and handwritten text remain the loudest things on screen.
+ * The look follows the native iOS Journal app: a grouped grey page, white
+ * cards with generous radii, a saturated accent and frosted navigation bars.
+ * The dark theme mirrors the same structure rather than inverting it, so
+ * photographs and handwriting stay the loudest things on screen.
  */
 
 @theme {
-  --font-sans: "Iowan Old Style", "Palatino Linotype", "Source Han Serif SC",
-    "Songti SC", Georgia, "Times New Roman", serif;
-  /* Headings use the same warm serif as the body. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+  /* Headings use the same stack as the body, tightened. */
   --font-serif: var(--font-sans);
-  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-    sans-serif;
+  --font-ui: var(--font-sans);
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
     "Liberation Mono", monospace;
 
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.25rem;
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.375rem;
+  --radius-2xl: 1.75rem;
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -28,45 +30,68 @@
   --duration-fast: 140ms;
   --duration-base: 220ms;
   --duration-slow: 360ms;
+
+  /* The shadows of the floating surfaces. The light and dark values live in
+     the `:root` blocks below; they are declared here so the utilities exist. */
+  --shadow-float: 0 2px 10px rgb(0 0 0 / 0.12), 0 10px 30px rgb(0 0 0 / 0.1);
+  --shadow-lift: 0 12px 40px rgb(0 0 0 / 0.2);
 }
 
 :root {
   color-scheme: light;
 
-  /* Paper */
-  --paper: #faf7f2;
-  --paper-raised: #fffdfa;
-  --paper-sunken: #f2ede4;
-  --paper-overlay: #fffdfa;
+  /* The stack used for titles: the system face, tightened. */
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+
+  /* Grouped background and the cards that sit on it */
+  --paper: #f2f2f7;
+  --paper-raised: #ffffff;
+  --paper-sunken: #e9e9ef;
+  --paper-overlay: #ffffff;
 
   /* Ink */
-  --ink: #23201b;
-  --ink-strong: #14120f;
-  --ink-muted: #6b6459;
-  --ink-faint: #9a9284;
+  --ink: #1c1c1e;
+  --ink-strong: #000000;
+  --ink-muted: #6b6b72;
+  --ink-faint: #9a9aa0;
 
-  /* Accent: a muted persimmon that reads as ink on paper */
-  --accent: #b8542f;
-  --accent-soft: #f0d9cd;
-  --accent-ink: #8c3d20;
-  --accent-contrast: #fffaf6;
+  /* Accent: an iOS indigo, used for links, selection and the primary action */
+  --accent: #5856d6;
+  --accent-soft: #eceafc;
+  --accent-ink: #4643b8;
+  --accent-contrast: #ffffff;
 
-  /* Secondary: a quiet sage for tags and metadata */
-  --sage: #5c7a63;
-  --sage-soft: #dde7de;
+  /* Secondary: a quiet teal for tags and metadata */
+  --sage: #2f8f83;
+  --sage-soft: #dff2ef;
 
   /* Lines and shadows */
-  --line: #e4dcd0;
-  --line-strong: #d2c7b6;
-  --shadow-sm: 0 1px 2px rgb(35 32 27 / 0.05);
-  --shadow-md: 0 2px 8px rgb(35 32 27 / 0.06), 0 1px 2px rgb(35 32 27 / 0.04);
-  --shadow-lg: 0 12px 32px rgb(35 32 27 / 0.1), 0 2px 8px rgb(35 32 27 / 0.05);
+  --line: #e3e3e9;
+  --line-strong: #d1d1d9;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 1px 3px rgb(0 0 0 / 0.06), 0 6px 16px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 2px 6px rgb(0 0 0 / 0.07), 0 14px 34px rgb(0 0 0 / 0.11);
+  --shadow-float: 0 2px 10px rgb(0 0 0 / 0.12), 0 10px 30px rgb(0 0 0 / 0.1);
+  --shadow-lift: 0 12px 40px rgb(0 0 0 / 0.2);
 
   /* Semantic */
-  --danger: #a8321f;
-  --danger-soft: #f6ddd7;
-  --success: #3f6b47;
-  --warning: #8a6412;
+  --danger: #d93025;
+  --danger-soft: #fdeceb;
+  --success: #248a5b;
+  --warning: #b8860b;
+
+  /* The colourful cards of the insights page */
+  --grad-violet: linear-gradient(155deg, #7b7ae4 0%, #a29ff2 100%);
+  --grad-rose: linear-gradient(155deg, #e4607c 0%, #c8435f 100%);
+  --grad-slate: linear-gradient(155deg, #5c5c78 0%, #33334a 100%);
+  --grad-sun: linear-gradient(155deg, #f3a44a 0%, #e0702c 100%);
+  --grad-mint: linear-gradient(155deg, #4fc3a1 0%, #2b9b86 100%);
+
+  /* Frosted navigation surfaces */
+  --glass: rgb(255 255 255 / 0.72);
+  --glass-strong: rgb(255 255 255 / 0.86);
 
   /* Type scale */
   --text-xs: 0.75rem;
@@ -83,66 +108,88 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --paper: #14120f;
-    --paper-raised: #1c1a16;
-    --paper-sunken: #100e0c;
-    --paper-overlay: #201d18;
+    --paper: #000000;
+    --paper-raised: #1c1c1e;
+    --paper-sunken: #2c2c2e;
+    --paper-overlay: #2c2c2e;
 
-    --ink: #e6e0d6;
-    --ink-strong: #f7f3ec;
-    --ink-muted: #a49b8c;
-    --ink-faint: #6f6759;
+    --ink: #f2f2f7;
+    --ink-strong: #ffffff;
+    --ink-muted: #a1a1a8;
+    --ink-faint: #6e6e76;
 
-    --accent: #e08a63;
-    --accent-soft: #3a251c;
-    --accent-ink: #f0a988;
-    --accent-contrast: #1a1512;
+    --accent: #7d7aff;
+    --accent-soft: #262645;
+    --accent-ink: #a3a1ff;
+    --accent-contrast: #10101a;
 
-    --sage: #9dbca4;
-    --sage-soft: #23302a;
+    --sage: #4fc3a1;
+    --sage-soft: #16332c;
 
-    --line: #2b2822;
-    --line-strong: #3d3931;
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-    --shadow-md: 0 2px 8px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.25);
-    --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45), 0 2px 8px rgb(0 0 0 / 0.3);
+    --line: #38383a;
+    --line-strong: #48484a;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 1px 3px rgb(0 0 0 / 0.5), 0 6px 16px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 34px rgb(0 0 0 / 0.5);
+    --shadow-float: 0 2px 10px rgb(0 0 0 / 0.6), 0 10px 30px rgb(0 0 0 / 0.5);
+    --shadow-lift: 0 12px 40px rgb(0 0 0 / 0.6);
 
-    --danger: #e08a7a;
-    --danger-soft: #38201c;
-    --success: #8fbf9a;
-    --warning: #d0ac5e;
+    --danger: #ff6b5e;
+    --danger-soft: #3a1e1b;
+    --success: #4fc3a1;
+    --warning: #e0b64a;
+
+    --grad-violet: linear-gradient(155deg, #4a49a8 0%, #6f6dd8 100%);
+    --grad-rose: linear-gradient(155deg, #a33b56 0%, #7d2c42 100%);
+    --grad-slate: linear-gradient(155deg, #3a3a4c 0%, #1c1c26 100%);
+    --grad-sun: linear-gradient(155deg, #a86628 0%, #7d4718 100%);
+    --grad-mint: linear-gradient(155deg, #2b7a68 0%, #1c5a4c 100%);
+
+    --glass: rgb(28 28 30 / 0.72);
+    --glass-strong: rgb(28 28 30 / 0.88);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --paper: #14120f;
-  --paper-raised: #1c1a16;
-  --paper-sunken: #100e0c;
-  --paper-overlay: #201d18;
+  --paper: #000000;
+  --paper-raised: #1c1c1e;
+  --paper-sunken: #2c2c2e;
+  --paper-overlay: #2c2c2e;
 
-  --ink: #e6e0d6;
-  --ink-strong: #f7f3ec;
-  --ink-muted: #a49b8c;
-  --ink-faint: #6f6759;
+  --ink: #f2f2f7;
+  --ink-strong: #ffffff;
+  --ink-muted: #a1a1a8;
+  --ink-faint: #6e6e76;
 
-  --accent: #e08a63;
-  --accent-soft: #3a251c;
-  --accent-ink: #f0a988;
-  --accent-contrast: #1a1512;
+  --accent: #7d7aff;
+  --accent-soft: #262645;
+  --accent-ink: #a3a1ff;
+  --accent-contrast: #10101a;
 
-  --sage: #9dbca4;
-  --sage-soft: #23302a;
+  --sage: #4fc3a1;
+  --sage-soft: #16332c;
 
-  --line: #2b2822;
-  --line-strong: #3d3931;
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.25);
-  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45), 0 2px 8px rgb(0 0 0 / 0.3);
+  --line: #38383a;
+  --line-strong: #48484a;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 1px 3px rgb(0 0 0 / 0.5), 0 6px 16px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 34px rgb(0 0 0 / 0.5);
+  --shadow-float: 0 2px 10px rgb(0 0 0 / 0.6), 0 10px 30px rgb(0 0 0 / 0.5);
+  --shadow-lift: 0 12px 40px rgb(0 0 0 / 0.6);
 
-  --danger: #e08a7a;
-  --danger-soft: #38201c;
-  --success: #8fbf9a;
-  --warning: #d0ac5e;
+  --danger: #ff6b5e;
+  --danger-soft: #3a1e1b;
+  --success: #4fc3a1;
+  --warning: #e0b64a;
+
+  --grad-violet: linear-gradient(155deg, #4a49a8 0%, #6f6dd8 100%);
+  --grad-rose: linear-gradient(155deg, #a33b56 0%, #7d2c42 100%);
+  --grad-slate: linear-gradient(155deg, #3a3a4c 0%, #1c1c26 100%);
+  --grad-sun: linear-gradient(155deg, #a86628 0%, #7d4718 100%);
+  --grad-mint: linear-gradient(155deg, #2b7a68 0%, #1c5a4c 100%);
+
+  --glass: rgb(28 28 30 / 0.72);
+  --glass-strong: rgb(28 28 30 / 0.88);
 }

@@ -50,7 +50,7 @@ export function SessionList({ sessions, language, busy, onRevoke }: SessionListP
         {sessions.map((session) => (
           <li
             key={session.id}
-            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md border border-line px-3 py-2"
+            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl bg-paper-sunken/60 px-3.5 py-3"
           >
             <div className="min-w-0">
               <p className="text-[0.9375rem] text-ink-strong">

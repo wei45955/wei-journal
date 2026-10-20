@@ -41,11 +41,19 @@ export function formatRelative(iso: string, language = 'en'): string {
   return formatDistanceToNow(date, { addSuffix: true, locale: localeFor(language) })
 }
 
-/** A short time of day. */
-export function formatTime(iso: string, language = 'en'): string {
+/** A short time of day, in the zone the moment was written in. */
+export function formatTime(iso: string, language = 'en', timeZone?: string): string {
   const date = parseISO(iso)
   if (!isValid(date)) return ''
-  return format(date, 'p', { locale: localeFor(language) })
+  try {
+    return new Intl.DateTimeFormat(language, {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone,
+    }).format(date)
+  } catch {
+    return format(date, 'p', { locale: localeFor(language) })
+  }
 }
 
 /** The heading used above a group of entries in the timeline. */

@@ -32,10 +32,10 @@ export function SearchResultCard({ result, language }: SearchResultCardProps) {
   const title = entry.title.trim() || t('entries.untitled')
 
   return (
-    <article className="rounded-lg border border-line bg-paper-raised p-4 transition-colors hover:border-line-strong">
+    <article className="rounded-2xl bg-paper-raised p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-shadow hover:shadow-[0_2px_10px_rgb(0_0_0/0.07)]">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h3 className="font-[--font-sans] text-[1.0625rem] font-medium text-ink-strong">
-          <Link to={`/entries/${entry.id}`} className="hover:underline">
+        <h3 className="text-[1.0625rem] font-semibold text-ink-strong">
+          <Link to={`/entries/${entry.id}`} className="hover:text-accent-ink">
             {title}
           </Link>
         </h3>

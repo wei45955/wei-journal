@@ -120,14 +120,14 @@ export function CalendarPage() {
 
   return (
     <div className="pb-8">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-serif text-2xl text-ink-strong">{t('calendar.title')}</h1>
-          <p className="mt-0.5 text-sm text-ink-muted">{title}</p>
+          <h1 className="title-large text-ink-strong">{t('calendar.title')}</h1>
+          <p className="mt-1 text-sm text-ink-muted">{title}</p>
         </div>
 
         <div
-          className="flex rounded-lg border border-line bg-paper-raised p-0.5"
+          className="flex rounded-xl bg-paper-sunken p-1"
           role="tablist"
           aria-label={t('calendar.title')}
         >
@@ -138,10 +138,10 @@ export function CalendarPage() {
               role="tab"
               aria-selected={view === option.value}
               onClick={() => setView(option.value)}
-              className={`cursor-pointer rounded-md px-3 py-1.5 text-sm transition-colors ${
+              className={`cursor-pointer rounded-[0.625rem] px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ${
                 view === option.value
-                  ? 'bg-accent text-accent-contrast'
-                  : 'text-ink-muted hover:text-ink-strong'
+                  ? 'bg-paper-raised text-ink-strong shadow-[0_1px_3px_rgb(0_0_0/0.08)]'
+                  : 'text-ink-muted hover:text-ink'
               }`}
             >
               {t(option.key, option.fallback)}
@@ -150,51 +150,38 @@ export function CalendarPage() {
         </div>
       </header>
 
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => shift(-1)}
-            aria-label={t('calendar.previous')}
-            title={t('calendar.previous')}
-          >
-            <ChevronLeftIcon size={16} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => shift(1)}
-            aria-label={t('calendar.next')}
-            title={t('calendar.next')}
-          >
-            <ChevronRightIcon size={16} />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {view === 'month' || view === 'year' ? (
-            <span className="text-xs text-ink-muted">
-              {t('calendar.totalEntries', '{{count}} entries', { count: total })}
-            </span>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setAnchor(today)}
-            disabled={isToday}
-          >
-            {t('common.today')}
-          </Button>
-        </div>
-      </div>
-
       {status === 'loading' ? (
         <Skeleton className="h-72 w-full" />
       ) : status === 'error' ? (
         <ErrorState message={error} onRetry={() => setReloadToken((token) => token + 1)} />
       ) : view === 'month' ? (
-        <div className="rounded-lg border border-line bg-paper-raised p-3 sm:p-4">
+        <div className="card p-4 sm:p-5">
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <h2 className="text-[1.375rem] font-bold tracking-tight text-ink-strong">{title}</h2>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => shift(-1)}
+                aria-label={t('calendar.previous')}
+                title={t('calendar.previous')}
+                className="text-accent"
+              >
+                <ChevronLeftIcon size={20} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => shift(1)}
+                aria-label={t('calendar.next')}
+                title={t('calendar.next')}
+                className="text-accent"
+              >
+                <ChevronRightIcon size={20} />
+              </Button>
+            </div>
+          </div>
+
           <MonthGrid
             month={anchor}
             counts={counts}
@@ -203,12 +190,49 @@ export function CalendarPage() {
             selected={anchor}
             onSelect={selectDay}
           />
-          <div className="mt-3 flex justify-end">
-            <CalendarLegend />
+
+          <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+            <span className="text-xs text-ink-muted">
+              {t('calendar.totalEntries', '{{count}} entries', { count: total })}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setAnchor(today)}
+              disabled={isToday}
+            >
+              {t('common.today')}
+            </Button>
           </div>
         </div>
       ) : view === 'year' ? (
-        <div className="rounded-lg border border-line bg-paper-raised p-3 sm:p-4">
+        <div className="card p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-[1.375rem] font-bold tracking-tight text-ink-strong">{title}</h2>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => shift(-1)}
+                aria-label={t('calendar.previous')}
+                title={t('calendar.previous')}
+                className="text-accent"
+              >
+                <ChevronLeftIcon size={20} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => shift(1)}
+                aria-label={t('calendar.next')}
+                title={t('calendar.next')}
+                className="text-accent"
+              >
+                <ChevronRightIcon size={20} />
+              </Button>
+            </div>
+          </div>
+
           <YearGrid
             year={partsOf(anchor).year}
             counts={counts}
@@ -217,19 +241,47 @@ export function CalendarPage() {
             selected={anchor}
             onSelect={selectDay}
           />
-          <div className="mt-3 flex justify-end">
+
+          <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
+            <span className="text-xs text-ink-muted">
+              {t('calendar.totalEntries', '{{count}} entries', { count: total })}
+            </span>
             <CalendarLegend />
           </div>
         </div>
       ) : (
         <div>
-          <p className="mb-3 text-sm text-ink-muted">
-            {dayCount === 0
-              ? t('calendar.noEntries')
-              : dayCount === 1
-                ? t('calendar.oneEntry')
-                : t('calendar.entriesOn', { count: dayCount })}
-          </p>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm text-ink-muted">
+              {dayCount === 0
+                ? t('calendar.noEntries')
+                : dayCount === 1
+                  ? t('calendar.oneEntry')
+                  : t('calendar.entriesOn', { count: dayCount })}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => shift(-1)}
+                aria-label={t('calendar.previous')}
+                title={t('calendar.previous')}
+                className="text-accent"
+              >
+                <ChevronLeftIcon size={20} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => shift(1)}
+                aria-label={t('calendar.next')}
+                title={t('calendar.next')}
+                className="text-accent"
+              >
+                <ChevronRightIcon size={20} />
+              </Button>
+            </div>
+          </div>
 
           {dayStatus === 'loading' ? (
             <div className="flex flex-col gap-3" aria-busy="true">
@@ -241,7 +293,7 @@ export function CalendarPage() {
           ) : entries.length === 0 ? (
             <EmptyState title={t('calendar.noEntries')} body={t('entries.empty.body')} />
           ) : (
-            <ul className="flex flex-col gap-2">
+            <ul className="flex flex-col gap-2.5">
               {entries.map((entry) => {
                 const title = entry.title.trim() || t('entries.untitled')
                 const snippet = entry.plainText.trim().replace(/\s+/g, ' ').slice(0, 160)
@@ -249,14 +301,12 @@ export function CalendarPage() {
                   <li key={entry.id}>
                     <Link
                       to={`/entries/${entry.id}`}
-                      className="block rounded-lg border border-line bg-paper-raised p-3 transition-colors hover:border-line-strong"
+                      className="block rounded-2xl bg-paper-raised p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-shadow hover:shadow-[0_2px_10px_rgb(0_0_0/0.07)]"
                     >
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="font-[--font-sans] text-[0.9375rem] font-medium text-ink-strong">
-                          {title}
-                        </span>
-                        <span className="shrink-0 text-xs text-ink-faint">
-                          {formatTime(entry.eventTime, language)}
+                        <span className="text-[1.0625rem] font-semibold text-ink-strong">{title}</span>
+                        <span className="shrink-0 text-xs text-ink-faint tabular-nums">
+                          {formatTime(entry.eventTime, language, entry.timezone)}
                         </span>
                       </div>
                       {snippet ? (

@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,6 +30,29 @@ type mapPlace struct {
 	Title     string  `json:"title"`
 	Date      string  `json:"date"`
 	MediaKind string  `json:"mediaKind"`
+	// ThumbURL points at the photo taken here, when there is one and its
+	// thumbnail has been generated. The map draws it as the marker.
+	ThumbURL string `json:"thumbUrl"`
+	// EntryCount is how many entries were written at this place, so one pin
+	// can carry the number of memories that hang on it.
+	EntryCount int `json:"entryCount"`
+}
+
+// placeKey identifies a place on the map. The coordinates are rounded to
+// about a hundred metres, so the same cafe written down twice by hand still
+// counts as one place.
+type placeKey struct {
+	latitude  float64
+	longitude float64
+	name      string
+}
+
+func placeKeyOf(l models.Location) placeKey {
+	return placeKey{
+		latitude:  math.Round(l.Latitude*1000) / 1000,
+		longitude: math.Round(l.Longitude*1000) / 1000,
+		name:      strings.TrimSpace(l.Name),
+	}
 }
 
 // handleListLocations returns the places that can be shown on the map.
@@ -89,18 +113,50 @@ func (s *Server) handleListLocations(c *gin.Context) {
 		}
 	}
 
+	// The photo taken at a place, so the map can draw it as the marker.
+	mediaIDs := make([]uint, 0, len(locations))
+	for _, l := range locations {
+		if l.MediaID != nil {
+			mediaIDs = append(mediaIDs, *l.MediaID)
+		}
+	}
+	type mediaInfo struct {
+		kind     string
+		thumbURL string
+	}
+	media := map[uint]mediaInfo{}
+	if len(mediaIDs) > 0 {
+		var assets []models.MediaAsset
+		if err := s.handle.DB().Where("user_id = ? AND id IN ?", user.ID, mediaIDs).Find(&assets).Error; err == nil {
+			for _, a := range assets {
+				info := mediaInfo{kind: a.Kind}
+				if a.DerivedPath != "" {
+					info.thumbURL = "/api/media/" + itoa(a.ID) + "/thumb"
+				}
+				media[a.ID] = info
+			}
+		}
+	}
+
+	// How many entries hang on each place, so the pin can carry the number.
+	placeCounts := map[placeKey]int{}
+	for _, l := range locations {
+		placeCounts[placeKeyOf(l)]++
+	}
+
 	out := make([]mapPlace, 0, len(locations))
 	for _, l := range locations {
 		place := mapPlace{
-			ID:        l.ID,
-			EntryID:   l.EntryID,
-			MediaID:   l.MediaID,
-			Name:      l.Name,
-			Address:   l.Address,
-			Latitude:  l.Latitude,
-			Longitude: l.Longitude,
-			Source:    l.Source,
-			Status:    l.Status,
+			ID:         l.ID,
+			EntryID:    l.EntryID,
+			MediaID:    l.MediaID,
+			Name:       l.Name,
+			Address:    l.Address,
+			Latitude:   l.Latitude,
+			Longitude:  l.Longitude,
+			Source:     l.Source,
+			Status:     l.Status,
+			EntryCount: placeCounts[placeKeyOf(l)],
 		}
 		if l.EntryID != nil {
 			if info, ok := titles[*l.EntryID]; ok {
@@ -108,9 +164,35 @@ func (s *Server) handleListLocations(c *gin.Context) {
 				place.Date, _ = info["date"].(string)
 			}
 		}
+		if l.MediaID != nil {
+			if info, ok := media[*l.MediaID]; ok {
+				place.MediaKind = info.kind
+				place.ThumbURL = info.thumbURL
+			}
+		}
 		out = append(out, place)
 	}
 	httpx.OK(c, out)
+}
+
+// linkPlacePhoto gives a place the photo taken there, so the map can draw
+// the memory as a picture instead of a plain pin.
+func linkPlacePhoto(tx *gorm.DB, userID uint, entryID uint) error {
+	var mediaID uint
+	err := tx.Model(&models.MediaAsset{}).
+		Where("user_id = ? AND entry_id = ? AND kind = ?", userID, entryID, "image").
+		Order("id ASC").
+		Limit(1).
+		Pluck("id", &mediaID).Error
+	if err != nil {
+		return err
+	}
+	if mediaID == 0 {
+		return nil
+	}
+	return tx.Model(&models.Location{}).
+		Where("user_id = ? AND entry_id = ? AND media_id IS NULL", userID, entryID).
+		Update("media_id", mediaID).Error
 }
 
 // setEntryLocation stores or replaces the location of an entry.
@@ -159,7 +241,10 @@ func (s *Server) handleSetEntryLocation(c *gin.Context) {
 			Delete(&models.Location{}).Error; err != nil {
 			return err
 		}
-		return tx.Create(&loc).Error
+		if err := tx.Create(&loc).Error; err != nil {
+			return err
+		}
+		return linkPlacePhoto(tx, user.ID, entryID)
 	})
 	if err != nil {
 		httpx.Internal(c, s.log, err, "set location")
