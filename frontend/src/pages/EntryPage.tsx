@@ -2,7 +2,16 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
-import { displayTimezone, formatTime, formatEventDate, formatDateTime, localDateKey } from '../lib/format'
+import {
+  dateTimePattern,
+  displayTimezone,
+  formatTime,
+  formatEventDate,
+  formatDateTime,
+  localDateKey,
+  normalizeDateFormat,
+} from '../lib/format'
+import { useBack, useReturnPath } from '../hooks/useBack'
 import { useToast } from '../state/toast'
 import { useAuth } from '../state/auth'
 import { ErrorState, Skeleton } from '../components/ui'
@@ -22,6 +31,8 @@ export function EntryPage() {
   const { t } = useTranslation()
   const { entryId } = useParams()
   const navigate = useNavigate()
+  const back = useBack('/')
+  const returnPath = useReturnPath('/')
   const { notify, describe } = useToast()
   const { user } = useAuth()
   const [entry, setEntry] = useState<Entry | null>(null)
@@ -78,7 +89,9 @@ export function EntryPage() {
         color: entry.color,
       })
       notify(t('entries.duplicate'), 'success')
-      navigate(`/entries/${copy.id}/edit`)
+      // The copy is a page of its own, so it opens as one. Editing can
+      // begin from there, with the copy as the way back.
+      navigate(`/entries/${copy.id}`)
     } catch (err) {
       notify(describe(err, t('errors.generic')), 'error')
     } finally {
@@ -92,7 +105,9 @@ export function EntryPage() {
     try {
       await api.deleteEntry(entry.id)
       notify(t('entries.delete'), 'success')
-      navigate('/')
+      // The entry itself must not stay in the history, or the way back
+      // would return to a page that no longer exists.
+      navigate(returnPath, { replace: true })
     } catch (err) {
       notify(describe(err, t('errors.generic')), 'error')
       setBusy(false)
@@ -148,13 +163,15 @@ export function EntryPage() {
     <article className="animate-page-in flex flex-col gap-5 pb-10">
       <TopBar
         title={entry.title || t('entries.untitled')}
-        left={<BackButton label={t('entries.backToTimeline')} onClick={() => navigate(-1)} />}
+        left={<BackButton label={t('entries.backToTimeline')} onClick={back} />}
         actions={
           <>
             <IconButton
               label={t('entries.editEntry')}
               disabled={busy}
-              onClick={() => navigate(`/entries/${entry.id}/edit`)}
+              onClick={() =>
+                navigate(`/entries/${entry.id}/edit`, { state: { fromEntry: entry.id } })
+              }
             >
               <PencilIcon size={19} />
             </IconButton>
@@ -178,6 +195,7 @@ export function EntryPage() {
             {formatEventDate(
               localDateKey(new Date(entry.eventTime), displayTimezone(user?.settings.timezone)),
               user?.settings.language,
+              normalizeDateFormat(user?.settings.dateFormat),
             )}
           </time>
           <span aria-hidden="true">·</span>
@@ -218,9 +236,11 @@ export function EntryPage() {
         ) : null}
       </header>
 
-      <div className="card p-5 sm:p-6">
-        <RichText document={entry.document} />
-      </div>
+      {entry.plainText.trim() ? (
+        <div className="card p-5 sm:p-6">
+          <RichText document={entry.document} />
+        </div>
+      ) : null}
 
       {strokes.length > 0 ? (
         <section className="overflow-hidden rounded-2xl bg-paper-raised shadow-sm">
@@ -266,7 +286,10 @@ export function EntryPage() {
                 tagNames: names,
                 revision: entry.revision,
               })
-              .then(() => notify(t('entries.tags'), 'success'))
+              .then((updated) => {
+                setEntry(updated)
+                notify(t('entries.tags'), 'success')
+              })
               .catch((err) => notify(describe(err, t('errors.generic')), 'error'))
           }}
         />
@@ -274,10 +297,20 @@ export function EntryPage() {
 
       <footer className="flex flex-col gap-1 border-t border-line pt-3 text-xs text-ink-faint">
         <span>
-          {t('entries.created')}: {formatDateTime(entry.createdAt, user?.settings.language)}
+          {t('entries.created')}:{' '}
+          {formatDateTime(
+            entry.createdAt,
+            user?.settings.language,
+            dateTimePattern(user?.settings.dateFormat),
+          )}
         </span>
         <span>
-          {t('entries.updated')}: {formatDateTime(entry.updatedAt, user?.settings.language)}
+          {t('entries.updated')}:{' '}
+          {formatDateTime(
+            entry.updatedAt,
+            user?.settings.language,
+            dateTimePattern(user?.settings.dateFormat),
+          )}
         </span>
       </footer>
 

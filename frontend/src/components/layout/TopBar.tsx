@@ -38,19 +38,24 @@ export function TopBar({ title, left, actions, plain = false }: TopBarProps) {
   }, [])
 
   return (
-    <header className="sticky top-0 z-40">
+    // The bar runs to the edges of the screen, not just to the edges of
+    // the page column: entries scrolling underneath must not peek past it.
+    <header className="sticky top-0 z-40 -mx-4 sm:-mx-6">
       <div
         className={cn(
-          'glass-bar',
-          !plain && 'border-b border-line/60',
+          'glass-bar border-b border-transparent transition-colors duration-200',
+          // Once entries scroll underneath, the bar turns solid: a hint of
+          // a headline behind it reads as a rendering fault, not as glass.
+          scrolled ? 'bg-paper' : 'bg-paper/85',
+          !plain && scrolled && 'border-line/60',
         )}
       >
         {/* The space the system draws in, so nothing hides behind it. */}
         <div className="h-[env(safe-area-inset-top,0px)]" aria-hidden="true" />
-        <div className="relative flex h-12 items-center px-1.5">
-          <div className="relative z-10 flex w-11 shrink-0 items-center">{left}</div>
+        <div className="relative flex h-12 items-center px-4 sm:px-6">
+          <div className="relative z-10 flex w-12 shrink-0 items-center">{left}</div>
 
-          <div className="pointer-events-none absolute inset-x-14 flex justify-center px-1">
+          <div className="pointer-events-none absolute inset-x-16 flex justify-center px-1">
             <span
               className={cn(
                 'block max-w-full truncate text-[0.9375rem] font-semibold tracking-tight text-ink-strong',
@@ -97,7 +102,7 @@ export function IconButton({
       title={label}
       aria-pressed={pressed}
       className={cn(
-        'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors',
+        'flex size-11 shrink-0 items-center justify-center rounded-full transition-all duration-150',
         'active:scale-95 active:bg-paper-sunken disabled:opacity-40',
         danger
           ? 'text-danger hover:bg-danger-soft'
@@ -124,7 +129,7 @@ export function BackButton({ label, onClick }: { label: string; onClick: () => v
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex size-10 items-center justify-center rounded-full text-ink transition-colors active:scale-95 active:bg-paper-sunken hover:bg-paper-sunken"
+      className="flex size-11 items-center justify-center rounded-full text-ink transition-all duration-150 active:scale-95 active:bg-paper-sunken hover:bg-paper-sunken"
     >
       <svg viewBox="0 0 24 24" className="size-[1.35rem]" fill="none" aria-hidden="true">
         <path

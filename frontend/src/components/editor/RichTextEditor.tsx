@@ -153,8 +153,10 @@ function Toolbar({ editor }: { editor: Editor }) {
     },
   ]
 
+  // Ten buttons must fit the width of a small phone without a hidden
+  // scroll: the gaps are folded away and the divider is kept narrow.
   return (
-    <div className="flex items-center gap-0.5 overflow-x-auto border-b border-line/70 bg-paper-sunken/40 px-2 py-1.5 no-scrollbar">
+    <div className="flex items-center overflow-x-auto border-b border-line/70 bg-paper-sunken/40 px-2 py-1.5 no-scrollbar">
       {items.map((item) => (
         <button
           key={item.key}
@@ -164,7 +166,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           aria-label={item.label}
           aria-pressed={item.active}
           className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-30',
+            'flex h-10 w-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-30',
             item.active ? 'bg-paper-raised text-accent-ink shadow-sm' : 'text-ink-muted hover:bg-paper-raised hover:text-ink',
           )}
         >
@@ -172,14 +174,14 @@ function Toolbar({ editor }: { editor: Editor }) {
         </button>
       ))}
 
-      <span className="mx-1 h-5 w-px shrink-0 bg-line" aria-hidden="true" />
+      <span className="mx-0.5 h-5 w-px shrink-0 bg-line" aria-hidden="true" />
 
       <button
         type="button"
         onClick={() => editor.chain().focus().undo().run()}
         disabled={!editor.can().chain().focus().undo().run()}
         aria-label={t('drawing.undo')}
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-paper-raised hover:text-ink disabled:opacity-30"
+        className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-paper-raised hover:text-ink disabled:opacity-30"
       >
         <UndoIcon size={16} />
       </button>
@@ -188,7 +190,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         onClick={() => editor.chain().focus().redo().run()}
         disabled={!editor.can().chain().focus().redo().run()}
         aria-label={t('drawing.redo')}
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-paper-raised hover:text-ink disabled:opacity-30"
+        className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-paper-raised hover:text-ink disabled:opacity-30"
       >
         <RedoIcon size={16} />
       </button>

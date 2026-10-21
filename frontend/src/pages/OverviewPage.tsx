@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
+import { displayTimezone } from '../lib/format'
 import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
 import { useFolders } from '../hooks/useFolders'
@@ -39,12 +40,15 @@ export function OverviewPage() {
   const [error, setError] = useState('')
   const [foldersOpen, setFoldersOpen] = useState(false)
   const [addingFolder, setAddingFolder] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const timezone = displayTimezone(user?.settings.timezone)
 
   useEffect(() => {
     let cancelled = false
+    setStatus('loading')
     void (async () => {
       try {
-        const summary = await api.stats()
+        const summary = await api.stats(timezone)
         if (!cancelled) {
           setStats(summary)
           setStatus('ready')
@@ -59,15 +63,26 @@ export function OverviewPage() {
     return () => {
       cancelled = true
     }
-  }, [describe, t])
+  }, [describe, t, attempt, timezone])
 
   const streak = stats?.currentStreak ?? 0
   const year = stats?.currentYear ?? new Date().getFullYear()
 
+  // The greeting follows the day of the account, not the clock of the
+  // server or of a phone that may be in another zone.
   const hour = useMemo(() => {
-    const now = new Date()
-    return now.getHours()
-  }, [])
+    try {
+      return Number(
+        new Intl.DateTimeFormat('en-GB', {
+          hour: 'numeric',
+          hourCycle: 'h23',
+          timeZone: displayTimezone(user?.settings.timezone),
+        }).format(new Date()),
+      )
+    } catch {
+      return new Date().getHours()
+    }
+  }, [user?.settings.timezone])
 
   const greeting =
     hour < 5 ? t('overview.night') : hour < 12 ? t('overview.morning') : hour < 18 ? t('overview.afternoon') : t('overview.evening')
@@ -99,7 +114,7 @@ export function OverviewPage() {
           <Skeleton className="h-16 w-full rounded-2xl" />
         </div>
       ) : status === 'error' ? (
-        <ErrorState message={error} onRetry={() => navigate(0)} />
+        <ErrorState message={error} onRetry={() => setAttempt((value) => value + 1)} />
       ) : (
         <>
           {/* --- the numbers of the archive --- */}
@@ -108,19 +123,19 @@ export function OverviewPage() {
             onClick={() => navigate('/insights')}
             className="card flex w-full items-stretch gap-1 p-4 text-left transition-shadow duration-200 hover:shadow-md active:scale-[0.995]"
           >
-            <Number
+            <StatNumber
               value={streak}
               unit={streak === 1 ? t('stats.oneDay') : t('stats.days')}
               label={t('overview.streak')}
             />
             <span className="my-1 w-px bg-line" aria-hidden="true" />
-            <Number
+            <StatNumber
               value={stats?.totalEntries ?? 0}
               unit={t('overview.inTotal')}
               label={t('stats.totalEntries')}
             />
             <span className="my-1 w-px bg-line" aria-hidden="true" />
-            <Number value={stats?.entriesThisYear ?? 0} unit={String(year)} label={t('overview.thisYear')} />
+            <StatNumber value={stats?.entriesThisYear ?? 0} unit={String(year)} label={t('overview.thisYear')} />
             <span className="flex w-8 shrink-0 items-center justify-end text-ink-faint">
               <ChevronRightIcon size={18} />
             </span>
@@ -145,8 +160,8 @@ export function OverviewPage() {
                   {folders.length === 0
                     ? t('folders.empty')
                     : folders.length === 1
-                      ? t('folders.oneEntry')
-                      : t('folders.entries', { count: folders.length })}
+                      ? t('folders.oneFolder')
+                      : t('folders.count', { count: folders.length })}
                 </span>
               </span>
               <span className="text-ink-faint">
@@ -235,7 +250,7 @@ export function OverviewPage() {
 }
 
 /** One number of the archive. */
-function Number({
+function StatNumber({
   value,
   unit,
   label,

@@ -6,6 +6,10 @@ services:
       context: ./backend
       args:
         VERSION: ${WJ_VERSION:-1.0.0}
+        # The public Go proxy is the default. Set GOPROXY in the environment
+        # when that proxy is unreachable, for example
+        # GOPROXY=https://goproxy.cn,direct docker compose up -d --build
+        GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
     image: wei-journal-backend:${WJ_VERSION:-1.0.0}
     restart: unless-stopped
     env_file:

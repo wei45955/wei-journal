@@ -38,6 +38,33 @@ docker compose up -d --build
 
 The interface is on `http://<host>:8088`. The API is behind it at `/api` and is not published to the host. The database and the files are on a named volume, so the journal survives a container replacement.
 
+### Redeploy after the code changes
+
+The running containers keep the image they were built from. `docker compose restart` only starts those same images again, so a change in the source is not visible until the images are built again.
+
+From the root of the repository:
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+`up -d --build` rebuilds the backend and the frontend, replaces the containers, and leaves the named volume in place. The journal, the uploads and the derived files stay. Do not add `-v`: `docker compose down -v` deletes that volume.
+
+The frontend waits until the backend is healthy. Check it with:
+
+```bash
+curl -s http://127.0.0.1:8088/api/health
+```
+
+When `proxy.golang.org` cannot be reached, the backend build stops while downloading modules. Point the build at another Go proxy and run the same command:
+
+```bash
+GOPROXY=https://goproxy.cn,direct docker compose up -d --build
+```
+
+The Compose file passes `GOPROXY` into the backend image. The default is the public proxy.
+
 The settings that are not secret are already in `config.env`, which is committed and travels with the code. The `.env` file holds the secrets of the machine and the values that differ from it, and it is the only file that has to be recreated when the project moves to another machine.
 
 To create the administrator through the interface instead, leave `WJ_ADMIN_USERNAME` and `WJ_ADMIN_PASSWORD` empty and register the first account. The first account on an empty installation becomes the administrator.

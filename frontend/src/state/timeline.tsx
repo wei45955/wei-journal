@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { emptyFilters } from '../components/entries/filters'
 import type { TimelineFilters } from '../components/entries/filters'
+import { useAuth } from './auth'
 
 /** The order the entries are shown in. */
 export type TimelineOrder = 'desc' | 'asc'
@@ -28,9 +29,22 @@ const TimelineContext = createContext<TimelineState | null>(null)
  * survive a trip to an entry and back.
  */
 export function TimelineProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const [filters, setFilters] = useState<TimelineFilters>(emptyFilters)
   const [order, setOrder] = useState<TimelineOrder>('desc')
   const scrollRef = useRef(0)
+
+  // Filters and the remembered place belong to one account. Signing in as
+  // someone else starts from a clean timeline.
+  const lastUserId = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    const current = user?.id
+    if (lastUserId.current === current) return
+    lastUserId.current = current
+    setFilters(emptyFilters)
+    setOrder('desc')
+    scrollRef.current = 0
+  }, [user?.id])
 
   const rememberScroll = useCallback((value: number) => {
     scrollRef.current = value

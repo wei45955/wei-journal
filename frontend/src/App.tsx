@@ -1,9 +1,12 @@
 /**
  * The application root: providers, routing and the signed out gate.
+ *
+ * The frame of the application is a layout route, so moving from one page
+ * to the next keeps the sidebar and the page background in place. Only the
+ * page inside the frame changes.
  */
 
-import type { ReactNode } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './state/auth'
 import { ToastProvider } from './state/toast'
 import { TimelineProvider } from './state/timeline'
@@ -19,7 +22,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { Spinner } from './components/ui'
 
 /** The signed out gate. The page it came from is remembered. */
-function RequireAuth({ children }: { children: ReactNode }) {
+function RequireAuth() {
   const { user, loading } = useAuth()
   const location = useLocation()
 
@@ -31,14 +34,15 @@ function RequireAuth({ children }: { children: ReactNode }) {
     )
   }
   if (!user) {
-    return <Navigate to="/signin" replace state={{ from: location.pathname }} />
+    return (
+      <Navigate
+        to="/signin"
+        replace
+        state={{ from: location.pathname + location.search + location.hash }}
+      />
+    )
   }
-  return <>{children}</>
-}
-
-/** A page inside the application frame. */
-function Shell({ children }: { children: ReactNode }) {
-  return <AppShell>{children}</AppShell>
+  return <Outlet />
 }
 
 export default function App() {
@@ -49,112 +53,23 @@ export default function App() {
           <Routes>
             <Route path="/signin" element={<AuthPage mode="signin" />} />
             <Route path="/signup" element={<AuthPage mode="signup" />} />
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <Shell>
-                    <TimelinePage />
-                  </Shell>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/overview"
-              element={
-                <RequireAuth>
-                  <Shell>
-                    <OverviewPage />
-                  </Shell>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/folders/:folderId"
-              element={
-                <RequireAuth>
-                  <Shell>
-                    <TimelinePage />
-                  </Shell>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/new"
-              element={
-                <RequireAuth>
-                  <Shell>
-                    <EditorPage />
-                  </Shell>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/entries/:entryId"
-              element={
-                <RequireAuth>
-                  <Shell>
-                    <EntryPage />
-                  </Shell>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/entries/:entryId/edit"
-              element={
-                <RequireAuth>
-                  <Shell>
-                    <EditorPage />
-                  </Shell>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/search"
-              element={
-                <RequireAuth>
-                  <Shell>
-                    <SearchPage />
-                  </Shell>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/calendar"
-              element={
-                <RequireAuth>
-                  <Navigate to="/insights" replace />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/insights"
-              element={
-                <RequireAuth>
-                  <Shell>
-                    <InsightsPage />
-                  </Shell>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/map"
-              element={
-                <RequireAuth>
-                  <Navigate to="/insights" replace />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <RequireAuth>
-                  <Shell>
-                    <SettingsPage />
-                  </Shell>
-                </RequireAuth>
-              }
-            />
+
+            <Route element={<RequireAuth />}>
+              <Route element={<AppShell />}>
+                <Route path="/" element={<TimelinePage />} />
+                <Route path="/overview" element={<OverviewPage />} />
+                <Route path="/folders/:folderId" element={<TimelinePage />} />
+                <Route path="/new" element={<EditorPage />} />
+                <Route path="/entries/:entryId" element={<EntryPage />} />
+                <Route path="/entries/:entryId/edit" element={<EditorPage />} />
+                <Route path="/search" element={<SearchPage />} />
+                <Route path="/insights" element={<InsightsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/calendar" element={<Navigate to="/insights" replace />} />
+                <Route path="/map" element={<Navigate to="/insights" replace />} />
+              </Route>
+            </Route>
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </TimelineProvider>

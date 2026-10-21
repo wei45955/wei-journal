@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ApiError, api } from '../lib/api'
 import { cn } from '../lib/cn'
@@ -63,6 +63,7 @@ export function EditorPage() {
   const { t } = useTranslation()
   const { entryId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const { notify, describe } = useToast()
   const { folders } = useFolders()
@@ -96,10 +97,17 @@ export function EditorPage() {
   const [gallery, setGallery] = useState<{ items: Media[]; index: number } | null>(null)
 
   const timer = useRef<number | null>(null)
-  const saving = useRef(false)
-  const pending = useRef(false)
   const revision = useRef<number | undefined>(undefined)
   const dirty = useRef(false)
+  // Each change raises the version. A save only clears the flag when no
+  // newer change has arrived while the request was in the air.
+  const version = useRef(0)
+  // The saves run one after another, so a slow request cannot overtake a
+  // newer one and write old words over new ones.
+  const queue = useRef<Promise<boolean>>(Promise.resolve(true))
+  // A conflict waits for the newer entry to be loaded; retrying the same
+  // old revision would only conflict again.
+  const blocked = useRef(false)
   const stateRef = useRef(state)
   stateRef.current = state
   // The entry this page has just created. Its state on screen is already the
@@ -107,6 +115,9 @@ export function EditorPage() {
   const createdId = useRef<number | null>(null)
   const mounted = useRef(true)
   const entryIdRef = useRef<number | undefined>(entryId ? Number(entryId) : undefined)
+  const [finishing, setFinishing] = useState(false)
+  const [reloading, setReloading] = useState(false)
+  const scheduleRef = useRef<() => void>(() => {})
 
   const language = user?.settings.language ?? 'en'
 
@@ -137,7 +148,9 @@ export function EditorPage() {
           document: loaded.document,
           drawing: loaded.drawing ?? [],
           eventTime: loaded.eventTime,
-          timezone: displayTimezone(user?.settings.timezone),
+          // The entry keeps the zone it was written in, even when the
+          // phone has travelled since.
+          timezone: loaded.timezone || displayTimezone(user?.settings.timezone),
           folderId: loaded.folderId ?? null,
           tags: loaded.tags,
           color: loaded.color,
@@ -158,95 +171,107 @@ export function EditorPage() {
     }
   }, [entryId, describe, t])
 
-  const save = useCallback(async () => {
-    if (saving.current) {
-      pending.current = true
-      return
-    }
-    if (!dirty.current) return
+  const save = useCallback((): Promise<boolean> => {
+    async function pass(): Promise<boolean> {
+      if (blocked.current) return false
+      if (!dirty.current) return true
 
-    const snapshot = stateRef.current
-    const isEmpty =
-      !snapshot.title.trim() &&
-      !snapshot.mediaIds.length &&
-      !snapshot.drawing.length &&
-      !(snapshot.document.content ?? []).some((node) => !isBlankNode(node))
+      const snapshot = stateRef.current
+      const snapshotVersion = version.current
+      const isEmpty =
+        !snapshot.title.trim() &&
+        !snapshot.mediaIds.length &&
+        !snapshot.drawing.length &&
+        !(snapshot.document.content ?? []).some((node) => !isBlankNode(node))
 
-    // Nothing worth storing yet: an untouched new entry stays unsaved.
-    if (revision.current === undefined && isEmpty) return
-
-    saving.current = true
-    setSaveState('saving')
-    try {
-      const payload = {
-        title: snapshot.title,
-        document: JSON.stringify(snapshot.document),
-        drawing: JSON.stringify(snapshot.drawing),
-        eventTime: snapshot.eventTime,
-        timezone: snapshot.timezone,
-        folderId: snapshot.folderId ?? null,
-        tagIds: snapshot.tags.map((tag) => tag.id),
-        color: snapshot.color,
-        isPinned: snapshot.isPinned,
-        mediaIds: snapshot.mediaIds,
-        coverMediaId: snapshot.coverMediaId ?? null,
-        revision: revision.current,
+      // Nothing worth storing yet: an untouched new entry stays unsaved.
+      if (revision.current === undefined && isEmpty) {
+        dirty.current = false
+        setSaveState('idle')
+        return true
       }
 
-      if (revision.current === undefined) {
-        const created = await api.createEntry(payload)
-        createdId.current = created.id
-        revision.current = created.revision
-        entryIdRef.current = created.id
-        setEntry(created)
-        setMedia(created.media)
-        navigate(`/entries/${created.id}/edit`, { replace: true })
-      } else {
-        const updated = await api.updateEntry(entryIdRef.current ?? 0, {
-          ...payload,
+      setSaveState('saving')
+      try {
+        const payload = {
+          title: snapshot.title,
+          document: JSON.stringify(snapshot.document),
+          drawing: JSON.stringify(snapshot.drawing),
+          eventTime: snapshot.eventTime,
+          timezone: snapshot.timezone,
+          folderId: snapshot.folderId ?? null,
+          tagIds: snapshot.tags.map((tag) => tag.id),
+          color: snapshot.color,
+          isPinned: snapshot.isPinned,
+          mediaIds: snapshot.mediaIds,
+          coverMediaId: snapshot.coverMediaId ?? null,
           revision: revision.current,
-        })
-        revision.current = updated.revision
-        setEntry(updated)
-        setMedia(updated.media)
-      }
-
-      dirty.current = false
-      setSaveState('saved')
-      setSavedAt(new Date())
-      setConflict(false)
-
-      // The place lives in its own table, so it is written separately.
-      if (snapshot.location) {
-        try {
-          await api.setEntryLocation(entryIdRef.current ?? 0, {
-            name: snapshot.location.name,
-            address: snapshot.location.address,
-            latitude: snapshot.location.latitude,
-            longitude: snapshot.location.longitude,
-          })
-        } catch {
-          // A place that cannot be saved must not fail the entry itself.
         }
-      }
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setSaveState('conflict')
-        setConflict(true)
-        return
-      }
-      setSaveState('error')
-      notify(describe(err, t('entries.saveFailed')), 'error')
-    } finally {
-      saving.current = false
-      if (pending.current) {
-        pending.current = false
-        if (!mounted.current) return
-        dirty.current = true
-        schedule()
+
+        if (revision.current === undefined) {
+          const created = await api.createEntry(payload)
+          createdId.current = created.id
+          revision.current = created.revision
+          entryIdRef.current = created.id
+          setEntry(created)
+          setMedia(created.media)
+          navigate(`/entries/${created.id}/edit`, { replace: true })
+        } else {
+          const updated = await api.updateEntry(entryIdRef.current ?? 0, {
+            ...payload,
+            revision: revision.current,
+          })
+          revision.current = updated.revision
+          setEntry(updated)
+          setMedia(updated.media)
+        }
+
+        // Words typed while the request was away are newer than what the
+        // server has just accepted, so the entry stays unsaved.
+        const stillDirty = version.current !== snapshotVersion
+        dirty.current = stillDirty
+        setConflict(false)
+
+        if (stillDirty) {
+          setSaveState('dirty')
+          scheduleRef.current()
+        } else {
+          setSaveState('saved')
+          setSavedAt(new Date())
+        }
+
+        // The place lives in its own table, so it is written separately.
+        if (snapshot.location) {
+          try {
+            await api.setEntryLocation(entryIdRef.current ?? 0, {
+              name: snapshot.location.name,
+              address: snapshot.location.address,
+              latitude: snapshot.location.latitude,
+              longitude: snapshot.location.longitude,
+            })
+          } catch {
+            // A place that cannot be saved must not fail the entry itself.
+          }
+        }
+        return true
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          blocked.current = true
+          setSaveState('conflict')
+          setConflict(true)
+          return false
+        }
+        setSaveState('error')
+        notify(describe(err, t('entries.saveFailed')), 'error')
+        return false
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // Every call joins the end of the queue, so the last words always leave
+    // after the words before them.
+    const next = queue.current.then(pass, pass)
+    queue.current = next.catch(() => false)
+    return next
   }, [navigate, notify, describe, t])
 
   const schedule = useCallback(() => {
@@ -256,24 +281,55 @@ export function EditorPage() {
       void save()
     }, AUTOSAVE_DELAY)
   }, [save])
+  scheduleRef.current = schedule
 
-  function update(patch: Partial<EditorState>) {
-    setState((current) => ({ ...current, ...patch }))
+  function clearTimer() {
+    if (timer.current === null) return
+    window.clearTimeout(timer.current)
+    timer.current = null
+  }
+
+  function markDirty() {
+    version.current += 1
     dirty.current = true
     setSaveState('dirty')
     schedule()
   }
 
-  // Save when the page is closed so nothing is lost.
+  function update(patch: Partial<EditorState>) {
+    setState((current) => ({ ...current, ...patch }))
+    markDirty()
+  }
+
+  // Save when the page is hidden or closed so nothing is lost. The phone
+  // may put the app away at any moment, and the autosave timer alone would
+  // not have fired yet.
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!dirty.current) return
       event.preventDefault()
       event.returnValue = ''
     }
+    const flush = () => {
+      if (!dirty.current) return
+      if (timer.current !== null) {
+        window.clearTimeout(timer.current)
+        timer.current = null
+      }
+      void save()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
     window.addEventListener('beforeunload', onBeforeUnload)
-    return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [])
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [save])
 
   useEffect(() => {
     mounted.current = true
@@ -288,7 +344,10 @@ export function EditorPage() {
       setConfirmLeave(true)
       return
     }
-    navigate(timelinePath())
+    // The editor is left behind in the history as well: the way back from
+    // the list must not lead into an editor that was already finished
+    // with.
+    navigate(timelinePath(), { replace: true })
   }
 
   /**
@@ -298,13 +357,83 @@ export function EditorPage() {
    */
   function timelinePath(): string {
     const folderId = timelineFilters.folderId
+    if (folderId === 'none') return '/folders/none'
     return typeof folderId === 'number' ? `/folders/${folderId}` : '/'
   }
 
+  /** Waits for the words to be on the server before the page changes. */
   async function finish() {
-    await save()
-    if (entryIdRef.current) navigate(`/entries/${entryIdRef.current}`)
-    else navigate('/')
+    if (finishing) return
+    setFinishing(true)
+    clearTimer()
+    const ok = await save()
+    if (!ok) {
+      setFinishing(false)
+      return
+    }
+
+    const id = entryIdRef.current
+    if (id && !editing) {
+      // A new entry: replace the editor with its own page, so the way back
+      // leads to the list and not to an empty editor.
+      navigate(`/entries/${id}`, { replace: true })
+      return
+    }
+
+    const fromEntry =
+      (location.state as { fromEntry?: number } | null)?.fromEntry === id
+    if (id && fromEntry) {
+      navigate(-1)
+      return
+    }
+    navigate(id ? `/entries/${id}` : '/', { replace: true })
+  }
+
+  async function saveAndLeave() {
+    if (finishing) return
+    setFinishing(true)
+    clearTimer()
+    const ok = await save()
+    setFinishing(false)
+    if (!ok) return
+    setConfirmLeave(false)
+    navigate(timelinePath(), { replace: true })
+  }
+
+  /** Brings the newer entry in, and leaves no local words on top of it. */
+  async function reloadLatest() {
+    const id = entryIdRef.current
+    if (!id || reloading) return
+    setReloading(true)
+    try {
+      const loaded = await api.entry(id)
+      revision.current = loaded.revision
+      blocked.current = false
+      dirty.current = false
+      version.current += 1
+      setEntry(loaded)
+      setMedia(loaded.media)
+      setState({
+        title: loaded.title,
+        document: loaded.document,
+        drawing: loaded.drawing ?? [],
+        eventTime: loaded.eventTime,
+        timezone: loaded.timezone || displayTimezone(user?.settings.timezone),
+        folderId: loaded.folderId ?? null,
+        tags: loaded.tags,
+        color: loaded.color,
+        isPinned: loaded.isPinned,
+        mediaIds: loaded.media.map((item) => item.id),
+        coverMediaId: loaded.coverMediaId ?? null,
+        location: loaded.location ?? null,
+      })
+      setConflict(false)
+      setSaveState('idle')
+    } catch (err) {
+      notify(describe(err, t('errors.generic')), 'error')
+    } finally {
+      setReloading(false)
+    }
   }
 
   if (loading) {
@@ -335,7 +464,12 @@ export function EditorPage() {
         actions={
           <>
             <SaveIndicator state={saveState} savedAt={savedAt} language={language} />
-            <Button size="sm" variant="primary" onClick={() => void finish()}>
+            <Button
+              size="sm"
+              variant="primary"
+              loading={finishing}
+              onClick={() => void finish()}
+            >
               {t('entries.done')}
             </Button>
           </>
@@ -352,12 +486,10 @@ export function EditorPage() {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => {
-                dirty.current = false
-                window.location.reload()
-              }}
+              loading={reloading}
+              onClick={() => void reloadLatest()}
             >
-              {t('common.retry')}
+              {t('entries.loadLatest')}
             </Button>
           </div>
         ) : null}
@@ -368,7 +500,7 @@ export function EditorPage() {
             placeholder={t('entries.placeholder')}
             aria-label={t('entries.title')}
             onChange={(event) => update({ title: event.target.value })}
-            className="w-full border-0 bg-transparent px-0 font-serif text-[1.75rem] leading-tight text-ink-strong placeholder:text-ink-faint/70 focus:ring-0 focus:outline-none"
+            className="editor-title-input w-full border-0 bg-transparent px-0 font-serif text-[1.75rem] leading-tight text-ink-strong placeholder:text-ink-faint/70 focus:ring-0 focus:outline-none"
           />
 
           <RichTextEditor
@@ -396,9 +528,7 @@ export function EditorPage() {
                         current.coverMediaId ??
                         (uploaded.find((item) => item.kind === 'image')?.id ?? null),
                     }))
-                    dirty.current = true
-                    setSaveState('dirty')
-                    schedule()
+                    markDirty()
                   }}
                 />
               </div>
@@ -520,7 +650,7 @@ export function EditorPage() {
               <Field label={t('entries.color')} htmlFor="entry-color">
                 <div className="flex items-center gap-2">
                   <PaletteIcon size={16} className="shrink-0 text-ink-faint" />
-                  <div className="flex flex-wrap gap-2" id="entry-color">
+                  <div className="flex flex-wrap gap-1.5" id="entry-color">
                     {COLORS.map((color) => (
                       <button
                         key={color}
@@ -529,7 +659,11 @@ export function EditorPage() {
                         aria-label={color}
                         aria-pressed={state.color === color}
                         className={cn(
-                          'size-7 rounded-full transition-transform duration-150',
+                          // Seven dots, the palette and the pin share one
+                          // row even on the narrowest phone.
+                          'relative size-[1.625rem] rounded-full transition-transform duration-150',
+                          // The dot stays small, the place to hit it does not.
+                          'before:absolute before:inset-x-0 before:-inset-y-2',
                           state.color === color
                             ? 'ring-2 ring-ink ring-offset-2 ring-offset-paper-raised'
                             : 'ring-1 ring-black/5',
@@ -538,15 +672,25 @@ export function EditorPage() {
                       />
                     ))}
                   </div>
+                  {/* The pin sits beside the colours as one clear state
+                      button. With its words it pushed the last colour onto
+                      a line of its own on a phone. */}
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="ml-auto"
-                    icon={<PinIcon size={14} />}
+                    variant={state.isPinned ? 'primary' : 'ghost'}
+                    className={cn(
+                      'ml-auto size-11 shrink-0 px-0',
+                      // An unpinned pin is a quiet outline in the row; only
+                      // the pinned one is filled, so the state reads at a
+                      // glance.
+                      !state.isPinned && 'text-ink-muted',
+                    )}
+                    icon={<PinIcon size={16} />}
+                    aria-label={state.isPinned ? t('entries.unpin') : t('entries.pin')}
+                    aria-pressed={state.isPinned}
+                    title={state.isPinned ? t('entries.unpin') : t('entries.pin')}
                     onClick={() => update({ isPinned: !state.isPinned })}
-                  >
-                    {state.isPinned ? t('entries.unpin') : t('entries.pin')}
-                  </Button>
+                  />
                 </div>
               </Field>
             </div>
@@ -644,11 +788,18 @@ export function EditorPage() {
         title={t('entries.unsaved')}
         description={t('entries.unsavedHint')}
         confirmLabel={t('entries.save')}
-        onClose={() => setConfirmLeave(false)}
-        onConfirm={() => {
+        alternateLabel={t('entries.discard')}
+        onAlternate={() => {
+          clearTimer()
+          dirty.current = false
           setConfirmLeave(false)
-          void save().then(() => navigate(timelinePath()))
+          navigate(timelinePath(), { replace: true })
         }}
+        busy={finishing}
+        onClose={() => {
+          if (!finishing) setConfirmLeave(false)
+        }}
+        onConfirm={() => void saveAndLeave()}
       />
 
       {gallery ? (

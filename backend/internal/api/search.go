@@ -267,21 +267,9 @@ func (s *Server) handleStats(c *gin.Context) {
 		Where("user_id = ? AND kind IN ? AND deleted_at IS NULL", user.ID,
 			[]string{models.MediaFile, models.MediaDocumentType}).Count(&files)
 
-	var dates []string
-	s.handle.DB().Model(&models.Entry{}).Where("user_id = ?", user.ID).
-		Distinct().Order("event_date ASC").Pluck("event_date", &dates)
-
-	activeDays := len(dates)
-	current, longest := computeStreaks(dates)
-
-	firstDate, lastDate := "", ""
-	if len(dates) > 0 {
-		firstDate = dates[0]
-		lastDate = dates[len(dates)-1]
-	}
-
-	// The entries written in the current year, counted in the zone the
-	// account reads the calendar in.
+	// Days and years are counted in the zone the reader lives in. An
+	// account that follows the device sends that zone along, because only
+	// the browser knows it.
 	zone := time.UTC
 	if settings, err := s.loadSettings(user.ID); err == nil {
 		name := strings.TrimSpace(settings.Timezone)
@@ -291,7 +279,27 @@ func (s *Server) handleStats(c *gin.Context) {
 			}
 		}
 	}
-	year := time.Now().In(zone).Year()
+	if name := strings.TrimSpace(c.Query("tz")); name != "" {
+		if loc, err := time.LoadLocation(name); err == nil {
+			zone = loc
+		}
+	}
+	now := time.Now().In(zone)
+
+	var dates []string
+	s.handle.DB().Model(&models.Entry{}).Where("user_id = ?", user.ID).
+		Distinct().Order("event_date ASC").Pluck("event_date", &dates)
+
+	activeDays := len(dates)
+	current, longest := computeStreaks(dates, now)
+
+	firstDate, lastDate := "", ""
+	if len(dates) > 0 {
+		firstDate = dates[0]
+		lastDate = dates[len(dates)-1]
+	}
+
+	year := now.Year()
 	var entriesThisYear int64
 	s.handle.DB().Model(&models.Entry{}).
 		Where("user_id = ? AND event_date >= ? AND event_date <= ?", user.ID,
@@ -316,10 +324,12 @@ func (s *Server) handleStats(c *gin.Context) {
 }
 
 // computeStreaks derives the current and longest run of consecutive days
-// that hold at least one entry. The result is always calculated from the
-// stored data rather than from a counter, so deleting an entry correctly
-// changes the result.
-func computeStreaks(dates []string) (current, longest int) {
+// that hold at least one entry. `now` carries the zone the reader counts
+// days in: a diary written this morning in Shanghai is still yesterday in
+// UTC, and that entry must not end the streak. The result is always
+// calculated from the stored data rather than from a counter, so deleting
+// an entry correctly changes the result.
+func computeStreaks(dates []string, now time.Time) (current, longest int) {
 	if len(dates) == 0 {
 		return 0, 0
 	}
@@ -356,15 +366,25 @@ func computeStreaks(dates []string) (current, longest int) {
 
 	// The current streak is the run that reaches today or yesterday; a
 	// longer gap simply means the streak ended, it is never punished.
-	today := time.Now().UTC().Truncate(24 * time.Hour)
-	last := unique[len(unique)-1]
-	switch {
-	case last.Equal(today):
-		current = run
-	case last.Equal(today.AddDate(0, 0, -1)):
-		current = run
-	default:
-		current = 0
+	// Future-dated entries are ignored here: a plan for next week must not
+	// hide the fact that the reader wrote this morning.
+	today := now.Format("2006-01-02")
+	yesterday := now.AddDate(0, 0, -1).Format("2006-01-02")
+	for i := range unique {
+		key := unique[i].Format("2006-01-02")
+		if key != today && key != yesterday {
+			continue
+		}
+		run := 1
+		for j := i; j > 0; j-- {
+			if unique[j].Sub(unique[j-1]) != 24*time.Hour {
+				break
+			}
+			run++
+		}
+		if run > current {
+			current = run
+		}
 	}
 	return current, longest
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../ui'
 import { ConfirmDialog } from '../ui/Dialog'
-import { formatDateTime } from '../../lib/format'
+import { dateTimePattern, formatDateTime } from '../../lib/format'
 import type { Session } from '../../lib/types'
 
 /** A short name for the device a session was opened on. */
@@ -29,6 +29,7 @@ function deviceLabel(agent: string): string {
 interface SessionListProps {
   sessions: Session[]
   language: string
+  dateFormat?: string
   busy: boolean
   onRevoke: (id: number) => void
 }
@@ -36,7 +37,7 @@ interface SessionListProps {
 /**
  * The devices that are signed in, with the ones that are not welcome gone.
  */
-export function SessionList({ sessions, language, busy, onRevoke }: SessionListProps) {
+export function SessionList({ sessions, language, dateFormat, busy, onRevoke }: SessionListProps) {
   const { t } = useTranslation()
   const [pending, setPending] = useState<Session | null>(null)
 
@@ -63,7 +64,7 @@ export function SessionList({ sessions, language, busy, onRevoke }: SessionListP
               </p>
               <p className="mt-0.5 truncate text-xs text-ink-muted">
                 {session.ip ? `${session.ip} · ` : ''}
-                {formatDateTime(session.lastSeenAt, language)}
+                {formatDateTime(session.lastSeenAt, language, dateTimePattern(dateFormat))}
               </p>
             </div>
             <Button

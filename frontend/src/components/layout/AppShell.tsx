@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { useAuth } from '../../state/auth'
@@ -8,6 +8,7 @@ import { NewFolderForm } from '../entries/NewFolderForm'
 import {
   ChartIcon,
   FolderIcon,
+  GridIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
@@ -18,7 +19,81 @@ const primaryLinks = [
   { to: '/', labelKey: 'nav.timeline', icon: TimelineIcon, end: true },
   { to: '/search', labelKey: 'nav.search', icon: SearchIcon },
   { to: '/insights', labelKey: 'nav.insights', icon: ChartIcon },
+  { to: '/overview', labelKey: 'nav.overview', icon: GridIcon },
 ]
+
+/**
+ * How far each visited page was scrolled, keyed by the history entry so a
+ * page that is returned to opens where it was left.
+ */
+const scrollPlaces = new Map<string, number>()
+
+/**
+ * Every new page starts at its own top, but a page that is returned to —
+ * the list of results behind an entry, the insights behind a photo — opens
+ * at the place it was left. The browser's own restoration is switched off
+ * because the page is written before its content has arrived, and the
+ * browser would put the reader at the bottom of a list that is momentarily
+ * short.
+ */
+function useScrollPlaces() {
+  const { pathname, key } = useLocation()
+  const activeKey = useRef(key)
+  activeKey.current = key
+  const page = useRef(pathname)
+
+  useEffect(() => {
+    const previous = history.scrollRestoration
+    history.scrollRestoration = 'manual'
+    const remember = () => scrollPlaces.set(activeKey.current, window.scrollY)
+    window.addEventListener('scroll', remember, { passive: true })
+    return () => {
+      history.scrollRestoration = previous
+      window.removeEventListener('scroll', remember)
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    // Only a new page moves the reader; changing the words of a search or
+    // the filters of a list rewrites the address but stays on the page.
+    if (page.current === pathname) return
+    page.current = pathname
+
+    const target = scrollPlaces.get(key)
+    if (!target) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      return
+    }
+
+    // The pictures and entries of the page still have to arrive and make
+    // it longer, so the place is restored for as long as it keeps growing.
+    let height = document.body.scrollHeight
+    const apply = () => window.scrollTo({ top: target, behavior: 'auto' })
+    const frame = requestAnimationFrame(apply)
+    const timer = window.setInterval(() => {
+      const next = document.body.scrollHeight
+      if (next === height) return
+      height = next
+      apply()
+    }, 200)
+    const stop = () => {
+      window.clearInterval(timer)
+      window.clearTimeout(limit)
+    }
+    const limit = window.setTimeout(stop, 3000)
+    // Touching the screen means the reader has taken over; the page must
+    // never pull itself away under their finger.
+    window.addEventListener('touchstart', stop, { passive: true, once: true })
+    window.addEventListener('wheel', stop, { passive: true, once: true })
+
+    return () => {
+      cancelAnimationFrame(frame)
+      stop()
+      window.removeEventListener('touchstart', stop)
+      window.removeEventListener('wheel', stop)
+    }
+  }, [pathname, key])
+}
 
 /**
  * The frame of the application.
@@ -27,8 +102,11 @@ const primaryLinks = [
  * the way back and the actions. The wide layout keeps a sidebar, because
  * there is room for it there.
  */
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell() {
   const { t } = useTranslation()
+
+  useScrollPlaces()
+
   return (
     <div className="min-h-dvh bg-paper text-ink">
       {/* --- desktop sidebar --- */}
@@ -43,7 +121,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* --- content --- */}
       <main className="pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] lg:ml-72 lg:pb-0">
-        <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:max-w-4xl">{children}</div>
+        <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:max-w-4xl">
+          <Outlet />
+        </div>
       </main>
     </div>
   )
@@ -165,11 +245,11 @@ export function NewEntryButton() {
       to="/new"
       aria-label={t('nav.newEntry')}
       className={cn(
-        'fixed right-4 z-30 flex size-14 items-center justify-center rounded-full text-white',
-        'shadow-float transition-transform duration-150 active:scale-95',
+        'fixed right-4 z-30 flex size-14 items-center justify-center rounded-full',
+        'bg-accent text-accent-contrast shadow-float',
+        'transition-transform duration-150 hover:scale-[1.03] active:scale-95',
         'bottom-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] lg:bottom-8 lg:right-8',
       )}
-      style={{ background: 'linear-gradient(160deg, #7b7ae4 0%, #4f4cc4 100%)' }}
     >
       <PlusIcon size={26} strokeWidth={2} />
     </NavLink>

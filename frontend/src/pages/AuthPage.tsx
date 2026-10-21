@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
@@ -10,6 +10,7 @@ import { Logo } from '../components/entries/Logo'
 export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const { signIn, signUp } = useAuth()
   const { notify, describe } = useToast()
 
@@ -37,7 +38,17 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
         await signIn(username.trim(), password)
         notify(t('auth.signInTitle'), 'success')
       }
-      navigate('/', { replace: true })
+      // Return to the page the reader was sent away from, if there was one.
+      const remembered = (location.state as { from?: unknown } | null)?.from
+      const target =
+        typeof remembered === 'string' &&
+        remembered.startsWith('/') &&
+        !remembered.startsWith('//') &&
+        !remembered.startsWith('/signin') &&
+        !remembered.startsWith('/signup')
+          ? remembered
+          : '/'
+      navigate(target, { replace: true })
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setError(t('auth.usernameTaken'))

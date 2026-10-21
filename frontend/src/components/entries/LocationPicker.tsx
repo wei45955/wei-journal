@@ -36,6 +36,24 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
   const [unavailable, setUnavailable] = useState(false)
   const [error, setError] = useState('')
   const [locating, setLocating] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // A fresh sheet every time, without the words of the last visit.
+  useEffect(() => {
+    if (open) return
+    setQuery('')
+    setSearchTerm('')
+    setResults([])
+    setOwnPlaces([])
+  }, [open])
+
+  // The place search waits for the typing to settle, so every letter is
+  // not a request to two services.
+  useEffect(() => {
+    if (!open) return
+    const timer = window.setTimeout(() => setSearchTerm(query.trim()), 320)
+    return () => window.clearTimeout(timer)
+  }, [open, query])
 
   useEffect(() => {
     if (!open) return
@@ -50,17 +68,17 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
         if (cancelled) return
         setUnavailable(!capabilities.search)
 
-        const own = await api.ownLocations(query)
+        const own = await api.ownLocations(searchTerm)
         if (cancelled) return
         setOwnPlaces(own.items)
 
         // Nothing is looked for before a word is typed: the service would
         // be asked for an empty name.
-        if (query.trim() === '' || !capabilities.search) {
+        if (searchTerm === '' || !capabilities.search) {
           setResults([])
           return
         }
-        const places = await api.geocode(query)
+        const places = await api.geocode(searchTerm)
         if (cancelled) return
         setResults(places.items)
       } catch (err) {
@@ -72,7 +90,7 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
     return () => {
       cancelled = true
     }
-  }, [open, query, describe, t])
+  }, [open, searchTerm, describe, t])
 
   /**
    * Asks the phone where it is. The name of the place is asked of the

@@ -13,21 +13,31 @@ interface TagsState {
 
 let cache: Tag[] = []
 let inflight: Promise<Tag[]> | null = null
+let generation = 0
 const listeners = new Set<(tags: Tag[]) => void>()
 
 async function fetchTags(): Promise<Tag[]> {
+  const mine = generation
   if (!inflight) {
-    inflight = api
-      .tags()
-      .then((result) => result.items)
-      .finally(() => {
-        inflight = null
-      })
+    const task = api.tags().then((result) => result.items)
+    inflight = task
+    void task.finally(() => {
+      if (inflight === task) inflight = null
+    })
   }
   const result = await inflight
+  if (mine !== generation) return result
   cache = result
   for (const listener of listeners) listener(result)
   return result
+}
+
+/** Drops the tags of one account when the session changes. */
+export function resetTagCache() {
+  generation += 1
+  cache = []
+  inflight = null
+  for (const listener of listeners) listener([])
 }
 
 /** The tag list is shared, so it is fetched once and broadcast. */
@@ -39,7 +49,11 @@ export function useTags(): TagsState {
     const listener = (next: Tag[]) => setTags(next)
     listeners.add(listener)
     if (cache.length === 0) {
-      void fetchTags().finally(() => setLoading(false))
+      // A failed fetch is retried when a tag changes; it must not surface
+      // as an unhandled rejection.
+      void fetchTags()
+        .catch(() => {})
+        .finally(() => setLoading(false))
     } else {
       setLoading(false)
     }

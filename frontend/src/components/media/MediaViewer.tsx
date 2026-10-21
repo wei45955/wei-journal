@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { formatBytes } from '../../lib/format'
+import { lockBodyScroll } from '../../lib/scrollLock'
 import type { Media } from '../../lib/types'
 import { Button } from '../ui'
 import { CloseIcon, DownloadIcon, FileIcon } from '../icons'
@@ -127,10 +128,26 @@ function MediaOverlay({
   const [playing, setPlaying] = useState(false)
   const [zoom, setZoom] = useState<ZoomState>(RESET)
 
-  const media = items[Math.min(Math.max(index, 0), items.length - 1)]
+  // The index that is really on the screen. A swipe at either end can
+  // never take the viewer past the first or the last picture.
+  const currentIndex = Math.min(Math.max(index, 0), items.length - 1)
+  const media = items[currentIndex]
   const motion = media ? motionFor(media) : null
 
+  const move = useCallback(
+    (delta: number) => {
+      const next = Math.min(items.length - 1, Math.max(0, currentIndex + delta))
+      if (next !== currentIndex) onIndexChange(next)
+    },
+    [currentIndex, items.length, onIndexChange],
+  )
+  const moveRef = useRef(move)
+  moveRef.current = move
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   const surfaceRef = useRef<HTMLDivElement>(null)
+  const pictureRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<ZoomState>(RESET)
   zoomRef.current = zoom
   const gesture = useRef<{
@@ -143,44 +160,67 @@ function MediaOverlay({
   } | null>(null)
   const lastTap = useRef(0)
 
+  // The page behind must not move while the viewer is open. The lock is
+  // taken once, not again every time the picture changes.
+  useEffect(() => lockBodyScroll(), [])
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-      if (event.key === 'ArrowRight' && items.length > 1) onIndexChange(index + 1)
-      if (event.key === 'ArrowLeft' && items.length > 1) onIndexChange(index - 1)
+      if (event.key === 'Escape') onCloseRef.current()
+      if (event.key === 'ArrowRight') moveRef.current(1)
+      if (event.key === 'ArrowLeft') moveRef.current(-1)
     }
     document.addEventListener('keydown', onKey)
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previous
-    }
-  }, [media, items.length, index, onClose, onIndexChange])
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     setPlaying(false)
     setZoom(RESET)
   }, [media?.id])
 
-  /** Zooms around a point of the surface, so the finger stays on the image. */
-  const zoomAround = useCallback((nextScale: number, point?: { x: number; y: number }) => {
-    setZoom((current) => {
-      const clamped = Math.min(MAX_SCALE, Math.max(1, nextScale))
-      if (!point) return { ...current, scale: clamped, x: 0, y: 0 }
-      const surface = surfaceRef.current
-      if (!surface) return { ...current, scale: clamped }
-      const rect = surface.getBoundingClientRect()
-      const localX = point.x - rect.left - rect.width / 2
-      const localY = point.y - rect.top - rect.height / 2
-      const ratio = clamped / current.scale
-      return {
-        scale: clamped,
-        x: localX - (localX - current.x) * ratio,
-        y: localY - (localY - current.y) * ratio,
-      }
-    })
+  /**
+   * A picture may be moved while it is larger than the screen, but it must
+   * not be thrown away: the edge that is being looked at stays on screen.
+   */
+  const keepInView = useCallback((x: number, y: number, scale: number) => {
+    const surface = surfaceRef.current
+    const picture = pictureRef.current
+    if (!surface || !picture || scale <= 1) return { x: 0, y: 0 }
+    const box = surface.getBoundingClientRect()
+    // The element itself is not scaled, so its layout size times the scale
+    // is the space it really covers. The extra room at the edges lets the
+    // border of the picture sit a little inside the screen.
+    const maxX = Math.max(0, (picture.offsetWidth * scale - box.width) / 2)
+    const maxY = Math.max(0, (picture.offsetHeight * scale - box.height) / 2)
+    return {
+      x: Math.min(maxX, Math.max(-maxX, x)),
+      y: Math.min(maxY, Math.max(-maxY, y)),
+    }
   }, [])
+
+  /** Zooms around a point of the surface, so the finger stays on the image. */
+  const zoomAround = useCallback(
+    (nextScale: number, point?: { x: number; y: number }) => {
+      setZoom((current) => {
+        const clamped = Math.min(MAX_SCALE, Math.max(1, nextScale))
+        if (!point) return { ...current, scale: clamped, x: 0, y: 0 }
+        const surface = surfaceRef.current
+        if (!surface) return { ...current, scale: clamped }
+        const rect = surface.getBoundingClientRect()
+        const localX = point.x - rect.left - rect.width / 2
+        const localY = point.y - rect.top - rect.height / 2
+        const ratio = clamped / current.scale
+        const moved = keepInView(
+          localX - (localX - current.x) * ratio,
+          localY - (localY - current.y) * ratio,
+          clamped,
+        )
+        return { scale: clamped, x: moved.x, y: moved.y }
+      })
+    },
+    [keepInView],
+  )
 
   function onTouchStart(event: React.TouchEvent) {
     if (event.touches.length === 2) {
@@ -226,22 +266,26 @@ function MediaOverlay({
         const clamped = Math.min(MAX_SCALE, Math.max(1, next))
         const mid = midpoint(event.touches)
         const ratio = clamped / active.startScale
-        return {
-          scale: clamped,
-          x: active.startX + (mid.x - active.startMid.x) * ratio,
-          y: active.startY + (mid.y - active.startMid.y) * ratio,
-        }
+        const moved = keepInView(
+          active.startX + (mid.x - active.startMid.x) * ratio,
+          active.startY + (mid.y - active.startMid.y) * ratio,
+          clamped,
+        )
+        return { scale: clamped, x: moved.x, y: moved.y }
       })
       return
     }
 
     if (event.touches.length === 1 && zoom.scale > 1) {
       const touch = event.touches[0]
-      setZoom((current) => ({
-        ...current,
-        x: active.startX + (touch.clientX - active.startMid.x),
-        y: active.startY + (touch.clientY - active.startMid.y),
-      }))
+      setZoom((current) => {
+        const moved = keepInView(
+          active.startX + (touch.clientX - active.startMid.x),
+          active.startY + (touch.clientY - active.startMid.y),
+          current.scale,
+        )
+        return { ...current, x: moved.x, y: moved.y }
+      })
     }
   }
 
@@ -252,7 +296,7 @@ function MediaOverlay({
       // A horizontal swipe moves to the next picture.
       const end = event.changedTouches[0]?.clientX ?? active.swipeX
       const delta = end - active.swipeX
-      if (Math.abs(delta) > 56) onIndexChange(index + (delta < 0 ? 1 : -1))
+      if (Math.abs(delta) > 56) move(delta < 0 ? 1 : -1)
     }
     if (gesture.current) gesture.current.startDistance = 0
   }
@@ -280,14 +324,14 @@ function MediaOverlay({
   const film = isFilm(media)
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-black/95 animate-fade-in">
+    <div className="fixed inset-0 z-[70] flex flex-col bg-black animate-fade-in">
       <header className="flex shrink-0 items-start gap-2 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 text-white">
         <div className="min-w-0 flex-1 pt-1">
           <p className="truncate text-sm font-semibold">{media.originalName}</p>
           <p className="truncate text-xs text-white/60">
             {formatBytes(media.size)}
             {media.width && media.height ? ` · ${media.width}×${media.height}` : ''}
-            {items.length > 1 ? ` · ${index + 1}/${items.length}` : ''}
+            {items.length > 1 ? ` · ${currentIndex + 1}/${items.length}` : ''}
           </p>
         </div>
         <a
@@ -319,13 +363,14 @@ function MediaOverlay({
         {items.length > 1 ? (
           <GalleryArrow
             side="left"
-            disabled={index <= 0}
-            onClick={() => onIndexChange(index - 1)}
+            disabled={currentIndex <= 0}
+            onClick={() => move(-1)}
           />
         ) : null}
 
         {picture ? (
           <div
+            ref={pictureRef}
             className="relative flex max-h-full max-w-full items-center justify-center"
             style={{
               transform: `translate3d(${zoom.x}px, ${zoom.y}px, 0) scale(${zoom.scale})`,
@@ -339,14 +384,14 @@ function MediaOverlay({
                 loop
                 muted
                 playsInline
-                className="max-h-[70vh] max-w-full rounded-xl object-contain"
+                className="max-h-[70dvh] max-w-full rounded-xl object-contain"
               />
             ) : (
               <img
                 src={media.url}
                 alt={media.originalName}
                 draggable={false}
-                className="max-h-[70vh] max-w-full rounded-xl object-contain"
+                className="max-h-[70dvh] max-w-full rounded-xl object-contain"
               />
             )}
             {motion ? (
@@ -369,7 +414,7 @@ function MediaOverlay({
             src={media.url}
             controls
             playsInline
-            className="max-h-[70vh] max-w-full rounded-xl bg-black"
+            className="max-h-[70dvh] max-w-full rounded-xl bg-black"
           />
         ) : null}
 
@@ -390,8 +435,8 @@ function MediaOverlay({
         {items.length > 1 ? (
           <GalleryArrow
             side="right"
-            disabled={index >= items.length - 1}
-            onClick={() => onIndexChange(index + 1)}
+            disabled={currentIndex >= items.length - 1}
+            onClick={() => move(1)}
           />
         ) : null}
 
@@ -439,10 +484,10 @@ function MediaOverlay({
               type="button"
               onClick={() => onIndexChange(itemIndex)}
               aria-label={item.originalName}
-              aria-current={itemIndex === index}
+              aria-current={itemIndex === currentIndex}
               className={cn(
                 'relative size-14 shrink-0 overflow-hidden rounded-xl bg-white/10 transition-opacity',
-                itemIndex === index ? 'ring-2 ring-white' : 'opacity-55',
+                itemIndex === currentIndex ? 'ring-2 ring-white' : 'opacity-55',
               )}
             >
               <Thumb media={item} />
@@ -470,12 +515,13 @@ function GalleryArrow({
   disabled: boolean
   onClick: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={side === 'left' ? 'Previous' : 'Next'}
+      aria-label={side === 'left' ? t('media.previous') : t('media.next')}
       className={cn(
         'absolute top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-0',
         side === 'left' ? 'left-2' : 'right-2',

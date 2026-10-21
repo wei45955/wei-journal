@@ -12,14 +12,31 @@ import { EntryCard } from '../components/entries/EntryCard'
 import { FilterBar } from '../components/entries/FilterBar'
 import { BulkBar } from '../components/entries/BulkBar'
 import { filtersToQuery, hasActiveFilters } from '../components/entries/filters'
+import type { TimelineFilters } from '../components/entries/filters'
 import { BackButton, IconButton, TopBar } from '../components/layout/TopBar'
 import { NewEntryButton } from '../components/layout/AppShell'
 import { Menu } from '../components/layout/Menu'
 import { MediaGallery } from '../components/media/MediaViewer'
-import { FilterIcon, FolderIcon, MoreIcon, SearchIcon, SelectIcon, SortIcon } from '../components/icons'
+import {
+  FilterIcon,
+  FolderIcon,
+  GridIcon,
+  MoreIcon,
+  SearchIcon,
+  SelectIcon,
+  SortIcon,
+} from '../components/icons'
 import type { Entry, Media } from '../lib/types'
 
 const PAGE_SIZE = 30
+
+/** The folder named by the address, or undefined when the address names none. */
+function folderFromPath(raw: string | undefined): number | 'none' | undefined {
+  if (raw === undefined) return undefined
+  if (raw === 'none') return 'none'
+  if (!/^\d+$/.test(raw)) return undefined
+  return Number(raw)
+}
 
 export function TimelinePage() {
   const { t } = useTranslation()
@@ -29,8 +46,12 @@ export function TimelinePage() {
   const { filters, setFilters, order, setOrder, rememberScroll, takeScroll } = useTimeline()
   const params = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
 
-  const routeFolderId = params.folderId ? Number(params.folderId) : undefined
+  const rawFolder = params.folderId
+  const routeFolderId = folderFromPath(rawFolder)
+  const invalidFolder = rawFolder !== undefined && routeFolderId === undefined
+
   const [entries, setEntries] = useState<Entry[]>([])
   const [cursor, setCursor] = useState('')
   const [hasMore, setHasMore] = useState(false)
@@ -45,16 +66,25 @@ export function TimelinePage() {
   const language = user?.settings.language ?? 'en'
   const zone = displayTimezone(user?.settings.timezone)
 
-  const effectiveFilters = filters
+  // The address is the source of truth for the folder: "/" is every entry,
+  // "/folders/12" is one folder and "/folders/none" is the entries that are
+  // in no folder. The rest of the filters live in the timeline state.
+  const effectiveFilters = useMemo<TimelineFilters>(
+    () => ({ ...filters, folderId: routeFolderId }),
+    [filters, routeFolderId],
+  )
 
-  // A link to a folder opens that folder. The filter follows, so the list
-  // and the address always agree.
+  // Keeping the state in step means returning to the timeline — or opening
+  // the filters — still shows the folder in the address.
   useEffect(() => {
-    if (routeFolderId === undefined) return
+    if (invalidFolder) {
+      navigate('/', { replace: true })
+      return
+    }
     setFilters((current) =>
       current.folderId === routeFolderId ? current : { ...current, folderId: routeFolderId },
     )
-  }, [routeFolderId, setFilters])
+  }, [invalidFolder, navigate, routeFolderId, setFilters])
 
   const load = useCallback(
     async (nextCursor: string, replace: boolean) => {
@@ -81,7 +111,6 @@ export function TimelinePage() {
   // The address of the list as it is on the screen. The browser pulls the
   // page back to the top when the address changes, and that move must not
   // be taken for the place the reader left from.
-  const location = useLocation()
   const ownPath = useRef(location.pathname)
   ownPath.current = location.pathname
 
@@ -153,17 +182,22 @@ export function TimelinePage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [rememberScroll])
 
-  // A new set of filters starts the list at the top again.
+  // A new folder, filter or order starts the list at the top again, and
+  // forgets where the old list was left.
   const signature = JSON.stringify([effectiveFilters, order])
   const lastSignature = useRef(signature)
   useEffect(() => {
     if (lastSignature.current === signature) return
     lastSignature.current = signature
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [signature])
+    rememberScroll(0)
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [signature, rememberScroll])
 
-  const folderId = typeof effectiveFilters.folderId === 'number' ? effectiveFilters.folderId : undefined
+  const folderId = typeof routeFolderId === 'number' ? routeFolderId : undefined
   const currentFolder = folders.find((folder) => folder.id === folderId)
+  const inFolder = routeFolderId !== undefined
+  const folderTitle =
+    routeFolderId === 'none' ? t('entries.noFolder') : currentFolder?.name
 
   const groups = useMemo(() => {
     const map = new Map<string, Entry[]>()
@@ -175,6 +209,14 @@ export function TimelinePage() {
     }
     return Array.from(map.entries())
   }, [entries, zone])
+
+  function selectFolder(next: number | 'none' | undefined) {
+    setFilters((current) =>
+      current.folderId === next ? current : { ...current, folderId: next },
+    )
+    const path = next === undefined ? '/' : `/folders/${next}`
+    if (location.pathname !== path) navigate(path)
+  }
 
   function toggleSelect(id: number) {
     setSelected((current) =>
@@ -196,6 +238,12 @@ export function TimelinePage() {
 
   const menuItems = useMemo(
     () => [
+      {
+        id: 'overview',
+        label: t('nav.overview'),
+        icon: <GridIcon size={17} />,
+        onSelect: () => navigate('/overview'),
+      },
       {
         id: 'select',
         label: selecting ? t('batch.clear') : t('batch.select'),
@@ -227,48 +275,39 @@ export function TimelinePage() {
         id: 'folder-all',
         label: t('timeline.allFolders'),
         icon: <FolderIcon size={17} />,
-        checked: effectiveFilters.folderId === undefined,
-        onSelect: () => {
-          setFilters({ ...filters, folderId: undefined })
-          navigate('/')
-        },
+        checked: routeFolderId === undefined,
+        onSelect: () => selectFolder(undefined),
       },
       {
         id: 'folder-none',
         label: t('entries.noFolder'),
         icon: <FolderIcon size={17} />,
-        checked: effectiveFilters.folderId === 'none',
-        onSelect: () => setFilters({ ...filters, folderId: 'none' }),
+        checked: routeFolderId === 'none',
+        onSelect: () => selectFolder('none'),
       },
       ...folders.map((folder) => ({
         id: `folder-${folder.id}`,
         label: folder.name,
         icon: <FolderIcon size={17} />,
-        checked: effectiveFilters.folderId === folder.id,
-        onSelect: () => {
-          setFilters({ ...filters, folderId: folder.id })
-          navigate(`/folders/${folder.id}`)
-        },
+        checked: routeFolderId === folder.id,
+        onSelect: () => selectFolder(folder.id),
       })),
     ],
-    [
-      t,
-      selecting,
-      order,
-      filtersOpen,
-      folders,
-      effectiveFilters.folderId,
-      filters,
-      navigate,
-      setFilters,
-    ],
+    // selectFolder is built from the stable navigate and setFilters and the
+    // current address; listing the values it reads keeps the menu honest.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, selecting, order, filtersOpen, folders, routeFolderId, location.pathname, navigate, setFilters],
   )
 
   return (
     <div ref={rootRef} className="animate-page-in pb-24">
       <TopBar
-        title={currentFolder ? currentFolder.name : t('nav.timeline')}
-        left={<BackButton label={t('nav.backToOverview')} onClick={() => navigate('/overview')} />}
+        title={folderTitle ?? t('nav.timeline')}
+        left={
+          inFolder ? (
+            <BackButton label={t('timeline.allFolders')} onClick={() => navigate('/')} />
+          ) : undefined
+        }
         actions={
           <>
             <IconButton label={t('nav.search')} onClick={() => navigate('/search')}>
@@ -286,9 +325,7 @@ export function TimelinePage() {
       />
 
       <header className="pt-3 pb-3">
-        <h1 className="title-large text-ink-strong">
-          {currentFolder ? currentFolder.name : t('nav.timeline')}
-        </h1>
+        <h1 className="title-large text-ink-strong">{folderTitle ?? t('nav.timeline')}</h1>
         {currentFolder ? (
           <p className="mt-1 text-sm text-ink-muted">
             {currentFolder.entryCount === 1
@@ -299,8 +336,9 @@ export function TimelinePage() {
       </header>
 
       <FilterBar
-        filters={filters}
+        filters={effectiveFilters}
         onChange={setFilters}
+        onFolderChange={selectFolder}
         open={filtersOpen}
         onOpenChange={setFiltersOpen}
       />
@@ -308,7 +346,7 @@ export function TimelinePage() {
       {loading ? (
         <div className="flex flex-col gap-3">
           {[0, 1, 2].map((index) => (
-            <Skeleton key={index} className="h-32 w-full rounded-2xl" />
+            <Skeleton key={index} className="h-40 w-full rounded-[1.375rem]" />
           ))}
         </div>
       ) : error ? (
@@ -322,9 +360,9 @@ export function TimelinePage() {
         <>
           <div className="flex flex-col gap-7">
             {groups.map(([date, group]) => (
-              <section key={date} aria-label={dayHeading(date, language)}>
+              <section key={date} aria-label={dayHeading(date, language, zone)}>
                 <h2 className="mb-2.5 px-1 text-sm font-semibold tracking-wide text-ink-faint">
-                  {dayHeading(date, language)}
+                  {dayHeading(date, language, zone)}
                 </h2>
                 <div className="flex flex-col gap-2.5">
                   {group.map((entry) => (

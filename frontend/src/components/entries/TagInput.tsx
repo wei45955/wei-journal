@@ -26,6 +26,7 @@ export function TagInput({ value, onChange, id }: TagInputProps) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
 
   const suggestions = knownTags.filter(
     (tag) =>
@@ -103,6 +104,14 @@ export function TagInput({ value, onChange, id }: TagInputProps) {
               onChange(value.slice(0, -1))
             }
           }}
+          onBlur={(event) => {
+            // A word that was typed but not confirmed is still a tag. The
+            // suggestions keep the focus, so they are not mistaken for
+            // somewhere else entirely.
+            const next = event.relatedTarget as Node | null
+            if (next && suggestionsRef.current?.contains(next)) return
+            if (text.trim()) void addTag(text)
+          }}
           list="wj-tag-suggestions"
           className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
         />
@@ -114,11 +123,12 @@ export function TagInput({ value, onChange, id }: TagInputProps) {
       </div>
 
       {suggestions.length > 0 && text.trim() ? (
-        <div className="flex flex-wrap gap-1.5">
+        <div ref={suggestionsRef} className="flex flex-wrap gap-1.5">
           {suggestions.slice(0, 8).map((tag) => (
             <button
               key={tag.id}
               type="button"
+              onPointerDown={(event) => event.preventDefault()}
               onClick={() => void addTag(tag.name)}
               className={cn(
                 'rounded-full border border-line bg-paper-raised px-2.5 py-1 text-xs text-ink-muted',

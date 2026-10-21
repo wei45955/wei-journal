@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
 import { ErrorState, Skeleton } from '../components/ui'
-import { CoffeeIcon } from '../components/icons'
 import { BackButton, TopBar } from '../components/layout/TopBar'
 import { partsOf } from '../components/calendar/dates'
-import { displayTimezone, localDateKey } from '../lib/format'
+import {
+  displayTimezone,
+  formatEventDate,
+  localDateKey,
+  normalizeDateFormat,
+} from '../lib/format'
+import { useBack } from '../hooks/useBack'
 import type { Stats } from '../lib/types'
 import { CalendarPage } from './CalendarPage'
 import { MapPage } from './MapPage'
@@ -30,7 +33,10 @@ export function InsightsPage() {
   const { t } = useTranslation()
   const { describe } = useToast()
   const { user } = useAuth()
-  const navigate = useNavigate()
+  const back = useBack('/')
+  const language = user?.settings.language ?? 'en'
+  const dateFormat = normalizeDateFormat(user?.settings.dateFormat)
+  const timezone = displayTimezone(user?.settings.timezone)
 
   const [stats, setStats] = useState<Stats | null>(null)
   const [months, setMonths] = useState<MonthCount[]>([])
@@ -39,10 +45,7 @@ export function InsightsPage() {
   const [error, setError] = useState('')
   const [reloadToken, setReloadToken] = useState(0)
 
-  const today = useMemo(
-    () => localDateKey(new Date(), displayTimezone(user?.settings.timezone)),
-    [user?.settings.timezone],
-  )
+  const today = useMemo(() => localDateKey(new Date(), timezone), [timezone])
 
   useEffect(() => {
     let cancelled = false
@@ -51,7 +54,7 @@ export function InsightsPage() {
       try {
         const { year } = partsOf(today)
         const [summary, places, calendar] = await Promise.all([
-          api.stats(),
+          api.stats(timezone),
           api.locations(),
           api.calendar('year', `${year}-01-01`),
         ])
@@ -83,7 +86,7 @@ export function InsightsPage() {
     return () => {
       cancelled = true
     }
-  }, [today, reloadToken, describe, t])
+  }, [today, timezone, reloadToken, describe, t])
 
   const yearTotal = months.reduce((sum, month) => sum + month.count, 0)
   const peak = Math.max(1, ...months.map((month) => month.count))
@@ -92,7 +95,7 @@ export function InsightsPage() {
     <div className="animate-page-in pb-8">
       <TopBar
         title={t('stats.title')}
-        left={<BackButton label={t('nav.back')} onClick={() => navigate(-1)} />}
+        left={<BackButton label={t('nav.back')} onClick={back} />}
       />
 
       <header className="pt-2 pb-4">
@@ -147,7 +150,6 @@ export function InsightsPage() {
               label={t('stats.visited')}
               value={placeCount}
               unit={placeCount === 1 ? t('stats.oneTime') : t('stats.times')}
-              icon={<CoffeeIcon size={22} />}
             />
             <StatTile
               gradient="var(--grad-sun)"
@@ -184,11 +186,19 @@ export function InsightsPage() {
               />
               <StatRow
                 label={t('stats.firstEntry')}
-                value={stats?.firstEntryDate || t('stats.never')}
+                value={
+                  stats?.firstEntryDate
+                    ? formatEventDate(stats.firstEntryDate, language, dateFormat)
+                    : t('stats.never')
+                }
               />
               <StatRow
                 label={t('stats.lastEntry')}
-                value={stats?.lastEntryDate || t('stats.never')}
+                value={
+                  stats?.lastEntryDate
+                    ? formatEventDate(stats.lastEntryDate, language, dateFormat)
+                    : t('stats.never')
+                }
               />
             </dl>
           </section>
@@ -268,19 +278,31 @@ function StatTile({
   label,
   value,
   unit,
-  icon,
 }: {
   gradient: string
   label: string
   value: number
   unit: string
-  icon?: ReactNode
 }) {
+  // A long archive can put five or six digits in a tile that is only a
+  // third of the screen wide. The number steps down rather than spilling
+  // out of the colour.
+  const digits = String(Math.abs(value)).length
+  const valueSize =
+    digits >= 6
+      ? 'text-[1.25rem]'
+      : digits >= 5
+        ? 'text-[1.5rem]'
+        : digits === 4
+          ? 'text-[1.75rem]'
+          : 'text-[2rem]'
+
   return (
     <div className="stat-tile p-3.5" style={{ background: gradient }}>
       <p className="truncate text-center text-[0.8125rem] font-semibold text-white/90">{label}</p>
-      {icon ? <div className="mt-1 flex justify-center">{icon}</div> : null}
-      <p className="mt-1 text-center font-display text-[2rem] leading-none font-bold tracking-tight">
+      <p
+        className={`mt-2 text-center font-display leading-none font-bold tracking-tight tabular-nums ${valueSize}`}
+      >
         {value}
       </p>
       <p className="mt-1 truncate text-center text-[0.75rem] font-medium text-white/75">{unit}</p>

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { format } from 'date-fns'
 import { api } from '../lib/api'
 import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
+import { useBack } from '../hooks/useBack'
+import { applyTheme } from '../lib/theme'
 import { setLanguage, type LanguageCode } from '../i18n'
 import { Button, Field, TextInput, Toggle } from '../components/ui'
 import {
@@ -12,8 +12,8 @@ import {
   browserTimezone,
   displayTimezone,
   formatDate,
-  localeFor,
   localDateKey,
+  normalizeDateFormat,
   TIMEZONE_CHOICES,
 } from '../lib/format'
 import type { AIStatus, Session, Settings } from '../lib/types'
@@ -39,14 +39,6 @@ const DATE_FORMATS = [
 /** The longest side a compressed picture may have. Zero keeps the original. */
 const IMAGE_SIZES = [1280, 2048, 3072, 0]
 
-/** The theme is applied to the document, the way the sign in does it. */
-function applyTheme(theme: string) {
-  if (theme === 'system') document.documentElement.removeAttribute('data-theme')
-  else if (theme === 'light' || theme === 'dark') {
-    document.documentElement.setAttribute('data-theme', theme)
-  }
-}
-
 /**
  * The settings of the account: how it looks, what it may send away, who is
  * signed in and how the data leaves the server.
@@ -55,10 +47,9 @@ export function SettingsPage() {
   const { t, i18n } = useTranslation()
   const { notify, describe } = useToast()
   const { user, updateUser, signOut } = useAuth()
-  const navigate = useNavigate()
+  const back = useBack('/')
 
   const language = user?.settings.language ?? i18n.resolvedLanguage ?? 'en'
-  const locale = localeFor(language)
   const settings = user?.settings
 
   const [saving, setSaving] = useState('')
@@ -114,16 +105,9 @@ export function SettingsPage() {
     () =>
       DATE_FORMATS.map((format_) => ({
         value: format_.value,
-        sample:
-          format_.value === 'yyyy-MM-dd'
-            ? format(new Date(), 'yyyy-MM-dd')
-            : format_.value === 'MM/dd/yyyy'
-              ? format(new Date(), 'MM/dd/yyyy')
-              : format_.value === 'dd/MM/yyyy'
-                ? format(new Date(), 'dd/MM/yyyy')
-                : format(new Date(), format_.value, { locale }),
+        sample: formatDate(new Date().toISOString(), language, normalizeDateFormat(format_.value)),
       })),
-    [locale],
+    [language],
   )
 
   const timezoneValue = !settings?.timezone ? AUTO_TIMEZONE : settings.timezone
@@ -136,7 +120,9 @@ export function SettingsPage() {
     try {
       const updated = await api.updateSettings(patch)
       if (user) updateUser({ ...user, settings: updated })
-      if (updated.theme) applyTheme(updated.theme)
+      if (updated.theme === 'system' || updated.theme === 'light' || updated.theme === 'dark') {
+        applyTheme(updated.theme)
+      }
       if (updated.language === 'en' || updated.language === 'zh-CN') {
         setLanguage(updated.language as LanguageCode)
       }
@@ -213,7 +199,7 @@ export function SettingsPage() {
     <div className="animate-page-in flex flex-col gap-4 pb-8">
       <TopBar
         title={t('settings.title')}
-        left={<BackButton label={t('nav.back')} onClick={() => navigate(-1)} />}
+        left={<BackButton label={t('nav.back')} onClick={back} />}
       />
 
       <header className="pt-2">
@@ -249,7 +235,7 @@ export function SettingsPage() {
               {t('settings.memberSince')}
             </dt>
             <dd className="mt-0.5 text-[0.9375rem] text-ink-strong">
-              {formatDate(user.createdAt, language)}
+              {formatDate(user.createdAt, language, normalizeDateFormat(settings.dateFormat))}
             </dd>
           </div>
         </dl>
@@ -272,7 +258,7 @@ export function SettingsPage() {
                 onClick={() => void saveSettings({ language: code }, 'language')}
                 disabled={saving === 'language'}
                 aria-pressed={active}
-                className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+                className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border px-4 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
                   active
                     ? 'border-accent bg-accent text-accent-contrast'
                     : 'border-line bg-paper-raised text-ink-muted hover:border-line-strong hover:text-ink-strong'
@@ -298,7 +284,7 @@ export function SettingsPage() {
                   onClick={() => void saveSettings({ theme: theme.value }, 'theme')}
                   disabled={saving === 'theme'}
                   aria-pressed={active}
-                  className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm transition-colors disabled:opacity-60 ${
+                  className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border px-4 py-1.5 text-sm transition-colors disabled:opacity-60 ${
                     active
                       ? 'border-accent bg-accent text-accent-contrast'
                       : 'border-line bg-paper-raised text-ink-muted hover:border-line-strong hover:text-ink-strong'
@@ -315,7 +301,7 @@ export function SettingsPage() {
           <select
             id="settings-date-format"
             className="w-full cursor-pointer rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-            value={settings.dateFormat || 'PPP'}
+            value={normalizeDateFormat(settings.dateFormat)}
             onChange={(event) => void saveSettings({ dateFormat: event.target.value }, 'dateFormat')}
             disabled={saving === 'dateFormat'}
           >
@@ -476,6 +462,7 @@ export function SettingsPage() {
           <SessionList
             sessions={sessions}
             language={language}
+            dateFormat={settings.dateFormat}
             busy={sessionBusy}
             onRevoke={(id) => void revokeSession(id)}
           />

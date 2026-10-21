@@ -14,18 +14,36 @@ interface FoldersState {
 
 let cache: Folder[] = []
 let inflight: Promise<Folder[]> | null = null
+let generation = 0
 const listeners = new Set<(folders: Folder[]) => void>()
 
 async function fetchFolders(): Promise<Folder[]> {
+  const mine = generation
   if (!inflight) {
-    inflight = api.folders().then((result) => result.items).finally(() => {
-      inflight = null
+    const task = api.folders().then((result) => result.items)
+    inflight = task
+    void task.finally(() => {
+      if (inflight === task) inflight = null
     })
   }
   const result = await inflight
+  if (mine !== generation) return result
   cache = result
   for (const listener of listeners) listener(result)
   return result
+}
+
+/**
+ * Drops the list of one account when the session changes.
+ *
+ * The cache lives outside React, so without this the folders of the account
+ * that has just signed out can be shown to the next one for a moment.
+ */
+export function resetFolderCache() {
+  generation += 1
+  cache = []
+  inflight = null
+  for (const listener of listeners) listener([])
 }
 
 /**
@@ -40,7 +58,12 @@ export function useFolders(): FoldersState {
     const listener = (next: Folder[]) => setFolders(next)
     listeners.add(listener)
     if (cache.length === 0) {
-      void fetchFolders().finally(() => setLoading(false))
+      // A failed fetch leaves an empty list and is retried when a folder is
+      // created or the page changes; it must not become an unhandled
+      // rejection in the console.
+      void fetchFolders()
+        .catch(() => {})
+        .finally(() => setLoading(false))
     } else {
       setLoading(false)
     }

@@ -25,6 +25,7 @@ function storedLanguage(): LanguageCode {
 
 function applyDocumentLanguage(code: LanguageCode) {
   document.documentElement.lang = code === 'zh-CN' ? 'zh-Hans' : 'en'
+  document.title = code === 'zh-CN' ? '微日记' : 'Wei Journal'
 }
 
 void i18n.use(initReactI18next).init({

@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../../lib/cn'
 import { formatTime } from '../../lib/format'
 import type { Entry, Media } from '../../lib/types'
 import { MediaGrid, splitMedia } from '../media/MediaGrid'
-import { ImageIcon, LocationIcon, PinIcon } from '../icons'
+import { FolderIcon, ImageIcon, LocationIcon, PinIcon, VideoIcon } from '../icons'
 
 interface EntryCardProps {
   entry: Entry
@@ -27,7 +27,13 @@ function leadingPicture(entry: Entry, pictures: Media[]): Media[] {
   return [cover, ...pictures.filter((item) => item.id !== cover.id)]
 }
 
-/** One entry in the timeline. */
+/**
+ * One entry in the timeline.
+ *
+ * The words lead, the pictures meet the edges of the card, and the small
+ * facts sit underneath. Nothing in the card shouts louder than the diary
+ * itself.
+ */
 export function EntryCard({
   entry,
   language,
@@ -38,21 +44,27 @@ export function EntryCard({
   onOpenMedia,
 }: EntryCardProps) {
   const { t } = useTranslation()
+  const location = useLocation()
   const title = entry.title || t('entries.untitled')
-  const excerpt = entry.plainText.slice(0, 220)
+  const excerpt = entry.plainText.trim().slice(0, 220)
   const { pictures, films, files } = splitMedia(entry.media ?? [])
   const ordered = leadingPicture(entry, pictures)
+  const from = { from: location.pathname + location.search }
+  const shownTags = entry.tags.slice(0, 3)
+  const hiddenTags = entry.tags.length - shownTags.length
 
   return (
     <article
       className={cn(
-        'group relative rounded-2xl bg-paper-raised p-4 transition-shadow duration-200',
-        'shadow-[0_1px_2px_rgb(0_0_0/0.04)] hover:shadow-[0_2px_10px_rgb(0_0_0/0.07)]',
+        'group relative overflow-hidden rounded-[1.375rem] bg-paper-raised',
+        'shadow-[0_1px_2px_rgb(0_0_0/0.045)] transition-shadow duration-200',
+        'hover:shadow-[0_3px_14px_rgb(0_0_0/0.07)]',
         selected && 'ring-2 ring-accent',
       )}
     >
       {selectable ? (
-        <label className="absolute top-3.5 left-3.5 z-10 flex size-6 cursor-pointer items-center justify-center">
+        <label className="absolute top-1.5 left-1.5 z-10 flex size-11 cursor-pointer items-center justify-center">
+          {/* The box is small, the place to hit it is not. */}
           <input
             type="checkbox"
             checked={Boolean(selected)}
@@ -63,77 +75,98 @@ export function EntryCard({
         </label>
       ) : null}
 
-      <Link to={`/entries/${entry.id}`} className={cn('block', selectable && 'pl-8')}>
-        <h3 className="text-[1.375rem] leading-tight font-bold tracking-tight text-ink-strong transition-colors group-hover:text-accent-ink">
-          {title}
-        </h3>
-        {excerpt ? (
-          <p className="mt-1.5 line-clamp-4 text-[1.0625rem] leading-relaxed text-ink">{excerpt}</p>
+      <div
+        className={cn(
+          'px-4 pt-4',
+          ordered.length > 0 ? 'pb-3.5' : 'pb-4',
+          selectable && 'pl-12',
+        )}
+      >
+        <Link to={`/entries/${entry.id}`} state={from} className="block">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="min-w-0 flex-1 text-[1.3125rem] leading-[1.25] font-bold tracking-tight text-ink-strong transition-colors group-hover:text-accent-ink">
+              {title}
+            </h3>
+            <time
+              dateTime={entry.eventTime}
+              className="shrink-0 pt-px text-xs font-medium text-ink-faint tabular-nums"
+            >
+              {formatTime(entry.eventTime, language, timeZone || entry.timezone)}
+            </time>
+          </div>
+          {excerpt ? (
+            <p className="mt-1.5 line-clamp-3 text-[1.0625rem] leading-[1.55] text-ink">
+              {excerpt}
+            </p>
+          ) : null}
+        </Link>
+
+        {shownTags.length > 0 ||
+        entry.location ||
+        entry.folderName ||
+        entry.isPinned ||
+        films.length > 0 ||
+        files.length > 0 ? (
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-ink-faint">
+            {shownTags.map((tag) => (
+              <span
+                key={tag.id}
+                className="inline-flex items-center rounded-full bg-paper-sunken px-2 py-0.5 font-medium text-ink-muted"
+              >
+                {tag.name}
+              </span>
+            ))}
+            {hiddenTags > 0 ? <span className="tabular-nums">+{hiddenTags}</span> : null}
+
+            {entry.location ? (
+              <span className="inline-flex min-w-0 items-center gap-1 text-ink-muted">
+                <LocationIcon size={13} className="shrink-0" />
+                <span className="max-w-40 truncate">
+                  {entry.location.name || entry.location.address}
+                </span>
+              </span>
+            ) : null}
+
+            {entry.folderName ? (
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <FolderIcon size={13} className="shrink-0" />
+                <span className="max-w-32 truncate">{entry.folderName}</span>
+              </span>
+            ) : null}
+
+            {films.length > 0 ? (
+              <span className="inline-flex items-center gap-1 tabular-nums">
+                <VideoIcon size={13} />
+                {films.length}
+              </span>
+            ) : null}
+
+            {files.length > 0 ? (
+              <span className="inline-flex items-center gap-1 tabular-nums">
+                <ImageIcon size={13} />
+                {files.length}
+              </span>
+            ) : null}
+
+            {entry.isPinned ? (
+              <span title={t('entries.pinned')} className="text-accent">
+                <PinIcon size={13} />
+              </span>
+            ) : null}
+          </div>
         ) : null}
-      </Link>
+      </div>
 
       {ordered.length > 0 ? (
-        <div className={cn('mt-3', selectable && 'pl-8')}>
-          <MediaGrid
-            media={ordered}
-            onOpen={(media, index) => {
-              const original = pictures.findIndex((item) => item.id === media.id)
-              onOpenMedia?.(media, original === -1 ? index : original)
-            }}
-          />
-        </div>
+        <MediaGrid
+          media={ordered}
+          bleed
+          onOpen={(media, index) => {
+            const original = pictures.findIndex((item) => item.id === media.id)
+            onOpenMedia?.(media, original === -1 ? index : original)
+          }}
+        />
       ) : null}
-
-      {films.length > 0 || files.length > 0 ? (
-        <div className={cn('mt-2 flex items-center gap-3 text-sm text-ink-muted', selectable && 'pl-8')}>
-          {films.length > 0 ? (
-            <span className="inline-flex items-center gap-1">
-              <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden="true">
-                <rect x="3" y="6" width="12.5" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
-                <path d="M15.5 10.5l5-3v9l-5-3" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-              </svg>
-              {films.length}
-            </span>
-          ) : null}
-          {files.length > 0 ? (
-            <span className="inline-flex items-center gap-1">
-              <ImageIcon size={14} />
-              {files.length}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      {entry.tags.length > 0 || entry.location ? (
-        <div className={cn('mt-3 flex flex-wrap items-center gap-1.5', selectable && 'pl-8')}>
-          {entry.tags.map((tag) => (
-            <span
-              key={tag.id}
-              className="inline-flex items-center rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent-ink"
-            >
-              {tag.name}
-            </span>
-          ))}
-          {entry.location ? (
-            <span className="inline-flex items-center gap-1 text-sm text-ink-muted">
-              <LocationIcon size={15} />
-              {entry.location.name || entry.location.address}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className={cn('mt-3 flex items-center gap-2 text-sm text-ink-faint', selectable && 'pl-8')}>
-        <time dateTime={entry.eventTime} className="font-medium tabular-nums">
-          {formatTime(entry.eventTime, language, timeZone || entry.timezone)}
-        </time>
-        {entry.isPinned ? (
-          <span title={t('entries.pinned')} className="text-accent">
-            <PinIcon size={14} />
-          </span>
-        ) : null}
-        {entry.folderName ? <span className="truncate">{entry.folderName}</span> : null}
-      </div>
     </article>
   )
 }

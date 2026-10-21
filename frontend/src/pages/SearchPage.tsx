@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
+import { useAuth } from '../state/auth'
+import { useBack } from '../hooks/useBack'
 import { useToast } from '../state/toast'
 import { Button, EmptyState, ErrorState, Skeleton } from '../components/ui'
-import { SearchIcon } from '../components/icons'
+import { FilterIcon, SearchIcon } from '../components/icons'
 import { BackButton, TopBar } from '../components/layout/TopBar'
 import type { SearchResult } from '../lib/types'
 import { SearchFilters } from '../components/search/SearchFilters'
@@ -21,13 +23,20 @@ type Status = 'idle' | 'loading' | 'ready' | 'error'
 export function SearchPage() {
   const { t, i18n } = useTranslation()
   const { notify, describe } = useToast()
-  const navigate = useNavigate()
+  const { user } = useAuth()
+  const back = useBack('/')
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [query, setQuery] = useState('')
-  const [type, setType] = useState('all')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
+  // The address holds the search, so opening a result and coming back
+  // finds the same words and the same filters.
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
+  const [type, setType] = useState(() => searchParams.get('type') ?? 'all')
+  const [from, setFrom] = useState(() => searchParams.get('from') ?? '')
+  const [to, setTo] = useState(() => searchParams.get('to') ?? '')
+  const [showFilters, setShowFilters] = useState(
+    () => Boolean(searchParams.get('type') || searchParams.get('from') || searchParams.get('to')),
+  )
+  const [attempt, setAttempt] = useState(0)
 
   const [results, setResults] = useState<SearchResult[]>([])
   const [offset, setOffset] = useState(0)
@@ -38,6 +47,16 @@ export function SearchPage() {
 
   const debouncedQuery = useDebouncedValue(query, 300)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (query.trim()) next.set('q', query)
+    if (type !== 'all') next.set('type', type)
+    if (from) next.set('from', from)
+    if (to) next.set('to', to)
+    if (next.toString() === searchParams.toString()) return
+    setSearchParams(next, { replace: true })
+  }, [query, type, from, to, searchParams, setSearchParams])
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -76,7 +95,7 @@ export function SearchPage() {
     return () => {
       cancelled = true
     }
-  }, [term, type, from, to, describe, t])
+  }, [term, type, from, to, attempt, describe, t])
 
   async function loadMore() {
     if (!term || loadingMore) return
@@ -105,38 +124,49 @@ export function SearchPage() {
     <div className="animate-page-in pb-8">
       <TopBar
         title={t('search.title')}
-        left={<BackButton label={t('nav.back')} onClick={() => navigate(-1)} />}
+        left={<BackButton label={t('nav.back')} onClick={back} />}
       />
 
       <header className="pt-2 pb-3">
         <h1 className="title-large text-ink-strong">{t('search.title')}</h1>
       </header>
 
-      <div className="relative">
-        <SearchIcon
-          size={18}
-          className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-faint"
-        />
-        <input
-          ref={inputRef}
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t('search.placeholder')}
-          aria-label={t('search.title')}
-          className="w-full rounded-full border-0 bg-paper-sunken py-3 pr-4 pl-11 text-[0.9375rem] text-ink placeholder:text-ink-faint focus:bg-paper-raised focus:outline-none"
-        />
-      </div>
-
-      <div className="mt-2.5">
-        <Button
-          variant={showFilters ? 'primary' : 'secondary'}
-          size="sm"
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <SearchIcon
+            size={18}
+            className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-faint"
+          />
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('search.placeholder')}
+            aria-label={t('search.title')}
+            className="h-12 w-full rounded-full border-0 bg-paper-sunken pr-4 pl-11 text-[0.9375rem] text-ink placeholder:text-ink-faint focus:bg-paper-raised focus:ring-2 focus:ring-accent/20 focus:outline-none"
+          />
+        </div>
+        <button
+          type="button"
           onClick={() => setShowFilters((open) => !open)}
           aria-expanded={showFilters}
+          aria-label={t('search.filters')}
+          title={t('search.filters')}
+          className={`relative flex size-12 shrink-0 items-center justify-center rounded-full transition-colors ${
+            showFilters || dirty
+              ? 'bg-accent-soft text-accent-ink'
+              : 'bg-paper-sunken text-ink-muted active:bg-paper-overlay'
+          }`}
         >
-          {t('search.filters')}
-        </Button>
+          <FilterIcon size={19} />
+          {dirty ? (
+            <span
+              className="absolute top-2.5 right-2.5 size-1.5 rounded-full bg-accent"
+              aria-hidden="true"
+            />
+          ) : null}
+        </button>
       </div>
 
       {showFilters ? (
@@ -168,7 +198,7 @@ export function SearchPage() {
             ))}
           </div>
         ) : status === 'error' ? (
-          <ErrorState message={error} onRetry={() => setQuery((current) => `${current} `)} />
+          <ErrorState message={error} onRetry={() => setAttempt((value) => value + 1)} />
         ) : results.length === 0 ? (
           <EmptyState title={t('search.noResults')} body={t('search.noResultsBody')} />
         ) : (
@@ -183,6 +213,7 @@ export function SearchPage() {
                   key={result.entry.id}
                   result={result}
                   language={i18n.resolvedLanguage ?? i18n.language}
+                  dateFormat={user?.settings.dateFormat}
                 />
               ))}
             </div>

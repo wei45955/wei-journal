@@ -20,6 +20,26 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Wei Journal</title>
+    <script>
+      // The account's theme is read before the first paint, so a dark
+      // journal never opens with a white flash.
+      (function () {
+        try {
+          var choice = window.localStorage.getItem('wj.theme')
+          if (choice === 'dark' || choice === 'light') {
+            document.documentElement.setAttribute('data-theme', choice)
+            var color = choice === 'dark' ? '#000000' : '#f2f2f7'
+            var metas = document.querySelectorAll('meta[name="theme-color"]')
+            for (var i = 0; i < metas.length; i += 1) metas[i].setAttribute('content', color)
+          }
+          if (window.localStorage.getItem('wj.language') === 'zh-CN') {
+            document.documentElement.lang = 'zh-Hans'
+          }
+        } catch (error) {
+          // Storage can be refused; the system theme is a fine default.
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

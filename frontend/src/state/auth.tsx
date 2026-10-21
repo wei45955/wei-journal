@@ -3,6 +3,9 @@ import type { ReactNode } from 'react'
 import { api, ApiError } from '../lib/api'
 import type { User } from '../lib/types'
 import { browserTimezone } from '../lib/format'
+import { applyTheme } from '../lib/theme'
+import { resetFolderCache } from '../hooks/useFolders'
+import { resetTagCache } from '../hooks/useTags'
 import { setLanguage } from '../i18n'
 import type { LanguageCode } from '../i18n'
 
@@ -26,8 +29,7 @@ function applyPreferences(user: User) {
   }
   const theme = user.settings?.theme
   if (theme === 'light' || theme === 'dark' || theme === 'system') {
-    if (theme === 'system') document.documentElement.removeAttribute('data-theme')
-    else document.documentElement.setAttribute('data-theme', theme)
+    applyTheme(theme)
   }
 }
 
@@ -41,11 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(me.user)
       applyPreferences(me.user)
     } catch (error) {
-      if (!(error instanceof ApiError) || !error.isUnauthorized) {
-        // A network failure is not the same as being signed out, but there is
-        // no usable session to work with either way.
-      }
-      setUser(null)
+      // Only a rejected session signs the reader out. A network failure
+      // leaves the account that is already on screen in place.
+      if (error instanceof ApiError && error.isUnauthorized) setUser(null)
     }
   }, [])
 
@@ -137,8 +137,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.logout()
     } finally {
       setUser(null)
+      resetFolderCache()
+      resetTagCache()
     }
   }, [])
+
+  // The shared caches live outside React. A change of account, including a
+  // session that has expired, must not let one account see the folders or
+  // tags of the previous one.
+  const lastUserId = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    const current = user?.id
+    if (lastUserId.current !== current) {
+      if (lastUserId.current !== undefined) {
+        resetFolderCache()
+        resetTagCache()
+      }
+      lastUserId.current = current
+    }
+  }, [user?.id])
 
   const value = useMemo<AuthState>(
     () => ({ user, loading, signIn, signUp, signOut, refreshUser, updateUser: setUser }),

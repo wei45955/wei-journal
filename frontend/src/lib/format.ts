@@ -2,7 +2,7 @@
  * Date and number formatting that follows the user's preferences.
  */
 
-import { format, formatDistanceToNow, isToday, isYesterday, isValid, parseISO } from 'date-fns'
+import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns'
 import { enUS, zhCN } from 'date-fns/locale'
 
 const locales: Record<string, Locale> = {
@@ -16,11 +16,42 @@ export function localeFor(language: string): Locale {
   return locales[language] ?? enUS
 }
 
+/**
+ * The patterns the account may hold. The upper case form was written by an
+ * older settings screen; date-fns reads it as the week year, so it is
+ * translated to the pattern the screen offers today.
+ */
+const LEGACY_PATTERNS: Record<string, string> = {
+  'YYYY-MM-DD': 'yyyy-MM-dd',
+  'YYYY-MM-DD HH:mm': 'yyyy-MM-dd HH:mm',
+}
+
+/** A date pattern that date-fns can read, with `PPP` as the fallback. */
+export function normalizeDateFormat(pattern?: string): string {
+  const value = (pattern ?? '').trim()
+  if (!value) return 'PPP'
+  return LEGACY_PATTERNS[value] ?? value
+}
+
+/** Adds the time of day to a date-only pattern, unless it already has one. */
+export function dateTimePattern(pattern?: string): string {
+  const value = normalizeDateFormat(pattern)
+  return /[Hhmsa]|p/.test(value) ? value : `${value} HH:mm`
+}
+
+function formatPattern(date: Date, language: string, pattern: string): string {
+  try {
+    return format(date, pattern, { locale: localeFor(language) })
+  } catch {
+    return format(date, 'PPP', { locale: localeFor(language) })
+  }
+}
+
 /** Formats an ISO timestamp for display. */
 export function formatDateTime(iso: string, language = 'en', pattern = 'PPP p'): string {
   const date = parseISO(iso)
   if (!isValid(date)) return ''
-  return format(date, pattern, { locale: localeFor(language) })
+  return formatPattern(date, language, normalizeDateFormat(pattern))
 }
 
 export function formatDate(iso: string, language = 'en', pattern = 'PPP'): string {
@@ -28,10 +59,10 @@ export function formatDate(iso: string, language = 'en', pattern = 'PPP'): strin
 }
 
 /** Formats the event date, which the server already resolved to a local day. */
-export function formatEventDate(eventDate: string, language = 'en'): string {
+export function formatEventDate(eventDate: string, language = 'en', pattern = 'PPP'): string {
   const date = parseISO(eventDate + 'T00:00:00')
   if (!isValid(date)) return eventDate
-  return format(date, 'PPP', { locale: localeFor(language) })
+  return formatPattern(date, language, normalizeDateFormat(pattern))
 }
 
 /** A short relative description such as "3 days ago". */
@@ -57,20 +88,33 @@ export function formatTime(iso: string, language = 'en', timeZone?: string): str
 }
 
 /** The heading used above a group of entries in the timeline. */
-export function dayHeading(eventDate: string, language = 'en'): string {
+export function dayHeading(eventDate: string, language = 'en', timezone?: string): string {
   const date = parseISO(eventDate + 'T00:00:00')
   if (!isValid(date)) return eventDate
+
+  // "Today" is the day of the account, which is not necessarily the day of
+  // the browser when the reader has chosen another zone.
   const now = new Date()
-  if (isToday(date)) {
+  const today = localDateKey(now, timezone)
+  if (eventDate === today) {
     return language === 'zh-CN' ? '今天' : 'Today'
   }
-  const yesterday = new Date(now)
-  yesterday.setDate(now.getDate() - 1)
-  if (isYesterday(date)) {
+  // Yesterday is a calendar step, not twenty-four hours: the day a clock
+  // springs forward is one hour short, and subtracting a day of milliseconds
+  // would skip a date.
+  const [year, month, day] = today.split('-').map(Number)
+  const yesterday = new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10)
+  if (eventDate === yesterday) {
     return language === 'zh-CN' ? '昨天' : 'Yesterday'
   }
-  const sameYear = date.getFullYear() === now.getFullYear()
-  return format(date, sameYear ? 'EEEE, MMMM d' : 'PPP', { locale: localeFor(language) })
+  const sameYear = eventDate.slice(0, 4) === today.slice(0, 4)
+  const locale = localeFor(language)
+  if (language === 'zh-CN') {
+    // Chinese dates run from the largest part to the smallest. Writing the
+    // English pattern in Chinese produces "星期六, 十月 17".
+    return format(date, sameYear ? 'M月d日 EEEE' : 'yyyy年M月d日', { locale })
+  }
+  return format(date, sameYear ? 'EEEE, MMMM d' : 'PPP', { locale })
 }
 
 /** Formats a byte count for display. */

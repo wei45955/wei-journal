@@ -7,7 +7,14 @@ import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
 import { Button, EmptyState, ErrorState, Skeleton } from '../components/ui'
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/icons'
-import { displayTimezone, formatTime, localeFor, localDateKey } from '../lib/format'
+import {
+  displayTimezone,
+  formatEventDate,
+  formatTime,
+  localeFor,
+  localDateKey,
+  normalizeDateFormat,
+} from '../lib/format'
 import type { Entry } from '../lib/types'
 import { MonthGrid } from '../components/calendar/MonthGrid'
 import { YearGrid } from '../components/calendar/YearGrid'
@@ -110,10 +117,14 @@ export function CalendarPage({ embedded = false }: { embedded?: boolean }) {
 
   const title = useMemo(() => {
     const date = new Date(`${anchor}T00:00:00`)
-    if (view === 'day') return format(date, 'PPPP', { locale })
-    if (view === 'month') return format(date, 'MMMM yyyy', { locale })
+    if (view === 'day') {
+      return formatEventDate(anchor, language, normalizeDateFormat(user?.settings.dateFormat))
+    }
+    if (view === 'month') {
+      return format(date, language === 'zh-CN' ? 'yyyy年M月' : 'MMMM yyyy', { locale })
+    }
     return String(yearOf(anchor))
-  }, [anchor, view, locale])
+  }, [anchor, view, locale, language, user?.settings.dateFormat])
 
   const dayCount = counts[anchor] ?? 0
   const isToday = anchor === today
@@ -127,7 +138,8 @@ export function CalendarPage({ embedded = false }: { embedded?: boolean }) {
           ) : (
             <h1 className="title-large text-ink-strong">{t('calendar.title')}</h1>
           )}
-          <p className="mt-1 text-sm text-ink-muted">{title}</p>
+          {/* The month and year cards carry the date in their own header. */}
+          {view === 'day' ? <p className="mt-1 text-sm text-ink-muted">{title}</p> : null}
         </div>
 
         <div
@@ -142,7 +154,7 @@ export function CalendarPage({ embedded = false }: { embedded?: boolean }) {
               role="tab"
               aria-selected={view === option.value}
               onClick={() => setView(option.value)}
-              className={`cursor-pointer rounded-[0.625rem] px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ${
+              className={`min-h-10 cursor-pointer rounded-[0.625rem] px-4 py-1.5 text-sm font-semibold transition-all duration-200 ${
                 view === option.value
                   ? 'bg-paper-raised text-ink-strong shadow-[0_1px_3px_rgb(0_0_0/0.08)]'
                   : 'text-ink-muted hover:text-ink'

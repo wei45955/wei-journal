@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useAuth } from '../state/auth'
+import { useBack } from '../hooks/useBack'
 import { useToast } from '../state/toast'
 import { Button, EmptyState, ErrorState, Skeleton } from '../components/ui'
 import { MapCanvas } from '../components/map/MapCanvas'
 import { MapFilters, type FolderFilter } from '../components/map/MapFilters'
-import { formatEventDate } from '../lib/format'
+import { formatEventDate, normalizeDateFormat } from '../lib/format'
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -43,9 +44,11 @@ export function MapPage({ embedded = false }: { embedded?: boolean }) {
   const { t, i18n } = useTranslation()
   const { describe } = useToast()
   const { user } = useAuth()
-  const navigate = useNavigate()
-
+  const location = useLocation()
+  const back = useBack('/')
   const language = user?.settings.language ?? i18n.resolvedLanguage ?? 'en'
+  const dateFormat = normalizeDateFormat(user?.settings.dateFormat)
+  const fromPath = location.pathname + location.search
 
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -129,8 +132,57 @@ export function MapPage({ embedded = false }: { embedded?: boolean }) {
     setAtList(true)
   }
 
+  // The heading belongs above the framed map when it is part of another
+  // page, and below the full screen map when it is a page of its own.
+  const heading = (
+    <header className="mb-3 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        {embedded ? (
+          <h2 className="title-section text-ink-muted">{t('map.title')}</h2>
+        ) : (
+          <h1 className="title-large text-ink-strong">{t('map.title')}</h1>
+        )}
+        <p className="mt-1 text-sm text-ink-muted">
+          {visiblePlaces.length === 1
+            ? t('map.onePlace')
+            : t('map.places', { count: visiblePlaces.length })}
+        </p>
+      </div>
+      <Button
+        variant={filterOpen ? 'primary' : 'secondary'}
+        size="sm"
+        onClick={() => setFilterOpen((value) => !value)}
+      >
+        {t('map.filters', 'Filters')}
+        <ChevronDownIcon
+          size={13}
+          className={filterOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
+        />
+      </Button>
+    </header>
+  )
+
+  const filterPanel = filterOpen ? (
+    <div className="card mb-3 p-4 animate-sheet-up">
+      <MapFilters
+        from={from}
+        to={to}
+        folderId={folderId}
+        tags={tags}
+        onFromChange={setFrom}
+        onToChange={setTo}
+        onFolderChange={setFolderId}
+        onTagsChange={setTags}
+        onReset={reset}
+      />
+    </div>
+  ) : null
+
   return (
     <div>
+      {embedded ? heading : null}
+      {embedded ? filterPanel : null}
+
       {/* --- the map, edge to edge --- */}
       <div
         className={
@@ -168,7 +220,7 @@ export function MapPage({ embedded = false }: { embedded?: boolean }) {
         {embedded ? null : (
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={back}
             aria-label={t('map.back', 'Back')}
             title={t('map.back', 'Back')}
             className="absolute top-[calc(var(--header-h)+0.75rem)] left-3 z-10 flex size-10 items-center justify-center rounded-full bg-white/80 text-ink-strong shadow-float backdrop-blur-xl transition-transform active:scale-90"
@@ -207,6 +259,7 @@ export function MapPage({ embedded = false }: { embedded?: boolean }) {
           <PlaceSheet
             place={selected}
             language={language}
+            dateFormat={dateFormat}
             embedded={embedded}
             onClose={() => setSelected(null)}
           />
@@ -215,47 +268,8 @@ export function MapPage({ embedded = false }: { embedded?: boolean }) {
 
       {/* --- everything the map does not show --- */}
       <div className={embedded ? 'pt-4' : 'mx-auto w-full max-w-3xl px-4 pt-5 sm:px-6 lg:max-w-4xl'}>
-        <header className="mb-3 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            {embedded ? (
-              <h2 className="title-section text-ink-muted">{t('map.title')}</h2>
-            ) : (
-              <h1 className="title-large text-ink-strong">{t('map.title')}</h1>
-            )}
-            <p className="mt-1 text-sm text-ink-muted">
-              {visiblePlaces.length === 1
-                ? t('map.onePlace')
-                : t('map.places', { count: visiblePlaces.length })}
-            </p>
-          </div>
-          <Button
-            variant={filterOpen ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setFilterOpen((value) => !value)}
-          >
-            {t('map.filters', 'Filters')}
-            <ChevronDownIcon
-              size={13}
-              className={filterOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
-            />
-          </Button>
-        </header>
-
-        {filterOpen ? (
-          <div className="card mb-3 p-4 animate-sheet-up">
-            <MapFilters
-              from={from}
-              to={to}
-              folderId={folderId}
-              tags={tags}
-              onFromChange={setFrom}
-              onToChange={setTo}
-              onFolderChange={setFolderId}
-              onTagsChange={setTags}
-              onReset={reset}
-            />
-          </div>
-        ) : null}
+        {embedded ? null : heading}
+        {embedded ? null : filterPanel}
 
         {tileError && !mapUnavailable ? (
           <p className="mb-2 text-xs text-danger">{t('map.tileError')}</p>
@@ -267,31 +281,45 @@ export function MapPage({ embedded = false }: { embedded?: boolean }) {
               {t('map.photos', 'Photos')}
             </h2>
             <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-              {withPhotos.map((place) => (
-                <Link
-                  key={place.id}
-                  to={place.entryId ? `/entries/${place.entryId}` : '#'}
-                  className="w-40 shrink-0 overflow-hidden rounded-2xl bg-paper-raised shadow-sm transition-shadow hover:shadow-md"
-                >
-                  <img
-                    src={place.thumbUrl}
-                    alt={place.name || place.title}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-28 w-full object-cover"
-                  />
-                  <div className="px-3 py-2">
-                    <p className="truncate text-sm font-semibold text-ink-strong">
-                      {place.name || place.title || t('map.unnamedPlace', 'Unnamed place')}
-                    </p>
-                    {place.date ? (
-                      <p className="truncate text-xs text-ink-faint">
-                        {formatEventDate(place.date, language)}
+              {withPhotos.map((place) => {
+                const card = (
+                  <>
+                    <img
+                      src={place.thumbUrl}
+                      alt={place.name || place.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-28 w-full object-cover"
+                    />
+                    <div className="px-3 py-2">
+                      <p className="truncate text-sm font-semibold text-ink-strong">
+                        {place.name || place.title || t('map.unnamedPlace', 'Unnamed place')}
                       </p>
-                    ) : null}
+                      {place.date ? (
+                        <p className="truncate text-xs text-ink-faint">
+                          {formatEventDate(place.date, language, dateFormat)}
+                        </p>
+                      ) : null}
+                    </div>
+                  </>
+                )
+                const className =
+                  'w-40 shrink-0 overflow-hidden rounded-2xl bg-paper-raised shadow-sm transition-shadow hover:shadow-md'
+                return place.entryId ? (
+                  <Link
+                    key={place.id}
+                    to={`/entries/${place.entryId}`}
+                    state={{ from: fromPath }}
+                    className={className}
+                  >
+                    {card}
+                  </Link>
+                ) : (
+                  <div key={place.id} className={className}>
+                    {card}
                   </div>
-                </Link>
-              ))}
+                )
+              })}
             </div>
           </section>
         ) : null}
@@ -346,7 +374,8 @@ export function MapPage({ embedded = false }: { embedded?: boolean }) {
                   {place.entryId ? (
                     <Link
                       to={`/entries/${place.entryId}`}
-                      className="shrink-0 text-sm font-semibold text-accent-ink hover:underline"
+                      state={{ from: fromPath }}
+                      className="-mr-1 shrink-0 rounded-full px-2 py-2 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-soft"
                     >
                       {t('map.openEntry')}
                     </Link>
@@ -368,15 +397,18 @@ export function MapPage({ embedded = false }: { embedded?: boolean }) {
 function PlaceSheet({
   place,
   language,
+  dateFormat,
   embedded,
   onClose,
 }: {
   place: MapPlace
   language: string
+  dateFormat?: string
   embedded?: boolean
   onClose: () => void
 }) {
   const { t } = useTranslation()
+  const location = useLocation()
   const title = place.name || place.title || t('map.unnamedPlace', 'Unnamed place')
 
   return (
@@ -419,7 +451,7 @@ function PlaceSheet({
               <p className="truncate text-sm text-ink-muted">{place.address}</p>
             ) : null}
             <p className="mt-0.5 text-xs text-ink-faint">
-              {place.date ? formatEventDate(place.date, language) : null}
+              {place.date ? formatEventDate(place.date, language, dateFormat) : null}
               {place.date && place.entryCount > 1 ? ' · ' : null}
               {place.entryCount > 1 ? t('map.places', { count: place.entryCount }) : null}
             </p>
@@ -428,7 +460,8 @@ function PlaceSheet({
           {place.entryId ? (
             <Link
               to={`/entries/${place.entryId}`}
-              className="shrink-0 rounded-full bg-accent px-3.5 py-2 text-sm font-semibold text-accent-contrast transition-transform active:scale-95"
+              state={{ from: location.pathname + location.search }}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-contrast transition-transform active:scale-95"
             >
               {t('map.openEntry')}
             </Link>

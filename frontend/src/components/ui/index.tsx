@@ -25,7 +25,7 @@ const buttonVariants: Record<ButtonVariant, string> = {
 }
 
 const buttonSizes: Record<ButtonSize, string> = {
-  sm: 'text-sm px-3.5 py-1.5 gap-1.5',
+  sm: 'min-h-11 text-sm px-3.5 py-1.5 gap-1.5',
   md: 'text-[0.9375rem] px-4.5 py-2.5 gap-2',
   lg: 'text-base px-6 py-3 gap-2',
 }
@@ -163,13 +163,14 @@ export function Toggle({
         onClick={() => onChange(!checked)}
         className={cn(
           'relative mt-0.5 h-[1.75rem] w-[3.125rem] shrink-0 rounded-full transition-colors duration-200 disabled:opacity-50',
+          'before:absolute before:-inset-2 before:content-[""]',
           checked ? 'bg-accent' : 'bg-line-strong',
         )}
       >
         <span
           className={cn(
-            'absolute top-0.5 size-[1.5rem] rounded-full bg-white shadow-sm transition-transform duration-200',
-            checked ? 'translate-x-[1.625rem]' : 'translate-x-0.5',
+            'absolute top-0.5 left-0.5 size-[1.5rem] rounded-full bg-white shadow-sm transition-transform duration-200',
+            checked ? 'translate-x-[1.375rem]' : 'translate-x-0',
           )}
         />
       </button>

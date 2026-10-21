@@ -384,7 +384,8 @@ export const api = {
     }),
   calendar: (view: 'day' | 'month' | 'year', date?: string) =>
     request<CalendarResponse>('/api/calendar', { query: { view, date } }),
-  stats: () => request<Stats>('/api/stats'),
+  stats: (timezone?: string) =>
+    request<Stats>('/api/stats', { query: { tz: timezone } }),
   locations: (query?: {
     from?: string
     to?: string
