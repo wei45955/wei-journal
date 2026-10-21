@@ -22,7 +22,7 @@ export default defineConfig({
     port: 5173,
     // Bind the address the Makefile advertises, not whichever one
     // "localhost" happens to resolve to.
-    host: '127.0.0.1',
+    host: '0.0.0.0',
     proxy: {
       '/api': {
         target: apiTarget,

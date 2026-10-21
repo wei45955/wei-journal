@@ -6,6 +6,7 @@ import { cn } from '../lib/cn'
 import { displayTimezone, formatTime, isoToWallInput, wallInputToISO } from '../lib/format'
 import { useAuth } from '../state/auth'
 import { useToast } from '../state/toast'
+import { useTimeline } from '../state/timeline'
 import { useFolders } from '../hooks/useFolders'
 import { Button, Field, Skeleton } from '../components/ui'
 import { ConfirmDialog } from '../components/ui/Dialog'
@@ -65,6 +66,7 @@ export function EditorPage() {
   const { user } = useAuth()
   const { notify, describe } = useToast()
   const { folders } = useFolders()
+  const { filters: timelineFilters } = useTimeline()
 
   const editing = Boolean(entryId)
   const [entry, setEntry] = useState<Entry | null>(null)
@@ -286,7 +288,17 @@ export function EditorPage() {
       setConfirmLeave(true)
       return
     }
-    navigate(-1)
+    navigate(timelinePath())
+  }
+
+  /**
+   * The list the reader came from. Editing is part of the entry, so the
+   * way back leads to the list and not to the page the entry was opened
+   * from.
+   */
+  function timelinePath(): string {
+    const folderId = timelineFilters.folderId
+    return typeof folderId === 'number' ? `/folders/${folderId}` : '/'
   }
 
   async function finish() {
@@ -455,34 +467,53 @@ export function EditorPage() {
               </Field>
 
               <Field label={t('entries.location')} htmlFor="entry-location">
-                <div className="flex items-center gap-2">
-                  <LocationIcon size={16} className="shrink-0 text-ink-faint" />
-                  {state.location ? (
-                    <span className="min-w-0 flex-1 truncate text-sm text-ink">
-                      {state.location.name || state.location.address}
-                    </span>
-                  ) : (
-                    <span className="min-w-0 flex-1 truncate text-sm text-ink-faint">
-                      {t('entries.noLocation')}
-                    </span>
-                  )}
-                  <Button size="sm" variant="secondary" onClick={() => setShowLocation(true)}>
-                    {state.location ? t('entries.rename') : t('entries.addLocation')}
-                  </Button>
-                  {state.location ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        update({ location: null })
-                        if (entryIdRef.current) {
-                          void api.clearEntryLocation(entryIdRef.current)
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <LocationIcon size={16} className="shrink-0 text-ink-faint" />
+                    {state.location ? (
+                      <input
+                        id="entry-location"
+                        value={state.location.name}
+                        placeholder={t('entries.locationName')}
+                        aria-label={t('entries.locationName')}
+                        onChange={(event) =>
+                          update({
+                            location: { ...(state.location as PlaceRef), name: event.target.value },
+                          })
                         }
-                      }}
-                    >
-                      {t('entries.remove')}
+                        className="min-w-0 flex-1 rounded-lg border border-line bg-paper-raised px-2.5 py-1.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      />
+                    ) : (
+                      <span className="min-w-0 flex-1 truncate text-sm text-ink-faint">
+                        {t('entries.noLocation')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setShowLocation(true)}>
+                      {state.location ? t('entries.changeLocation') : t('entries.addLocation')}
                     </Button>
-                  ) : null}
+                    {state.location ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          update({ location: null })
+                          if (entryIdRef.current) {
+                            void api.clearEntryLocation(entryIdRef.current)
+                          }
+                        }}
+                      >
+                        {t('entries.remove')}
+                      </Button>
+                    ) : null}
+                    {state.location &&
+                    state.location.name !== coordinatesOf(state.location) ? (
+                      <span className="ml-auto text-xs text-ink-faint tabular-nums">
+                        {coordinatesOf(state.location)}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </Field>
 
@@ -616,7 +647,7 @@ export function EditorPage() {
         onClose={() => setConfirmLeave(false)}
         onConfirm={() => {
           setConfirmLeave(false)
-          void save().then(() => navigate('/'))
+          void save().then(() => navigate(timelinePath()))
         }}
       />
 
@@ -697,6 +728,11 @@ function EditorMedia({
       })}
     </div>
   )
+}
+
+/** The coordinates of a place, written the way the picker writes them. */
+function coordinatesOf(place: PlaceRef): string {
+  return `${place.latitude.toFixed(5)}, ${place.longitude.toFixed(5)}`
 }
 
 function SaveIndicator({

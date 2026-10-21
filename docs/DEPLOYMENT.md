@@ -134,6 +134,11 @@ server {
 
 Set `WJ_COOKIE_SECURE=true` and `WJ_TRUSTED_ORIGINS=https://journal.example.com`.
 
+The position of the phone is only offered on a secure origin, so `https` is
+needed for it. A journal that is opened over plain `http` can still take a
+place from the search and from the places that were saved before, but the
+phone itself will not say where it is.
+
 ### `WJ_TRUSTED_PROXY` and the client address
 
 The client address decides the rate limiter buckets and the sign-in limiter key, so it has to be the address of the person using the journal and not the address of the proxy in front of it.

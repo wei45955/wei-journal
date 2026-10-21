@@ -2,9 +2,11 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -306,6 +308,92 @@ func (s *Server) handleGeocode(c *gin.Context) {
 	}
 	_ = user
 	httpx.OK(c, results)
+}
+
+// handleLocationCapabilities tells the interface what this installation can
+// do. The place search is optional, and the dialog says so instead of
+// pretending to work.
+func (s *Server) handleLocationCapabilities(c *gin.Context) {
+	httpx.OK(c, gin.H{"search": s.geocodingEnabled()})
+}
+
+// handleReverseGeocode names a point. It needs the same optional service as
+// the place search, so it answers with 503 when that service is off.
+func (s *Server) handleReverseGeocode(c *gin.Context) {
+	lat, err1 := strconv.ParseFloat(strings.TrimSpace(c.Query("lat")), 64)
+	lon, err2 := strconv.ParseFloat(strings.TrimSpace(c.Query("lon")), 64)
+	if err1 != nil || err2 != nil {
+		httpx.ValidationError(c, "invalid request body", map[string]string{
+			"lat": "the latitude and the longitude are required",
+		})
+		return
+	}
+	if !s.geocodingEnabled() {
+		httpx.Fail(c, http.StatusServiceUnavailable, &httpx.Error{
+			Code:    "unavailable",
+			Message: "place search is not configured on this server",
+		})
+		return
+	}
+	result, err := s.reverseGeocode(lat, lon)
+	if err != nil {
+		httpx.Internal(c, s.log, err, "reverse geocode")
+		return
+	}
+	if result == nil {
+		httpx.OK(c, []geocodeResult{})
+		return
+	}
+	httpx.OK(c, []geocodeResult{*result})
+}
+
+// reverseGeocode asks the configured service for the name of a point.
+func (s *Server) reverseGeocode(lat, lon float64) (*geocodeResult, error) {
+	endpoint := fmt.Sprintf("%s/reverse?format=jsonv2&lat=%f&lon=%f",
+		s.cfg.GeocodingURL, lat, lon)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", s.cfg.GeocodingUserAgent)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("place search failed")
+	}
+	var raw []struct {
+		DisplayName string `json:"display_name"`
+		Name        string `json:"name"`
+		Lat         string `json:"lat"`
+		Lon         string `json:"lon"`
+	}
+	if err := decodeJSONBody(resp.Body, &raw); err != nil {
+		return nil, err
+	}
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	name := raw[0].Name
+	if name == "" {
+		name = raw[0].DisplayName
+	}
+	if idx := strings.Index(name, ","); idx > 0 {
+		name = name[:idx]
+	}
+	parsedLat, parsedLon, ok := parseCoordinate(raw[0].Lat, raw[0].Lon)
+	if !ok {
+		parsedLat, parsedLon = lat, lon
+	}
+	return &geocodeResult{
+		Name:      strings.TrimSpace(name),
+		Address:   raw[0].DisplayName,
+		Latitude:  parsedLat,
+		Longitude: parsedLon,
+	}, nil
 }
 
 // handleSearchOwnLocations offers the user's own places as suggestions, which

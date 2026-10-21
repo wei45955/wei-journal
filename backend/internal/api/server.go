@@ -155,6 +155,8 @@ func (s *Server) Router() *gin.Engine {
 	secure.GET("/locations", s.handleListLocations)
 	secure.GET("/locations/search", s.handleGeocode)
 	secure.GET("/locations/own", s.handleSearchOwnLocations)
+	secure.GET("/locations/reverse", s.handleReverseGeocode)
+	secure.GET("/locations/capabilities", s.handleLocationCapabilities)
 
 	secure.POST("/batch", s.handleBatch)
 	secure.POST("/batch/preview", s.handleBatchPreview)

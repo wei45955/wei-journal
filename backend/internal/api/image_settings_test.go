@@ -148,3 +148,24 @@ func TestUploadTooLargeIsExplained(t *testing.T) {
 		t.Fatalf("the limit should be named: %s", resp.body)
 	}
 }
+
+// TestReverseGeocodeNeedsTheSearchService checks that naming a point needs
+// the same optional service as the place search, and that a bad point is
+// refused.
+func TestReverseGeocodeNeedsTheSearchService(t *testing.T) {
+	h := newHarness(t)
+	c := h.register("where", "testpassword123")
+
+	// The search service is off in the tests, so the answer is that it is
+	// not available.
+	resp := c.get("/api/locations/reverse?lat=31.2304&lon=121.4737")
+	if resp.status != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d body %s", resp.status, resp.body)
+	}
+
+	// A point that is not a number is refused before anything else.
+	resp = c.get("/api/locations/reverse?lat=north&lon=121.4737")
+	if resp.status != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d body %s", resp.status, resp.body)
+	}
+}

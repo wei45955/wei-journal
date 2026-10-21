@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { api, ApiError } from '../../lib/api'
+import { api } from '../../lib/api'
 import { useToast } from '../../state/toast'
 import { Button, TextInput } from '../ui'
 import { Dialog } from '../ui/Dialog'
-import { LocationIcon } from '../icons'
+import { CrosshairIcon, LocationIcon } from '../icons'
 import type { GeocodeResult, PlaceRef } from '../../lib/types'
 
 interface LocationPickerProps {
@@ -14,21 +14,28 @@ interface LocationPickerProps {
   current?: PlaceRef | null
 }
 
+/** The coordinates of a point, written the way a person would. */
+function formatCoordinates(latitude: number, longitude: number): string {
+  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+}
+
 /**
  * Chooses a place for an entry.
  *
- * The server's own places work everywhere. Searching for new places needs
- * the optional geocoding service, and the dialog says so when it is off
- * rather than pretending to work.
+ * The server's own places work everywhere. Finding a new place by name needs
+ * the optional search service, so the dialog offers the position of the
+ * phone as well, which needs nothing but the phone itself.
  */
 export function LocationPicker({ open, onClose, onSelect, current }: LocationPickerProps) {
   const { t } = useTranslation()
   const { describe } = useToast()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<GeocodeResult[]>([])
+  const [ownPlaces, setOwnPlaces] = useState<GeocodeResult[]>([])
   const [loading, setLoading] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
   const [error, setError] = useState('')
+  const [locating, setLocating] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -37,19 +44,25 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
     setError('')
     void (async () => {
       try {
-        const [places, own] = await Promise.all([
-          api.geocode(query).catch((err) => {
-            if (err instanceof ApiError && err.status === 503) {
-              setUnavailable(true)
-              return { items: [] as GeocodeResult[] }
-            }
-            throw err
-          }),
-          api.ownLocations(query),
-        ])
+        // The installation says whether it can look for new places. The
+        // places of the reader work either way.
+        const capabilities = await api.locationCapabilities().catch(() => ({ search: false }))
         if (cancelled) return
-        setResults([...places.items, ...own.items])
-        setUnavailable(false)
+        setUnavailable(!capabilities.search)
+
+        const own = await api.ownLocations(query)
+        if (cancelled) return
+        setOwnPlaces(own.items)
+
+        // Nothing is looked for before a word is typed: the service would
+        // be asked for an empty name.
+        if (query.trim() === '' || !capabilities.search) {
+          setResults([])
+          return
+        }
+        const places = await api.geocode(query)
+        if (cancelled) return
+        setResults(places.items)
       } catch (err) {
         if (!cancelled) setError(describe(err, t('errors.generic')))
       } finally {
@@ -60,6 +73,67 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
       cancelled = true
     }
   }, [open, query, describe, t])
+
+  /**
+   * Asks the phone where it is. The name of the place is asked of the
+   * server when it can, and the coordinates are used when it cannot.
+   */
+  async function useCurrentPosition() {
+    setError('')
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setError(t('entries.locationFailed'))
+      return
+    }
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = position.coords.latitude
+        const longitude = position.coords.longitude
+        const fallback: GeocodeResult = {
+          name: formatCoordinates(latitude, longitude),
+          address: '',
+          latitude,
+          longitude,
+        }
+        api
+          .reverseGeocode(latitude, longitude)
+          .then((page) => {
+            const found = page.items[0]
+            onSelect(found ?? fallback)
+            onClose()
+          })
+          .catch(() => {
+            onSelect(fallback)
+            onClose()
+          })
+          .finally(() => setLocating(false))
+      },
+      (failure) => {
+        setLocating(false)
+        // The browser only offers the position on a secure origin.
+        if (typeof window !== 'undefined' && !window.isSecureContext) {
+          setError(t('entries.locationNeedsSecure'))
+          return
+        }
+        if (failure.code === failure.PERMISSION_DENIED) {
+          setError(t('entries.locationDenied'))
+          return
+        }
+        setError(t('entries.locationFailed'))
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    )
+  }
+
+  function choose(place: GeocodeResult) {
+    onSelect({
+      name: place.name,
+      address: place.address,
+      latitude: place.latitude,
+      longitude: place.longitude,
+    })
+    onClose()
+  }
 
   return (
     <Dialog
@@ -83,9 +157,19 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
           aria-label={t('entries.searchLocation')}
         />
 
+        <Button
+          variant="secondary"
+          onClick={() => void useCurrentPosition()}
+          loading={locating}
+          icon={<CrosshairIcon size={16} />}
+          className="w-full"
+        >
+          {t('entries.useCurrentLocation')}
+        </Button>
+
         {unavailable ? (
           <p className="rounded-xl bg-paper-sunken px-3.5 py-2.5 text-sm text-ink-muted">
-            {t('entries.locationUnavailable')}
+            {t('entries.locationSearchOff')}
           </p>
         ) : null}
 
@@ -97,37 +181,37 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
 
         {loading ? <p className="text-sm text-ink-faint">{t('common.loading')}</p> : null}
 
-        {!loading && results.length === 0 && !unavailable ? (
-          <p className="text-sm text-ink-faint">{t('entries.empty.noResultsBody')}</p>
+        {ownPlaces.length > 0 ? (
+          <section className="flex flex-col gap-1">
+            <h3 className="px-1 text-[0.6875rem] font-semibold tracking-wide text-ink-faint uppercase">
+              {t('entries.yourPlaces')}
+            </h3>
+            <ul className="flex flex-col gap-1">
+              {ownPlaces.map((place, index) => (
+                <PlaceRow key={`own-${place.latitude}-${place.longitude}-${index}`} place={place} onChoose={choose} />
+              ))}
+            </ul>
+          </section>
         ) : null}
 
-        <ul className="flex flex-col gap-1">
-          {results.map((place, index) => (
-            <li key={`${place.latitude}-${place.longitude}-${index}`}>
-              <button
-                type="button"
-                onClick={() => {
-                  onSelect({
-                    name: place.name,
-                    address: place.address,
-                    latitude: place.latitude,
-                    longitude: place.longitude,
-                  })
-                  onClose()
-                }}
-                className="flex w-full items-start gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-paper-sunken"
-              >
-                <LocationIcon size={16} className="mt-0.5 shrink-0 text-ink-faint" />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm text-ink">{place.name}</span>
-                  {place.address ? (
-                    <span className="block truncate text-xs text-ink-faint">{place.address}</span>
-                  ) : null}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {results.length > 0 ? (
+          <section className="flex flex-col gap-1">
+            <h3 className="px-1 text-[0.6875rem] font-semibold tracking-wide text-ink-faint uppercase">
+              {t('entries.searchResults')}
+            </h3>
+            <ul className="flex flex-col gap-1">
+              {results.map((place, index) => (
+                <PlaceRow key={`hit-${place.latitude}-${place.longitude}-${index}`} place={place} onChoose={choose} />
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {!loading && ownPlaces.length === 0 && results.length === 0 ? (
+          <p className="text-sm text-ink-faint">
+            {query.trim() === '' ? t('entries.locationHint') : t('entries.empty.noResultsBody')}
+          </p>
+        ) : null}
 
         {current ? (
           <p className="border-t border-line pt-3 text-xs text-ink-faint">
@@ -136,5 +220,32 @@ export function LocationPicker({ open, onClose, onSelect, current }: LocationPic
         ) : null}
       </div>
     </Dialog>
+  )
+}
+
+/** One place in the list of suggestions. */
+function PlaceRow({
+  place,
+  onChoose,
+}: {
+  place: GeocodeResult
+  onChoose: (place: GeocodeResult) => void
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onChoose(place)}
+        className="flex w-full items-start gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-paper-sunken"
+      >
+        <LocationIcon size={16} className="mt-0.5 shrink-0 text-ink-faint" />
+        <span className="min-w-0">
+          <span className="block truncate text-sm text-ink">{place.name}</span>
+          {place.address ? (
+            <span className="block truncate text-xs text-ink-faint">{place.address}</span>
+          ) : null}
+        </span>
+      </button>
+    </li>
   )
 }

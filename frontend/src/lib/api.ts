@@ -401,6 +401,10 @@ export const api = {
     return list<MapPlace>('/api/locations', params)
   },
   geocode: (q: string) => list<GeocodeResult>('/api/locations/search', { q }),
+  reverseGeocode: (latitude: number, longitude: number) =>
+    list<GeocodeResult>('/api/locations/reverse', { lat: latitude, lon: longitude }),
+  locationCapabilities: () =>
+    request<{ search: boolean }>('/api/locations/capabilities'),
   ownLocations: (q: string) => list<GeocodeResult>('/api/locations/own', { q }),
 
   // --- bulk ---------------------------------------------------------------

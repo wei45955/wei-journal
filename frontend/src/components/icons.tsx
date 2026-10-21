@@ -217,6 +217,15 @@ export const NavigationIcon = (props: IconProps) => (
   </Icon>
 )
 
+/** The crosshair that finds the position of the phone. */
+export const CrosshairIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="6.5" />
+    <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" />
+    <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+  </Icon>
+)
+
 export const SparkIcon = (props: IconProps) => (
   <Icon {...props}>
     <path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9L12 3.5z" />

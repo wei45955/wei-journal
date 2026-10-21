@@ -502,6 +502,14 @@ Place name search. Disabled with `503 unavailable` unless `WJ_GEOCODING_ENABLED=
 
 The user's own places as suggestions. Works without any external service.
 
+### GET /api/locations/capabilities
+
+What this installation can do: { search: true } when the place search is configured, { search: false } when it is not. The interface uses it to say so before the reader searches.
+
+### GET /api/locations/reverse
+
+The name of a point. Disabled with 503 unavailable unless WJ_GEOCODING_ENABLED=true, because the point is sent to a third party service. The query holds lat and lon, and the answer is an array with at most one place.
+
 ---
 
 ## Bulk operations
