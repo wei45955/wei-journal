@@ -1,46 +1,46 @@
-/**
- * The application root: providers, routing and the signed out gate.
- *
- * The frame of the application is a layout route, so moving from one page
- * to the next keeps the sidebar and the page background in place. Only the
- * page inside the frame changes.
- */
-
+import { lazy, useEffect } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './state/auth'
 import { ToastProvider } from './state/toast'
-import { TimelineProvider } from './state/timeline'
-import { AppShell } from './components/layout/AppShell'
-import { AuthPage } from './pages/AuthPage'
-import { OverviewPage } from './pages/OverviewPage'
-import { TimelinePage } from './pages/TimelinePage'
-import { EditorPage } from './pages/EditorPage'
-import { EntryPage } from './pages/EntryPage'
-import { SearchPage } from './pages/SearchPage'
-import { InsightsPage } from './pages/InsightsPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { Spinner } from './components/ui'
+import { JournalProvider } from './state/journal'
+import { AppShell } from './shell/AppShell'
+import { AuthPage } from './features/auth/AuthPage'
+import { TimelinePage } from './features/timeline/TimelinePage'
+import { EntryPage } from './features/entry/EntryPage'
+import { ArchivePage } from './features/archive/ArchivePage'
+import { SearchPage } from './features/search/SearchPage'
+import { SettingsPage } from './features/settings/SettingsPage'
+import { Spinner } from './ui'
 
-/** The signed out gate. The page it came from is remembered. */
-function RequireAuth() {
-  const { user, loading } = useAuth()
+// The two heavy screens load on their own, and are fetched as soon as the
+// journal is open so they are ready before they are needed.
+const loadEditor = () => import('./features/editor/EditorPage')
+const loadPlaces = () => import('./features/places/PlacesPage')
+const EditorPage = lazy(() => loadEditor().then((module) => ({ default: module.EditorPage })))
+const PlacesPage = lazy(() => loadPlaces().then((module) => ({ default: module.PlacesPage })))
+
+function Gate() {
+  const { user, checking } = useAuth()
   const location = useLocation()
 
-  if (loading) {
+  useEffect(() => {
+    if (!user) return
+    const idle = window.requestIdleCallback ?? ((callback: () => void) => window.setTimeout(callback, 1200))
+    idle(() => {
+      void loadEditor()
+      void loadPlaces()
+    })
+  }, [user])
+
+  if (checking) {
     return (
-      <div className="flex min-h-dvh items-center justify-center">
-        <Spinner className="size-6 text-ink-faint" />
+      <div className="flex min-h-dvh items-center justify-center text-ink-3">
+        <Spinner size={22} />
       </div>
     )
   }
   if (!user) {
-    return (
-      <Navigate
-        to="/signin"
-        replace
-        state={{ from: location.pathname + location.search + location.hash }}
-      />
-    )
+    return <Navigate to="/signin" replace state={{ from: location.pathname + location.search }} />
   }
   return <Outlet />
 }
@@ -49,30 +49,26 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <TimelineProvider>
+        <JournalProvider>
           <Routes>
             <Route path="/signin" element={<AuthPage mode="signin" />} />
             <Route path="/signup" element={<AuthPage mode="signup" />} />
-
-            <Route element={<RequireAuth />}>
+            <Route element={<Gate />}>
               <Route element={<AppShell />}>
-                <Route path="/" element={<TimelinePage />} />
-                <Route path="/overview" element={<OverviewPage />} />
-                <Route path="/folders/:folderId" element={<TimelinePage />} />
-                <Route path="/new" element={<EditorPage />} />
-                <Route path="/entries/:entryId" element={<EntryPage />} />
-                <Route path="/entries/:entryId/edit" element={<EditorPage />} />
-                <Route path="/search" element={<SearchPage />} />
-                <Route path="/insights" element={<InsightsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/calendar" element={<Navigate to="/insights" replace />} />
-                <Route path="/map" element={<Navigate to="/insights" replace />} />
+                <Route index element={<TimelinePage />} />
+                <Route path="folder/:folderId" element={<TimelinePage />} />
+                <Route path="entry/:entryId" element={<EntryPage />} />
+                <Route path="entry/:entryId/edit" element={<EditorPage />} />
+                <Route path="write" element={<EditorPage />} />
+                <Route path="archive" element={<ArchivePage />} />
+                <Route path="places" element={<PlacesPage />} />
+                <Route path="search" element={<SearchPage />} />
+                <Route path="settings" element={<SettingsPage />} />
               </Route>
             </Route>
-
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </TimelineProvider>
+        </JournalProvider>
       </ToastProvider>
     </AuthProvider>
   )

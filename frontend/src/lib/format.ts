@@ -251,6 +251,34 @@ export function localDateKey(date: Date, timezone?: string): string {
   }
 }
 
+/** The parts of a day used by the date rail of the timeline. */
+export function dayParts(eventDate: string, language = 'en') {
+  const date = parseISO(eventDate + 'T00:00:00')
+  if (!isValid(date)) return { day: eventDate, weekday: '', month: '' }
+  const locale = localeFor(language)
+  return {
+    day: String(date.getDate()),
+    weekday: format(date, 'EEE', { locale }),
+    month: format(date, language === 'zh-CN' ? 'M月' : 'MMM', { locale }),
+  }
+}
+
+/** "October 2026" or "2026年10月", from a YYYY-MM or YYYY-MM-DD key. */
+export function monthLabel(key: string, language = 'en'): string {
+  const date = parseISO(key.slice(0, 7) + '-01T00:00:00')
+  if (!isValid(date)) return key
+  return format(date, language === 'zh-CN' ? 'yyyy年M月' : 'MMMM yyyy', { locale: localeFor(language) })
+}
+
+/** A long, human date: "Friday, 23 October 2026" or "2026年10月23日 星期五". */
+export function longDate(eventDate: string, language = 'en'): string {
+  const date = parseISO(eventDate + 'T00:00:00')
+  if (!isValid(date)) return eventDate
+  return format(date, language === 'zh-CN' ? 'yyyy年M月d日 EEEE' : 'EEEE, d MMMM yyyy', {
+    locale: localeFor(language),
+  })
+}
+
 /** Zones offered in the settings menu. The value is an IANA name. */
 export const TIMEZONE_CHOICES: { value: string; zh: string; en: string }[] = [
   { value: 'Asia/Shanghai', zh: '中国上海', en: 'Shanghai' },

@@ -1,24 +1,18 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import { en } from './locales/en'
-import { zhCN } from './locales/zh-CN'
+import { en } from './en'
+import { zh } from './zh'
 
-export const SUPPORTED_LANGUAGES = [
-  { code: 'en', label: 'English' },
-  { code: 'zh-CN', label: '简体中文' },
-] as const
+export type LanguageCode = 'en' | 'zh-CN'
 
-export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code']
-
-/** The language stored in the browser before the account is known. */
 const STORAGE_KEY = 'wj.language'
 
 function storedLanguage(): LanguageCode {
   try {
-    const value = window.localStorage.getItem(STORAGE_KEY)
-    if (value && SUPPORTED_LANGUAGES.some((l) => l.code === value)) return value as LanguageCode
+    const value = localStorage.getItem(STORAGE_KEY)
+    if (value === 'en' || value === 'zh-CN') return value
   } catch {
-    // Private browsing modes can refuse local storage; the default is fine.
+    // Storage may be refused; English is the default.
   }
   return 'en'
 }
@@ -31,7 +25,7 @@ function applyDocumentLanguage(code: LanguageCode) {
 void i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
-    'zh-CN': { translation: zhCN },
+    'zh-CN': { translation: zh },
   },
   lng: storedLanguage(),
   fallbackLng: 'en',
@@ -41,14 +35,13 @@ void i18n.use(initReactI18next).init({
 
 applyDocumentLanguage(i18n.language as LanguageCode)
 
-/** Switches the interface language and remembers it for the next visit. */
 export function setLanguage(code: LanguageCode) {
-  void i18n.changeLanguage(code)
+  if (i18n.language !== code) void i18n.changeLanguage(code)
   applyDocumentLanguage(code)
   try {
-    window.localStorage.setItem(STORAGE_KEY, code)
+    localStorage.setItem(STORAGE_KEY, code)
   } catch {
-    // Ignored: the choice simply will not survive a reload.
+    // The choice will not survive a reload.
   }
 }
 

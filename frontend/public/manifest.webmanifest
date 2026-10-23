@@ -1,29 +1,15 @@
 {
-  "name": "微日记",
+  "name": "微日记 Wei Journal",
   "short_name": "微日记",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f2f2f7",
-  "theme_color": "#f2f2f7",
+  "orientation": "portrait",
+  "background_color": "#edeff2",
+  "theme_color": "#edeff2",
   "icons": [
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }

@@ -1,44 +1,42 @@
 /**
- * The colour scheme of the document.
- *
- * The choice is stored in the browser as well as on the account, so the
- * first paint of the next launch is already in the right theme. The inline
- * script in `index.html` reads the same key before React starts.
+ * The colour scheme of the document. The choice is mirrored in local storage
+ * so the inline script in index.html can apply it before the first paint.
  */
 
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
-export const THEME_STORAGE_KEY = 'wj.theme'
+const STORAGE_KEY = 'wj.theme'
+const LIGHT = '#edeff2'
+const DARK = '#0d1219'
 
-const LIGHT_COLOR = '#f2f2f7'
-const DARK_COLOR = '#000000'
+function systemIsDark(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches
+}
 
-function updateThemeColor(theme: ThemeChoice) {
-  const head = document.head
-  if (!head) return
-  const metas = Array.from(
-    head.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'),
-  )
-  for (const meta of metas) {
-    if (theme === 'system') {
-      const light = meta.media.includes('light') || !meta.media
-      meta.content = light ? LIGHT_COLOR : DARK_COLOR
-    } else {
-      meta.content = theme === 'light' ? LIGHT_COLOR : DARK_COLOR
-    }
+function paintStatusBar(dark: boolean) {
+  const metas = document.head?.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]') ?? []
+  for (const meta of Array.from(metas)) meta.content = dark ? DARK : LIGHT
+}
+
+export function applyTheme(theme: ThemeChoice) {
+  const root = document.documentElement
+  if (theme === 'system') root.removeAttribute('data-theme')
+  else root.setAttribute('data-theme', theme)
+  paintStatusBar(theme === 'dark' || (theme === 'system' && systemIsDark()))
+  try {
+    localStorage.setItem(STORAGE_KEY, theme)
+  } catch {
+    // The theme still applies to this page.
   }
 }
 
-/** Applies a theme to the document and remembers it for the next launch. */
-export function applyTheme(theme: ThemeChoice) {
-  if (theme === 'system') document.documentElement.removeAttribute('data-theme')
-  else document.documentElement.setAttribute('data-theme', theme)
-
-  updateThemeColor(theme)
-
-  try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
-  } catch {
-    // The theme still applies to this page; it just will not survive a reload.
+/** Keeps the status bar colour in step when the system switches theme. */
+export function followSystemTheme(): () => void {
+  const query = window.matchMedia?.('(prefers-color-scheme: dark)')
+  if (!query) return () => undefined
+  const onChange = () => {
+    if (!document.documentElement.hasAttribute('data-theme')) paintStatusBar(query.matches)
   }
+  query.addEventListener('change', onChange)
+  return () => query.removeEventListener('change', onChange)
 }

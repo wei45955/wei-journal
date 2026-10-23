@@ -1,0 +1,458 @@
+@import 'tailwindcss';
+
+/*
+ * Wei Journal — "blue-black ink".
+ *
+ * The journal is written the way a fountain pen writes: blue-black ink on a
+ * cool, quiet paper. The ink is the only colour that speaks. It marks the
+ * day numerals of the timeline, the caret, the current choice and the one
+ * primary action on a screen. Everything else is paper and graphite.
+ */
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+:root {
+  color-scheme: light;
+
+  --wj-paper: #edeff2;
+  --wj-leaf: #ffffff;
+  --wj-well: #e3e6eb;
+  --wj-ink: #172033;
+  --wj-ink-2: #576174;
+  --wj-ink-3: #8a93a3;
+  --wj-rule: #d9dde4;
+  --wj-accent: #27467a;
+  --wj-accent-soft: #dce4f2;
+  --wj-accent-on: #ffffff;
+  --wj-danger: #b42318;
+  --wj-danger-soft: #f8e1de;
+  --wj-ok: #2f6b4f;
+  --wj-scrim: rgb(13 18 25 / 0.36);
+  --wj-glass: rgb(248 249 251 / 0.82);
+  --wj-float-shadow: 0 1px 2px rgb(23 32 51 / 0.06), 0 8px 28px rgb(23 32 51 / 0.12);
+  --wj-sheet-shadow: 0 -2px 30px rgb(23 32 51 / 0.14);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --wj-paper: #0d1219;
+  --wj-leaf: #161d28;
+  --wj-well: #1e2633;
+  --wj-ink: #e6eaf0;
+  --wj-ink-2: #a0aab9;
+  --wj-ink-3: #6b7585;
+  --wj-rule: #263040;
+  --wj-accent: #9db7e6;
+  --wj-accent-soft: #1f2c44;
+  --wj-accent-on: #0d1219;
+  --wj-danger: #f08a7e;
+  --wj-danger-soft: #3a1f1d;
+  --wj-ok: #7cc3a0;
+  --wj-scrim: rgb(0 0 0 / 0.55);
+  --wj-glass: rgb(22 29 40 / 0.82);
+  --wj-float-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.45);
+  --wj-sheet-shadow: 0 -2px 30px rgb(0 0 0 / 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --wj-paper: #0d1219;
+    --wj-leaf: #161d28;
+    --wj-well: #1e2633;
+    --wj-ink: #e6eaf0;
+    --wj-ink-2: #a0aab9;
+    --wj-ink-3: #6b7585;
+    --wj-rule: #263040;
+    --wj-accent: #9db7e6;
+    --wj-accent-soft: #1f2c44;
+    --wj-accent-on: #0d1219;
+    --wj-danger: #f08a7e;
+    --wj-danger-soft: #3a1f1d;
+    --wj-ok: #7cc3a0;
+    --wj-scrim: rgb(0 0 0 / 0.55);
+    --wj-glass: rgb(22 29 40 / 0.82);
+    --wj-float-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.45);
+    --wj-sheet-shadow: 0 -2px 30px rgb(0 0 0 / 0.5);
+  }
+}
+
+@theme inline {
+  --color-paper: var(--wj-paper);
+  --color-leaf: var(--wj-leaf);
+  --color-well: var(--wj-well);
+  --color-ink: var(--wj-ink);
+  --color-ink-2: var(--wj-ink-2);
+  --color-ink-3: var(--wj-ink-3);
+  --color-rule: var(--wj-rule);
+  --color-accent: var(--wj-accent);
+  --color-accent-soft: var(--wj-accent-soft);
+  --color-accent-on: var(--wj-accent-on);
+  --color-danger: var(--wj-danger);
+  --color-danger-soft: var(--wj-danger-soft);
+  --color-ok: var(--wj-ok);
+  --color-glass: var(--wj-glass);
+
+  --shadow-float: var(--wj-float-shadow);
+  --shadow-sheet: var(--wj-sheet-shadow);
+}
+
+@theme {
+  /* Two families with two jobs. The serif carries what was written and the
+     dates it was written on; the system sans carries the controls. */
+  --font-serif: 'Newsreader Variable', 'Songti SC', 'STSong', 'Noto Serif CJK SC',
+    'Source Han Serif SC', 'Noto Serif SC', Georgia, serif;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Segoe UI', Roboto, sans-serif;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --animate-fade: fade 180ms var(--ease-out-soft) backwards;
+  --animate-rise: rise 240ms var(--ease-out-soft) backwards;
+  --animate-sheet: sheet 340ms var(--ease-sheet) backwards;
+  --animate-pop: pop 200ms var(--ease-out-soft) backwards;
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  @keyframes sheet {
+    from {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ base */
+
+@layer base {
+  html {
+    background: var(--wj-paper);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--wj-paper);
+    color: var(--wj-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-synthesis-weight: none;
+    caret-color: var(--wj-accent);
+    overscroll-behavior-y: none;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--wj-accent) 22%, transparent);
+  }
+
+  button,
+  a,
+  [role='button'] {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+  }
+
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+
+  /* Inputs at 16px keep iOS from zooming the page when they take focus. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--wj-accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  img {
+    -webkit-user-drag: none;
+  }
+
+  input[type='date'],
+  input[type='datetime-local'] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 2.75rem;
+    text-align: left;
+  }
+  input[type='date']::-webkit-date-and-time-value,
+  input[type='datetime-local']::-webkit-date-and-time-value {
+    text-align: left;
+  }
+  input[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .glass {
+    background: var(--wj-glass);
+    -webkit-backdrop-filter: saturate(1.6) blur(18px);
+    backdrop-filter: saturate(1.6) blur(18px);
+  }
+  .press {
+    transition: transform 140ms var(--ease-out-soft), opacity 140ms, background-color 160ms;
+  }
+  .press:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+  .hairline {
+    box-shadow: inset 0 0 0 0.5px var(--wj-rule);
+  }
+}
+
+[data-hide-tabs] .tabbar {
+  display: none;
+}
+
+/* --------------------------------------------------- the written page */
+
+.page-text {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  font-variation-settings: 'opsz' 16;
+  color: var(--wj-ink);
+  overflow-wrap: anywhere;
+}
+.page-text > * + * {
+  margin-top: 0.85em;
+}
+.page-text h1,
+.page-text h2,
+.page-text h3 {
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-variation-settings: 'opsz' 36;
+}
+.page-text h1 {
+  font-size: 1.5rem;
+  margin-top: 1.4em;
+}
+.page-text h2 {
+  font-size: 1.3rem;
+  margin-top: 1.3em;
+}
+.page-text h3 {
+  font-size: 1.15rem;
+  margin-top: 1.2em;
+}
+.page-text > :first-child {
+  margin-top: 0;
+}
+.page-text ul,
+.page-text ol {
+  padding-left: 1.35em;
+}
+.page-text ul {
+  list-style: disc;
+}
+.page-text ol {
+  list-style: decimal;
+}
+.page-text li + li {
+  margin-top: 0.3em;
+}
+.page-text li > p {
+  margin: 0;
+}
+.page-text li::marker {
+  color: var(--wj-ink-3);
+}
+.page-text blockquote {
+  border-left: 2px solid var(--wj-accent);
+  padding-left: 1em;
+  color: var(--wj-ink-2);
+  font-style: italic;
+}
+.page-text a {
+  color: var(--wj-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.page-text code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  background: var(--wj-well);
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+}
+.page-text pre {
+  background: var(--wj-well);
+  border-radius: 10px;
+  padding: 0.8em 1em;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.page-text pre code {
+  background: none;
+  padding: 0;
+}
+.page-text hr {
+  border: 0;
+  height: 1px;
+  background: var(--wj-rule);
+  margin: 1.6em 0;
+}
+.page-text strong {
+  font-weight: 650;
+}
+
+/* The editor surface uses the same page. */
+.tiptap {
+  outline: none;
+  min-height: 40vh;
+}
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--wj-ink-3);
+}
+
+/* ---------------------------------------------------------- the map */
+
+.leaflet-container {
+  background: var(--wj-well);
+  font: 400 0.75rem/1.4 var(--font-sans);
+  color: var(--wj-ink);
+}
+.leaflet-container a {
+  color: var(--wj-accent);
+}
+.leaflet-control-attribution {
+  background: var(--wj-glass) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--wj-ink-2) !important;
+  font-size: 0.625rem;
+  border-radius: 8px 0 0 0;
+}
+.leaflet-control-zoom {
+  display: none;
+}
+.wj-tiles {
+  filter: saturate(0.55) contrast(0.96);
+}
+:root[data-theme='dark'] .wj-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.86) contrast(0.88) saturate(0.55);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .wj-tiles {
+    filter: invert(1) hue-rotate(180deg) brightness(0.86) contrast(0.88) saturate(0.55);
+  }
+}
+.wj-marker,
+.wj-cluster-icon {
+  background: none;
+  border: none;
+}
+.wj-pin {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--wj-accent);
+  box-shadow:
+    0 0 0 3px var(--wj-leaf),
+    0 3px 10px rgb(0 0 0 / 0.3);
+}
+.wj-photo {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--wj-well);
+  box-shadow:
+    0 0 0 2.5px var(--wj-leaf),
+    0 4px 14px rgb(0 0 0 / 0.28);
+}
+.wj-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wj-photo span {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font: 600 10px/16px var(--font-sans);
+  text-align: center;
+}
+.wj-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--wj-accent);
+  color: var(--wj-accent-on);
+  font: 600 13px/1 var(--font-sans);
+  box-shadow:
+    0 0 0 3px var(--wj-leaf),
+    0 4px 12px rgb(0 0 0 / 0.3);
+}
+
+/* ---------------------------------------------------------- motion */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

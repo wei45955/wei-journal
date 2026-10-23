@@ -4,14 +4,13 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
-    <meta name="description" content="A private, self-hosted journal for words, images and memories." />
-    <!-- Home-screen launch. The viewport already uses viewport-fit=cover, and
-         black-translucent lets the page run under the status bar. iOS still
-         draws the status bar and the Home Indicator; a site cannot hide them. -->
+    <meta name="theme-color" content="#edeff2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1219" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="A private, self-hosted journal." />
+    <meta name="format-detection" content="telephone=no" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -21,23 +20,25 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Wei Journal</title>
     <script>
-      // The account's theme is read before the first paint, so a dark
-      // journal never opens with a white flash.
-      (function () {
+      // Theme and language are applied before the first paint, so a dark
+      // journal never opens with a light flash.
+      ;(function () {
         try {
-          var choice = window.localStorage.getItem('wj.theme')
-          if (choice === 'dark' || choice === 'light') {
-            document.documentElement.setAttribute('data-theme', choice)
-            var color = choice === 'dark' ? '#000000' : '#f2f2f7'
-            var metas = document.querySelectorAll('meta[name="theme-color"]')
-            for (var i = 0; i < metas.length; i += 1) metas[i].setAttribute('content', color)
+          var root = document.documentElement
+          var choice = localStorage.getItem('wj.theme')
+          var dark =
+            choice === 'dark' ||
+            (choice !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          if (choice === 'dark' || choice === 'light') root.setAttribute('data-theme', choice)
+          var color = dark ? '#0d1219' : '#edeff2'
+          var metas = document.querySelectorAll('meta[name="theme-color"]')
+          for (var i = 0; i < metas.length; i += 1) metas[i].setAttribute('content', color)
+          if (localStorage.getItem('wj.language') === 'zh-CN') {
+            root.lang = 'zh-Hans'
+            document.title = '微日记'
           }
-          if (window.localStorage.getItem('wj.language') === 'zh-CN') {
-            document.documentElement.lang = 'zh-Hans'
-          }
-        } catch (error) {
-          // Storage can be refused; the system theme is a fine default.
-        }
+          if (window.navigator.standalone) root.setAttribute('data-standalone', '')
+        } catch (e) {}
       })()
     </script>
   </head>

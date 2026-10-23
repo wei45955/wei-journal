@@ -1,4 +1,3 @@
-/** Joins class names, dropping anything falsy. */
-export function cn(...parts: Array<string | false | null | undefined>): string {
-  return parts.filter(Boolean).join(' ')
+export function cn(...values: Array<string | false | null | undefined>): string {
+  return values.filter(Boolean).join(' ')
 }
