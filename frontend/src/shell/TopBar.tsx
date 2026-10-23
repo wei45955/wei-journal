@@ -20,6 +20,11 @@ export function useScrolled(threshold = 8): boolean {
 /**
  * The bar at the top of a page. It is transparent over the page title and
  * turns to frosted glass, with the title, once the page scrolls under it.
+ *
+ * The strip under the system status bar is never frosted. On a phone opened
+ * from the home screen the page runs up behind the status bar, and a blurred
+ * band there reads as a tear in the page. That strip stays the plain colour
+ * of the paper instead, so the bar and the status bar are one calm surface.
  */
 export function TopBar({
   title,
@@ -38,12 +43,21 @@ export function TopBar({
   const scrolled = useScrolled(collapseAt)
   const showTitle = alwaysTitle || scrolled
   return (
-    <header
-      className={cn(
-        'sticky top-0 z-40 -mx-5 px-2 pt-[env(safe-area-inset-top)] transition-[background-color,box-shadow] duration-200 sm:-mx-8 sm:px-5 lg:-mx-10 lg:px-7',
-        scrolled ? 'glass shadow-[0_0.5px_0_var(--wj-rule)]' : 'bg-transparent',
-      )}
-    >
+    <header className="sticky top-0 z-40 -mx-5 px-2 pt-[env(safe-area-inset-top)] sm:-mx-8 sm:px-5 lg:-mx-10 lg:px-7">
+      <div
+        aria-hidden="true"
+        className={cn(
+          'absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] transition-opacity duration-200',
+          scrolled ? 'bg-[var(--wj-glass-solid)] opacity-100' : 'opacity-0',
+        )}
+      />
+      <div
+        aria-hidden="true"
+        className={cn(
+          'absolute inset-x-0 bottom-0 top-[env(safe-area-inset-top)] -z-10 transition-opacity duration-200',
+          scrolled ? 'glass shadow-[0_0.5px_0_var(--wj-rule)] opacity-100' : 'opacity-0',
+        )}
+      />
       <div className="relative flex h-[52px] items-center gap-1">
         <div className="relative z-10 flex min-w-11 items-center">{leading}</div>
         <div

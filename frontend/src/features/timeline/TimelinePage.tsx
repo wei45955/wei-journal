@@ -10,14 +10,14 @@ import { useFolders, useTags } from '../../state/library'
 import { useToast } from '../../state/toast'
 import { PageTitle, TopBar } from '../../shell/TopBar'
 import { Button, EmptyState, ErrorState, IconButton, Skeleton, Spinner } from '../../ui'
-import { ActionSheet } from '../../ui/Sheet'
-import { ChevronDownIcon, CloseIcon, FilterIcon, FolderIcon, MoreIcon, SelectIcon, SortIcon } from '../../ui/icons'
+import { Menu } from '../../ui/Popover'
+import { ChevronDownIcon, CloseIcon, FilterIcon, FolderIcon, GearIcon, MoreIcon, SelectIcon, SortIcon } from '../../ui/icons'
 import { Viewer } from '../media/Viewer'
 import { splitMedia } from '../media/Thumb'
 import { BatchBar } from './BatchBar'
 import { EntryCard } from './EntryCard'
-import { FilterSheet } from './FilterSheet'
-import { ScopeSheet, type Scope } from './ScopeSheet'
+import { FilterMenu } from './FilterMenu'
+import { ScopeMenu, type Scope } from './ScopeMenu'
 import { useEntryList } from './useEntryList'
 
 function scopeFrom(raw: string | undefined): Scope | null {
@@ -55,10 +55,15 @@ export function TimelinePage() {
   const list = useEntryList(query)
   const entries = useMemo(() => list.data?.items ?? [], [list.data])
 
-  const [sheet, setSheet] = useState<'scope' | 'filter' | 'more' | null>(null)
+  const [menu, setMenu] = useState<'scope' | 'filter' | 'more' | null>(null)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<number[]>([])
   const [viewer, setViewer] = useState<{ entry: Entry; items: Media[]; index: number } | null>(null)
+
+  // The panels open beside the control that asked for them.
+  const filterRef = useRef<HTMLButtonElement>(null)
+  const moreRef = useRef<HTMLButtonElement>(null)
+  const scopeRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     setSelecting(false)
@@ -173,10 +178,15 @@ export function TimelinePage() {
             </button>
           ) : (
             <>
-              <IconButton label={t('timeline.filter')} active={filterCount > 0} onClick={() => setSheet('filter')}>
+              <IconButton
+                ref={filterRef}
+                label={t('timeline.filter')}
+                active={filterCount > 0}
+                onClick={() => setMenu(menu === 'filter' ? null : 'filter')}
+              >
                 <FilterIcon size={22} />
               </IconButton>
-              <IconButton label={t('nav.more')} onClick={() => setSheet('more')}>
+              <IconButton ref={moreRef} label={t('nav.more')} onClick={() => setMenu(menu === 'more' ? null : 'more')}>
                 <MoreIcon size={22} />
               </IconButton>
             </>
@@ -196,8 +206,9 @@ export function TimelinePage() {
         }
       >
         <button
+          ref={scopeRef}
           type="button"
-          onClick={() => setSheet('scope')}
+          onClick={() => setMenu(menu === 'scope' ? null : 'scope')}
           disabled={selecting}
           className="press -ml-0.5 inline-flex max-w-full items-center gap-1.5 rounded-[10px] text-left disabled:opacity-100"
           aria-haspopup="dialog"
@@ -287,16 +298,30 @@ export function TimelinePage() {
         </div>
       )}
 
-      <ScopeSheet open={sheet === 'scope'} onClose={() => setSheet(null)} scope={scope ?? undefined} />
-      <FilterSheet open={sheet === 'filter'} onClose={() => setSheet(null)} value={filters} onApply={setFilters} />
-      <ActionSheet
-        open={sheet === 'more'}
-        onClose={() => setSheet(null)}
-        actions={[
-          { id: 'select', label: t('timeline.select'), icon: <SelectIcon size={22} />, disabled: entries.length === 0, onSelect: () => setSelecting(true) },
-          { id: 'desc', label: t('timeline.newestFirst'), icon: <SortIcon size={22} />, checked: order === 'desc', onSelect: () => setOrder('desc') },
-          { id: 'asc', label: t('timeline.oldestFirst'), icon: <SortIcon size={22} />, checked: order === 'asc', onSelect: () => setOrder('asc') },
-          { id: 'folders', label: t('timeline.manageFolders'), icon: <FolderIcon size={22} />, onSelect: () => navigate('/settings#folders') },
+      <ScopeMenu
+        open={menu === 'scope'}
+        onClose={() => setMenu(null)}
+        anchorRef={scopeRef}
+        scope={scope ?? undefined}
+      />
+      <FilterMenu
+        open={menu === 'filter'}
+        onClose={() => setMenu(null)}
+        anchorRef={filterRef}
+        value={filters}
+        onApply={setFilters}
+      />
+      <Menu
+        open={menu === 'more'}
+        onClose={() => setMenu(null)}
+        anchorRef={moreRef}
+        label={t('nav.more')}
+        items={[
+          { id: 'select', label: t('timeline.select'), icon: <SelectIcon size={21} />, disabled: entries.length === 0, onSelect: () => setSelecting(true) },
+          { id: 'desc', label: t('timeline.newestFirst'), icon: <SortIcon size={21} />, checked: order === 'desc', onSelect: () => setOrder('desc') },
+          { id: 'asc', label: t('timeline.oldestFirst'), icon: <SortIcon size={21} />, checked: order === 'asc', onSelect: () => setOrder('asc') },
+          { id: 'folders', label: t('timeline.manageFolders'), icon: <FolderIcon size={21} />, onSelect: () => navigate('/settings#folders') },
+          { id: 'settings', label: t('nav.settings'), icon: <GearIcon size={21} />, onSelect: () => navigate('/settings') },
         ]}
       />
 
@@ -358,10 +383,11 @@ function DayRow({
         </span>
       </Link>
       <div className="flex flex-col gap-3">
-        {group.entries.map((entry) => (
+        {group.entries.map((entry, index) => (
           <EntryCard
             key={entry.id}
             entry={entry}
+            index={index}
             language={language}
             zone={zone}
             selecting={selecting}

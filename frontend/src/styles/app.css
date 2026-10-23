@@ -29,6 +29,9 @@
   --wj-ok: #2f6b4f;
   --wj-scrim: rgb(13 18 25 / 0.36);
   --wj-glass: rgb(248 249 251 / 0.82);
+  /* The frosted paper as an opaque colour. The strip under the system status
+     bar uses it, so the bar never shows a blurred slice of the page. */
+  --wj-glass-solid: #f6f7f9;
   --wj-float-shadow: 0 1px 2px rgb(23 32 51 / 0.06), 0 8px 28px rgb(23 32 51 / 0.12);
   --wj-sheet-shadow: 0 -2px 30px rgb(23 32 51 / 0.14);
 }
@@ -51,6 +54,7 @@
   --wj-ok: #7cc3a0;
   --wj-scrim: rgb(0 0 0 / 0.55);
   --wj-glass: rgb(22 29 40 / 0.82);
+  --wj-glass-solid: #141b25;
   --wj-float-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.45);
   --wj-sheet-shadow: 0 -2px 30px rgb(0 0 0 / 0.5);
 }
@@ -74,6 +78,7 @@
     --wj-ok: #7cc3a0;
     --wj-scrim: rgb(0 0 0 / 0.55);
     --wj-glass: rgb(22 29 40 / 0.82);
+    --wj-glass-solid: #141b25;
     --wj-float-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.45);
     --wj-sheet-shadow: 0 -2px 30px rgb(0 0 0 / 0.5);
   }
@@ -114,6 +119,11 @@
   --animate-rise: rise 240ms var(--ease-out-soft) backwards;
   --animate-sheet: sheet 340ms var(--ease-sheet) backwards;
   --animate-pop: pop 200ms var(--ease-out-soft) backwards;
+  /* A panel that opens beside a control. */
+  --animate-popover: popover 170ms var(--ease-out-soft) backwards;
+  --animate-popover-up: popover-up 170ms var(--ease-out-soft) backwards;
+  /* A line of the journal arriving, a little after the one above it. */
+  --animate-reveal: reveal 420ms var(--ease-out-soft) backwards;
 
   @keyframes fade {
     from {
@@ -135,6 +145,24 @@
     from {
       opacity: 0;
       transform: scale(0.96);
+    }
+  }
+  @keyframes popover {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.96);
+    }
+  }
+  @keyframes popover-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.96);
+    }
+  }
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
     }
   }
 }
@@ -231,7 +259,12 @@
     backdrop-filter: saturate(1.6) blur(18px);
   }
   .press {
-    transition: transform 140ms var(--ease-out-soft), opacity 140ms, background-color 160ms;
+    transition:
+      transform 140ms var(--ease-out-soft),
+      opacity 140ms,
+      background-color 160ms,
+      color 160ms,
+      border-color 160ms;
   }
   .press:active:not(:disabled) {
     transform: scale(0.96);

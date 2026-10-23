@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { useEditorState, type Editor } from '@tiptap/react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
@@ -51,6 +51,7 @@ function Tool({
   disabled,
   onPress,
   keepFocus = true,
+  buttonRef,
   children,
 }: {
   label: string
@@ -58,10 +59,13 @@ function Tool({
   disabled?: boolean
   onPress: () => void
   keepFocus?: boolean
+  /** The control a panel can hang from. */
+  buttonRef?: RefObject<HTMLButtonElement | null>
   children: ReactNode
 }) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       aria-label={label}
       title={label}
@@ -88,11 +92,14 @@ export function EditorToolbar({
   editor,
   onTool,
   marks,
+  anchors,
 }: {
   editor: Editor | null
   onTool: (tool: EditorTool) => void
   /** Which of the entry's extras are set, so their keys show it. */
   marks: { place: boolean; tags: boolean; folder: boolean; sketch: boolean }
+  /** The controls a panel may hang from. */
+  anchors?: Partial<Record<EditorTool, RefObject<HTMLButtonElement | null>>>
 }) {
   const { t } = useTranslation()
   const inset = useKeyboardInset()
@@ -198,7 +205,13 @@ export function EditorToolbar({
               <Tool label={t('format.link')} active={state?.link} keepFocus={false} onPress={() => onTool('link')}>
                 <LinkIcon size={21} />
               </Tool>
-              <Tool label={t('format.color')} active={state?.styled} keepFocus={false} onPress={() => onTool('style')}>
+              <Tool
+                label={t('format.color')}
+                active={state?.styled}
+                keepFocus={false}
+                buttonRef={anchors?.style}
+                onPress={() => onTool('style')}
+              >
                 <span className="relative font-serif text-[1.125rem] font-semibold">
                   A
                   <span className="absolute inset-x-0 -bottom-0.5 h-[3px] rounded-full bg-[linear-gradient(90deg,#3b6fb6,#2f8a5f,#c0602f,#9a5bb5)]" />

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Folder, Tag } from '../../lib/types'
 import { deleteFolder, deleteTag, renameFolder, renameTag, reorderFolders, useFolders, useTags } from '../../state/library'
 import { useToast } from '../../state/toast'
 import { Button, IconButton, TextInput } from '../../ui'
-import { ActionSheet, ConfirmSheet, Sheet } from '../../ui/Sheet'
+import { Menu } from '../../ui/Popover'
+import { ConfirmSheet, Sheet } from '../../ui/Sheet'
 import { ArrowDownIcon, ArrowUpIcon, FolderIcon, MoreIcon, PenIcon, TrashIcon } from '../../ui/icons'
 import { Group } from './parts'
 
@@ -63,6 +64,7 @@ export function FolderManager() {
   const [removing, setRemoving] = useState<Folder | null>(null)
   const [permanent, setPermanent] = useState(false)
   const [busy, setBusy] = useState(false)
+  const menuAnchor = useRef<HTMLElement | null>(null)
 
   async function move(folder: Folder, delta: number) {
     const ids = folders.map((item) => item.id)
@@ -104,29 +106,38 @@ export function FolderManager() {
             <IconButton size="sm" label={t('settings.moveUp')} disabled={index === 0} onClick={() => void move(folder, -1)} className="text-ink-2">
               <ArrowUpIcon size={18} />
             </IconButton>
-            <IconButton size="sm" label={t('nav.more')} onClick={() => setMenu(folder)} className="text-ink-2">
+            <IconButton
+              size="sm"
+              label={t('nav.more')}
+              onClick={(event) => {
+                menuAnchor.current = event.currentTarget
+                setMenu(folder)
+              }}
+              className="text-ink-2"
+            >
               <MoreIcon size={20} />
             </IconButton>
           </div>
         ))
       )}
 
-      <ActionSheet
+      <Menu
         open={menu !== null}
         onClose={() => setMenu(null)}
-        title={menu?.name}
-        actions={
+        anchorRef={menuAnchor}
+        label={menu?.name}
+        items={
           menu
             ? [
-                { id: 'rename', label: t('settings.renameFolder'), icon: <PenIcon size={22} />, onSelect: () => setRenaming(menu) },
+                { id: 'rename', label: t('settings.renameFolder'), icon: <PenIcon size={21} />, onSelect: () => setRenaming(menu) },
                 {
                   id: 'down',
                   label: t('settings.moveDown'),
-                  icon: <ArrowDownIcon size={22} />,
+                  icon: <ArrowDownIcon size={21} />,
                   disabled: folders[folders.length - 1]?.id === menu.id,
                   onSelect: () => void move(menu, 1),
                 },
-                { id: 'delete', label: t('common.delete'), icon: <TrashIcon size={22} />, destructive: true, onSelect: () => setRemoving(menu) },
+                { id: 'delete', label: t('common.delete'), icon: <TrashIcon size={21} />, destructive: true, onSelect: () => setRemoving(menu) },
               ]
             : []
         }
@@ -198,6 +209,7 @@ export function TagManager() {
   const [renaming, setRenaming] = useState<Tag | null>(null)
   const [removing, setRemoving] = useState<Tag | null>(null)
   const [busy, setBusy] = useState(false)
+  const menuAnchor = useRef<HTMLElement | null>(null)
 
   return (
     <Group id="tags" title={t('settings.tags')}>
@@ -209,7 +221,10 @@ export function TagManager() {
             <button
               key={tag.id}
               type="button"
-              onClick={() => setMenu(tag)}
+              onClick={(event) => {
+                menuAnchor.current = event.currentTarget
+                setMenu(tag)
+              }}
               className="press flex h-9 items-center gap-1.5 rounded-full bg-well px-3.5 text-[0.875rem] text-ink"
             >
               #{tag.name}
@@ -218,15 +233,16 @@ export function TagManager() {
           ))}
         </div>
       )}
-      <ActionSheet
+      <Menu
         open={menu !== null}
         onClose={() => setMenu(null)}
-        title={menu ? `#${menu.name}` : undefined}
-        actions={
+        anchorRef={menuAnchor}
+        label={menu ? `#${menu.name}` : undefined}
+        items={
           menu
             ? [
-                { id: 'rename', label: t('settings.renameTag'), icon: <PenIcon size={22} />, onSelect: () => setRenaming(menu) },
-                { id: 'delete', label: t('common.delete'), icon: <TrashIcon size={22} />, destructive: true, onSelect: () => setRemoving(menu) },
+                { id: 'rename', label: t('settings.renameTag'), icon: <PenIcon size={21} />, onSelect: () => setRenaming(menu) },
+                { id: 'delete', label: t('common.delete'), icon: <TrashIcon size={21} />, destructive: true, onSelect: () => setRemoving(menu) },
               ]
             : []
         }

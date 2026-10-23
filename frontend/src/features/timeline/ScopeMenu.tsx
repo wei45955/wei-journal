@@ -1,17 +1,31 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { createFolder, useFolders } from '../../state/library'
 import { useToast } from '../../state/toast'
 import { Button, TextInput } from '../../ui'
-import { Sheet } from '../../ui/Sheet'
+import { Popover } from '../../ui/Popover'
 import { CheckIcon, FolderIcon, InboxIcon, PlusIcon, StackIcon } from '../../ui/icons'
 
 export type Scope = number | 'none' | undefined
 
-/** Chooses which part of the journal is shown: everything, the unfiled entries or one folder. */
-export function ScopeSheet({ open, onClose, scope }: { open: boolean; onClose: () => void; scope: Scope }) {
+/**
+ * Chooses which part of the journal is shown: everything, the unfiled entries
+ * or one folder. It opens beside the title it belongs to.
+ */
+export function ScopeMenu({
+  open,
+  onClose,
+  anchorRef,
+  scope,
+}: {
+  open: boolean
+  onClose: () => void
+  anchorRef: RefObject<HTMLElement | null>
+  scope: Scope
+}) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { folders } = useFolders()
@@ -43,48 +57,55 @@ export function ScopeSheet({ open, onClose, scope }: { open: boolean; onClose: (
 
   const row = (active: boolean) =>
     cn(
-      'flex min-h-[52px] w-full items-center gap-3.5 rounded-[14px] px-3 text-left text-[1rem] transition-colors active:bg-well',
+      'flex min-h-[44px] w-full items-center gap-3 rounded-[12px] px-2.5 text-left text-[0.9375rem] transition-colors active:bg-well',
       active ? 'text-accent' : 'text-ink',
     )
 
   return (
-    <Sheet open={open} onClose={onClose} title={t('timeline.scopeTitle')} width="sm">
-      <ul className="-mx-2">
+    <Popover
+      open={open}
+      onClose={onClose}
+      anchorRef={anchorRef}
+      placement="bottom-start"
+      label={t('timeline.scopeTitle')}
+      className="w-[15rem] max-w-[calc(100vw_-_1.5rem)] p-1.5"
+    >
+      <ul>
         <li>
           <button type="button" className={row(scope === undefined)} onClick={() => go(undefined)}>
-            <StackIcon size={22} className="text-ink-2" />
+            <StackIcon size={21} className="text-ink-2" />
             <span className="flex-1">{t('timeline.allEntries')}</span>
-            {scope === undefined ? <CheckIcon size={20} /> : null}
+            {scope === undefined ? <CheckIcon size={19} /> : null}
           </button>
         </li>
         <li>
           <button type="button" className={row(scope === 'none')} onClick={() => go('none')}>
-            <InboxIcon size={22} className="text-ink-2" />
+            <InboxIcon size={21} className="text-ink-2" />
             <span className="flex-1">{t('timeline.unfiled')}</span>
-            {scope === 'none' ? <CheckIcon size={20} /> : null}
+            {scope === 'none' ? <CheckIcon size={19} /> : null}
           </button>
         </li>
       </ul>
 
-      {folders.length > 0 ? <div className="my-2 h-px bg-rule" /> : null}
+      {folders.length > 0 ? <div className="my-1.5 h-px bg-rule" /> : null}
 
-      <ul className="-mx-2">
+      <ul>
         {folders.map((folder) => (
           <li key={folder.id}>
             <button type="button" className={row(scope === folder.id)} onClick={() => go(folder.id)}>
-              <FolderIcon size={22} className="text-ink-2" />
+              <FolderIcon size={21} className="text-ink-2" />
               <span className="min-w-0 flex-1 truncate">{folder.name}</span>
               {scope === folder.id ? (
-                <CheckIcon size={20} />
+                <CheckIcon size={19} />
               ) : (
-                <span className="tnum text-[0.875rem] text-ink-3">{folder.entryCount}</span>
+                <span className="tnum text-[0.8125rem] text-ink-3">{folder.entryCount}</span>
               )}
             </button>
           </li>
         ))}
       </ul>
 
-      <div className="mt-2 border-t border-rule pt-3">
+      <div className="mt-1.5 border-t border-rule pt-1.5">
         {adding ? (
           <form onSubmit={add} className="flex items-center gap-2 animate-fade">
             <TextInput
@@ -103,13 +124,13 @@ export function ScopeSheet({ open, onClose, scope }: { open: boolean; onClose: (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="press flex h-11 items-center gap-2 rounded-full px-1 text-[0.9375rem] font-medium text-accent"
+            className="press flex h-10 items-center gap-2 rounded-[12px] px-2.5 text-[0.9375rem] font-medium text-accent"
           >
-            <PlusIcon size={20} />
+            <PlusIcon size={19} />
             {t('timeline.newFolder')}
           </button>
         )}
       </div>
-    </Sheet>
+    </Popover>
   )
 }

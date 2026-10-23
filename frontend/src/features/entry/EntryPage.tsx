@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../lib/api'
@@ -11,9 +11,10 @@ import { afterEntryChange } from '../../state/library'
 import { useToast } from '../../state/toast'
 import { BackButton, TopBar, useBack } from '../../shell/TopBar'
 import { ErrorState, IconButton, Skeleton } from '../../ui'
-import { ActionSheet, ConfirmSheet } from '../../ui/Sheet'
+import { Menu } from '../../ui/Popover'
+import { ConfirmSheet } from '../../ui/Sheet'
 import { CopyIcon, DownloadIcon, FileIcon, FolderIcon, MoreIcon, PenIcon, PinIcon, PlaceIcon, TrashIcon } from '../../ui/icons'
-import { Mosaic } from '../media/Mosaic'
+import { Gallery } from '../media/Gallery'
 import { splitMedia } from '../media/Thumb'
 import { Viewer } from '../media/Viewer'
 import { SketchView } from '../sketch/SketchView'
@@ -44,6 +45,7 @@ export function EntryPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [viewer, setViewer] = useState<number | null>(null)
+  const moreRef = useRef<HTMLButtonElement>(null)
 
   if (!entry) {
     return (
@@ -123,7 +125,7 @@ export function EntryPage() {
             <IconButton label={t('entry.edit')} onClick={() => navigate(`/entry/${current.id}/edit`, { replace: false })}>
               <PenIcon size={21} />
             </IconButton>
-            <IconButton label={t('nav.more')} onClick={() => setMore(true)}>
+            <IconButton ref={moreRef} label={t('nav.more')} onClick={() => setMore((open) => !open)}>
               <MoreIcon size={22} />
             </IconButton>
           </>
@@ -168,14 +170,7 @@ export function EntryPage() {
         ) : null}
       </header>
 
-      {visual.length > 0 ? (
-        <Mosaic
-          items={visual}
-          rounded
-          onOpen={setViewer}
-          className="mb-7 overflow-hidden rounded-[18px]"
-        />
-      ) : null}
+      {visual.length > 0 ? <Gallery items={visual} onOpen={setViewer} /> : null}
 
       <RichText document={current.document} />
 
@@ -221,21 +216,23 @@ export function EntryPage() {
         ) : null}
       </footer>
 
-      <ActionSheet
+      <Menu
         open={more}
         onClose={() => setMore(false)}
-        actions={[
+        anchorRef={moreRef}
+        label={t('nav.more')}
+        items={[
           {
             id: 'pin',
             label: current.isPinned ? t('entry.unpin') : t('entry.pin'),
-            icon: <PinIcon size={22} />,
+            icon: <PinIcon size={21} />,
             onSelect: () => void togglePin(),
           },
-          { id: 'copy', label: t('entry.duplicate'), icon: <CopyIcon size={22} />, onSelect: () => void duplicate() },
+          { id: 'copy', label: t('entry.duplicate'), icon: <CopyIcon size={21} />, onSelect: () => void duplicate() },
           {
             id: 'delete',
             label: t('entry.delete'),
-            icon: <TrashIcon size={22} />,
+            icon: <TrashIcon size={21} />,
             destructive: true,
             onSelect: () => setConfirmDelete(true),
           },

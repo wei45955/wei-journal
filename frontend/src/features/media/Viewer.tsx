@@ -9,6 +9,10 @@ import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, DownloadIcon, FileIcon, L
 import { isFilm, isPicture, motionOf } from './Thumb'
 
 const MAX_SCALE = 4
+/** How close two taps must be to count as one double tap. */
+const TAP_WINDOW = 280
+/** How long a single tap waits to see whether a second one follows. */
+const CLOSE_DELAY = 300
 
 interface View {
   scale: number
@@ -29,6 +33,10 @@ const centre = (touches: Touches) => ({
  * Photos and films on black, edge to edge. Swipe sideways to move between
  * them, swipe down to close, pinch or double-tap to look closer. A Live
  * Photo plays while it is pressed, the way it does on the phone.
+ *
+ * One tap closes the picture and one double tap zooms it, in both
+ * directions. The two are told apart by waiting for the second tap, so a
+ * double tap never closes the picture first.
  */
 export function Viewer({
   items,
@@ -52,11 +60,14 @@ export function Viewer({
   const [view, setView] = useState<View>(RESET)
   const [dragX, setDragX] = useState(0)
   const [dragY, setDragY] = useState(0)
-  const [chrome, setChrome] = useState(true)
   const [playing, setPlaying] = useState(false)
   const [animating, setAnimating] = useState(false)
 
   const surface = useRef<HTMLDivElement>(null)
+  const picture = useRef<HTMLElement | null>(null)
+  const setPicture = useCallback((element: HTMLElement | null) => {
+    picture.current = element
+  }, [])
   const gesture = useRef<{
     kind: 'none' | 'swipe' | 'pan' | 'pinch'
     x: number
@@ -68,6 +79,9 @@ export function Viewer({
     axis?: 'x' | 'y'
   }>({ kind: 'none', x: 0, y: 0, startView: RESET, startGap: 0, startCentre: { x: 0, y: 0 }, time: 0 })
   const lastTap = useRef(0)
+  const pendingClose = useRef<number | null>(null)
+  const lastTouchZoom = useRef(0)
+  const pointerType = useRef('')
   const holdTimer = useRef<number | null>(null)
   const viewRef = useRef(view)
   viewRef.current = view
@@ -86,6 +100,12 @@ export function Viewer({
   moveRef.current = move
 
   useEffect(() => lockBodyScroll(), [])
+  useEffect(
+    () => () => {
+      if (pendingClose.current !== null) window.clearTimeout(pendingClose.current)
+    },
+    [],
+  )
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeRef.current()
@@ -105,8 +125,14 @@ export function Viewer({
   const clamp = useCallback((next: View): View => {
     const box = surface.current?.getBoundingClientRect()
     if (!box || next.scale <= 1) return { scale: Math.max(1, next.scale), x: 0, y: 0 }
-    const maxX = (box.width * (next.scale - 1)) / 2
-    const maxY = (box.height * (next.scale - 1)) / 2
+    // The picture may be dragged only as far as its own edges. The size is
+    // read from the layout, not from the screen, because the screen already
+    // carries the zoom.
+    const shown = picture.current
+    const width = shown ? shown.offsetWidth : box.width
+    const height = shown ? shown.offsetHeight : box.height
+    const maxX = Math.max(0, (width * next.scale - box.width) / 2)
+    const maxY = Math.max(0, (height * next.scale - box.height) / 2)
     return {
       scale: Math.min(MAX_SCALE, next.scale),
       x: Math.min(maxX, Math.max(-maxX, next.x)),
@@ -129,6 +155,31 @@ export function Viewer({
     },
     [clamp],
   )
+
+  /** A double tap looks closer, and a second one puts the picture back. */
+  const toggleZoom = useCallback(
+    (x: number, y: number) => {
+      setAnimating(true)
+      zoomAt(viewRef.current.scale > 1 ? 1 : 2.5, { x, y })
+    },
+    [zoomAt],
+  )
+
+  function cancelPendingClose() {
+    if (pendingClose.current !== null) {
+      window.clearTimeout(pendingClose.current)
+      pendingClose.current = null
+    }
+  }
+
+  /** One tap closes the picture, unless a second tap follows it. */
+  function scheduleClose() {
+    cancelPendingClose()
+    pendingClose.current = window.setTimeout(() => {
+      pendingClose.current = null
+      closeRef.current()
+    }, CLOSE_DELAY)
+  }
 
   useEffect(() => {
     const element = surface.current
@@ -174,7 +225,7 @@ export function Viewer({
   function onTouchMove(event: React.TouchEvent) {
     const g = gesture.current
     if (g.kind === 'pinch' && event.touches.length === 2) {
-      const scale = g.startView.scale * (gap(event.touches) / g.startGap)
+      const scale = g.startView.scale * (gap(event.touches) / Math.max(1, g.startGap))
       const c = centre(event.touches)
       setView(
         clamp({
@@ -224,22 +275,25 @@ export function Viewer({
       else setDragY(0)
     } else if (g.kind !== 'pinch' && Math.hypot(dx, dy) < 8 && elapsed < 250) {
       const now = Date.now()
-      if (now - lastTap.current < 280) {
+      if (now - lastTap.current < TAP_WINDOW) {
+        // The second tap of a double tap: look closer, or come back.
         lastTap.current = 0
-        zoomAt(viewRef.current.scale > 1 ? 1 : 2.5, { x: touch.clientX, y: touch.clientY })
+        cancelPendingClose()
+        toggleZoom(touch.clientX, touch.clientY)
+        lastTouchZoom.current = now
       } else {
         lastTap.current = now
-        window.setTimeout(() => {
-          if (lastTap.current === now) setChrome((value) => !value)
-        }, 290)
+        scheduleClose()
       }
+    } else if (viewRef.current.scale < 1.02) {
+      // A drag that was not a drag: put the picture back where it was.
+      setView(RESET)
     }
-    if (viewRef.current.scale < 1.02) setView(RESET)
     g.kind = 'none'
   }
 
   if (!media) return null
-  const picture = isPicture(media)
+  const isPhoto = isPicture(media)
   const film = isFilm(media)
   const fade = 1 - Math.min(dragY / 400, 0.6)
 
@@ -254,7 +308,7 @@ export function Viewer({
       <header
         className={cn(
           'absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-gradient-to-b from-black/50 to-transparent px-2 pt-[calc(env(safe-area-inset-top)+0.25rem)] pb-6 transition-opacity duration-200',
-          chrome && dragY === 0 ? 'opacity-100' : 'pointer-events-none opacity-0',
+          dragY === 0 ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
       >
         <button
@@ -291,11 +345,29 @@ export function Viewer({
       <div
         ref={surface}
         data-allow-zoom
+        onPointerDown={(event) => {
+          pointerType.current = event.pointerType
+        }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
-        onDoubleClick={(event) => zoomAt(view.scale > 1 ? 1 : 2.5, { x: event.clientX, y: event.clientY })}
+        onClick={(event) => {
+          // A finger has already been listened to; this is the mouse.
+          if (pointerType.current === 'touch') return
+          if (event.detail > 1) {
+            cancelPendingClose()
+            return
+          }
+          scheduleClose()
+        }}
+        onDoubleClick={(event) => {
+          // A double tap on a phone also sends a double click, a moment
+          // later. That one has already done the work.
+          if (Date.now() - lastTouchZoom.current < 500) return
+          cancelPendingClose()
+          toggleZoom(event.clientX, event.clientY)
+        }}
         className="relative flex min-h-0 flex-1 touch-none items-center justify-center overflow-hidden select-none"
       >
         <div
@@ -305,11 +377,12 @@ export function Viewer({
             transition: animating ? 'transform 260ms var(--ease-out-soft)' : 'none',
           }}
         >
-          {picture ? (
+          {isPhoto ? (
             playing && motion ? (
               <video src={motion.url} autoPlay muted playsInline className="max-h-full max-w-full object-contain" />
             ) : (
               <img
+                ref={setPicture}
                 src={media.hasPreview ? media.previewUrl : media.url}
                 alt={media.originalName}
                 draggable={false}
@@ -319,6 +392,7 @@ export function Viewer({
           ) : film ? (
             <video
               key={media.id}
+              ref={setPicture}
               src={media.url}
               controls
               playsInline
@@ -331,7 +405,12 @@ export function Viewer({
                 <p className="max-w-[16rem] truncate text-[1rem] font-medium">{media.originalName}</p>
                 <p className="mt-1 text-[0.875rem] text-white/60">{formatBytes(media.size)}</p>
               </div>
-              <a href={media.url} download={media.originalName} className="press rounded-full bg-white px-5 py-2.5 text-[0.9375rem] font-semibold text-black">
+              <a
+                href={media.url}
+                download={media.originalName}
+                onClick={(event) => event.stopPropagation()}
+                className="press rounded-full bg-white px-5 py-2.5 text-[0.9375rem] font-semibold text-black"
+              >
                 {t('media.download')}
               </a>
             </div>
@@ -344,7 +423,10 @@ export function Viewer({
               type="button"
               aria-label={t('media.previous')}
               disabled={current === 0}
-              onClick={() => move(-1)}
+              onClick={(event) => {
+                event.stopPropagation()
+                move(-1)
+              }}
               className="press absolute left-3 hidden size-11 items-center justify-center rounded-full bg-white/10 disabled:opacity-0 sm:flex"
             >
               <ChevronLeftIcon size={24} />
@@ -353,7 +435,10 @@ export function Viewer({
               type="button"
               aria-label={t('media.next')}
               disabled={current === items.length - 1}
-              onClick={() => move(1)}
+              onClick={(event) => {
+                event.stopPropagation()
+                move(1)
+              }}
               className="press absolute right-3 hidden size-11 items-center justify-center rounded-full bg-white/10 disabled:opacity-0 sm:flex"
             >
               <ChevronRightIcon size={24} />
@@ -366,7 +451,7 @@ export function Viewer({
         <div
           className={cn(
             'absolute inset-x-0 bottom-0 flex justify-center gap-1.5 bg-gradient-to-t from-black/50 to-transparent pt-8 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] transition-opacity duration-200',
-            chrome && dragY === 0 ? 'opacity-100' : 'opacity-0',
+            dragY === 0 ? 'opacity-100' : 'opacity-0',
           )}
           aria-hidden="true"
         >

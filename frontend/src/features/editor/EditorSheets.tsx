@@ -6,6 +6,7 @@ import type { Tag } from '../../lib/types'
 import { createFolder, createTag, useFolders, useTags } from '../../state/library'
 import { useToast } from '../../state/toast'
 import { Button, Chip, inputClass, TextInput } from '../../ui'
+import { Popover } from '../../ui/Popover'
 import { Sheet } from '../../ui/Sheet'
 import { CheckIcon, FolderIcon, InboxIcon, PlusIcon } from '../../ui/icons'
 
@@ -212,9 +213,10 @@ export const TEXT_SIZES = [
   { id: 'large', value: '22px' },
 ] as const
 
-export function StyleSheet({
+export function StyleMenu({
   open,
   onClose,
+  anchorRef,
   colour,
   size,
   onColour,
@@ -222,6 +224,7 @@ export function StyleSheet({
 }: {
   open: boolean
   onClose: () => void
+  anchorRef: React.RefObject<HTMLElement | null>
   colour: string | null
   size: string | null
   onColour: (value: string | null) => void
@@ -229,7 +232,14 @@ export function StyleSheet({
 }) {
   const { t } = useTranslation()
   return (
-    <Sheet open={open} onClose={onClose} title={t('editor.format')} width="sm">
+    <Popover
+      open={open}
+      onClose={onClose}
+      anchorRef={anchorRef}
+      placement="top-end"
+      label={t('editor.format')}
+      className="w-[17.5rem] max-w-[calc(100vw_-_1.5rem)] p-4"
+    >
       <p className="text-[0.8125rem] text-ink-3">{t('format.color')}</p>
       <div className="mt-2 flex items-center justify-between">
         <button
@@ -257,8 +267,8 @@ export function StyleSheet({
           </button>
         ))}
       </div>
-      <p className="mt-5 text-[0.8125rem] text-ink-3">{t('format.size')}</p>
-      <div className="mt-2 grid grid-cols-3 gap-2 pb-2">
+      <p className="mt-4 text-[0.8125rem] text-ink-3">{t('format.size')}</p>
+      <div className="mt-2 grid grid-cols-3 gap-2">
         {TEXT_SIZES.map((option) => {
           const active = (size ?? '') === option.value
           return (
@@ -268,7 +278,7 @@ export function StyleSheet({
               aria-pressed={active}
               onClick={() => onSize(option.value || null)}
               className={cn(
-                'press flex h-14 items-center justify-center rounded-[14px] font-serif',
+                'press flex h-12 items-center justify-center rounded-[14px] font-serif',
                 active ? 'bg-accent-soft text-accent' : 'bg-well text-ink',
               )}
               style={{ fontSize: option.value || '18px' }}
@@ -278,7 +288,7 @@ export function StyleSheet({
           )
         })}
       </div>
-    </Sheet>
+    </Popover>
   )
 }
 

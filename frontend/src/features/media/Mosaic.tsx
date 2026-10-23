@@ -13,18 +13,15 @@ export function Mosaic({
   items,
   onOpen,
   className,
-  rounded = false,
 }: {
   items: Media[]
   onOpen?: (index: number) => void
   className?: string
-  rounded?: boolean
 }) {
   const { t } = useTranslation()
   if (items.length === 0) return null
   const shown = items.slice(0, 4)
   const rest = items.length - shown.length
-  const tile = rounded ? 'rounded-[10px]' : ''
 
   const cell = (media: Media, index: number, extra?: string) => (
     <button
@@ -36,7 +33,7 @@ export function Mosaic({
         onOpen?.(index)
       }}
       aria-label={media.originalName || t('media.open')}
-      className={cn('relative block size-full overflow-hidden bg-well', tile, extra)}
+      className={cn('relative block size-full overflow-hidden bg-well', extra)}
     >
       <Thumb media={media} large={items.length === 1} />
       {isFilm(media) ? (
@@ -57,7 +54,7 @@ export function Mosaic({
     </button>
   )
 
-  const gap = rounded ? 'gap-1.5' : 'gap-[2px]'
+  const gap = 'gap-[2px]'
 
   if (shown.length === 1) {
     const media = shown[0]

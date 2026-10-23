@@ -24,7 +24,7 @@ import { useUploader } from '../media/upload'
 import { SketchPad } from '../sketch/SketchPad'
 import { SketchView } from '../sketch/SketchView'
 import { EditorToolbar, type EditorTool } from './EditorToolbar'
-import { FolderSheet, LinkSheet, StyleSheet, TagSheet, TimeSheet } from './EditorSheets'
+import { FolderSheet, LinkSheet, StyleMenu, TagSheet, TimeSheet } from './EditorSheets'
 import { PlaceSheet } from './PlaceSheet'
 
 const AUTOSAVE_MS = 1200
@@ -385,6 +385,8 @@ export function EditorPage() {
 
   // --- uploads -----------------------------------------------------------
   const fileInput = useRef<HTMLInputElement>(null)
+  /** The control the style panel hangs from. */
+  const styleAnchor = useRef<HTMLButtonElement>(null)
   const uploader = useUploader((uploaded) => {
     setMedia((current) => [...current, ...uploaded])
     const firstPicture = uploaded.find((item) => isPicture(item))
@@ -661,6 +663,7 @@ export function EditorPage() {
           folder: state.folderId !== null,
           sketch: state.drawing.length > 0,
         }}
+        anchors={{ style: styleAnchor }}
         onTool={(next) => {
           if (next === 'attach') fileInput.current?.click()
           else setTool(next)
@@ -680,12 +683,13 @@ export function EditorPage() {
       <Sheet open={tool === 'sketch'} onClose={() => setTool(null)} title={t('sketch.title')} width="lg">
         <SketchPad strokes={state.drawing} onChange={(drawing) => update({ drawing })} />
       </Sheet>
-      <StyleSheet
+      <StyleMenu
         open={tool === 'style'}
         onClose={() => {
           setTool(null)
           editor?.commands.focus()
         }}
+        anchorRef={styleAnchor}
         colour={(textStyle.color as string) || null}
         size={(textStyle.fontSize as string) || null}
         onColour={(value) => {

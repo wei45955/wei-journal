@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../lib/api'
@@ -11,7 +11,7 @@ import { useFolders, useTags } from '../../state/library'
 import { useToast } from '../../state/toast'
 import { PageTitle, TopBar } from '../../shell/TopBar'
 import { Button, buttonClass, Chip, EmptyState, ErrorState, IconButton, inputClass, Skeleton } from '../../ui'
-import { Sheet } from '../../ui/Sheet'
+import { Popover } from '../../ui/Popover'
 import { ChevronRightIcon, CloseIcon, FilterIcon, LocateIcon, PlaceIcon } from '../../ui/icons'
 import { MapCanvas } from './MapCanvas'
 
@@ -50,6 +50,7 @@ export function PlacesPage() {
   const [fitToken, setFitToken] = useState(0)
   const [tileError, setTileError] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
+  const filterRef = useRef<HTMLButtonElement>(null)
 
   const key = `places:${filters.folder}:${filters.tags.join(',')}`
   const places = useResource<MapPlace[]>(key, async () =>
@@ -80,7 +81,12 @@ export function PlacesPage() {
       <TopBar
         title={t('map.title')}
         trailing={
-          <IconButton label={t('map.filter')} active={filtered} onClick={() => setFilterOpen(true)}>
+          <IconButton
+            ref={filterRef}
+            label={t('map.filter')}
+            active={filtered}
+            onClick={() => setFilterOpen((open) => !open)}
+          >
             <FilterIcon size={22} />
           </IconButton>
         }
@@ -164,7 +170,13 @@ export function PlacesPage() {
         </>
       )}
 
-      <PlaceFilterSheet open={filterOpen} onClose={() => setFilterOpen(false)} value={filters} onApply={setFilters} />
+      <PlaceFilterMenu
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        anchorRef={filterRef}
+        value={filters}
+        onApply={setFilters}
+      />
     </>
   )
 }
@@ -200,14 +212,16 @@ function PlaceCard({ place, language, dateFormat, onClose }: { place: MapPlace; 
   )
 }
 
-function PlaceFilterSheet({
+function PlaceFilterMenu({
   open,
   onClose,
+  anchorRef,
   value,
   onApply,
 }: {
   open: boolean
   onClose: () => void
+  anchorRef: React.RefObject<HTMLElement | null>
   value: PlaceFilters
   onApply: (next: PlaceFilters) => void
 }) {
@@ -220,32 +234,28 @@ function PlaceFilterSheet({
   }, [open, value])
 
   return (
-    <Sheet
+    <Popover
       open={open}
       onClose={onClose}
-      title={t('map.filter')}
-      tall
-      action={
-        <button type="button" onClick={() => setDraft(NONE)} className="press -mr-2 h-10 rounded-full px-3 text-[0.9375rem] text-ink-2">
+      anchorRef={anchorRef}
+      placement="bottom-end"
+      label={t('map.filter')}
+      className="w-[19rem] max-w-[calc(100vw_-_1.5rem)] overflow-hidden"
+    >
+      <header className="flex items-center justify-between gap-3 border-b border-rule px-4 py-2.5">
+        <h2 className="text-[0.9375rem] font-semibold text-ink">{t('map.filter')}</h2>
+        <button
+          type="button"
+          onClick={() => setDraft(NONE)}
+          className="press -mr-1 h-8 rounded-full px-2 text-[0.875rem] font-medium text-ink-2"
+        >
           {t('common.clear')}
         </button>
-      }
-      footer={
-        <Button
-          tone="primary"
-          size="lg"
-          block
-          onClick={() => {
-            onApply(draft)
-            onClose()
-          }}
-        >
-          {t('common.done')}
-        </Button>
-      }
-    >
-      <h3 className="mt-2 mb-3 text-[0.9375rem] font-semibold text-ink">{t('folder.title')}</h3>
-      <div className="flex flex-wrap gap-2">
+      </header>
+
+      <div className="max-h-[min(58vh,25rem)] overflow-y-auto overscroll-contain px-4 py-3">
+      <h3 className="mb-2.5 text-[0.8125rem] font-semibold text-ink-2">{t('folder.title')}</h3>
+      <div className="flex flex-wrap gap-1.5">
         <Chip selected={draft.folder === ''} onClick={() => setDraft({ ...draft, folder: '' })}>
           {t('map.anyFolder')}
         </Chip>
@@ -260,8 +270,8 @@ function PlaceFilterSheet({
       </div>
       {tags.length > 0 ? (
         <>
-          <h3 className="mt-7 mb-3 text-[0.9375rem] font-semibold text-ink">{t('filters.tags')}</h3>
-          <div className="flex flex-wrap gap-2">
+          <h3 className="mt-5 mb-2.5 text-[0.8125rem] font-semibold text-ink-2">{t('filters.tags')}</h3>
+          <div className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
               <Chip
                 key={tag.id}
@@ -276,18 +286,33 @@ function PlaceFilterSheet({
           </div>
         </>
       ) : null}
-      <h3 className="mt-7 mb-3 text-[0.9375rem] font-semibold text-ink">{t('filters.dates')}</h3>
-      <div className="grid grid-cols-2 gap-3">
+      <h3 className="mt-5 mb-2.5 text-[0.8125rem] font-semibold text-ink-2">{t('filters.dates')}</h3>
+      <div className="grid grid-cols-2 gap-2">
         <label className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-[0.8125rem] text-ink-2">{t('filters.from')}</span>
+          <span className="text-[0.75rem] text-ink-3">{t('filters.from')}</span>
           <input type="date" value={draft.from} max={draft.to || undefined} onChange={(event) => setDraft({ ...draft, from: event.target.value })} className={inputClass} />
         </label>
         <label className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-[0.8125rem] text-ink-2">{t('filters.to')}</span>
+          <span className="text-[0.75rem] text-ink-3">{t('filters.to')}</span>
           <input type="date" value={draft.to} min={draft.from || undefined} onChange={(event) => setDraft({ ...draft, to: event.target.value })} className={inputClass} />
         </label>
       </div>
-    </Sheet>
+      </div>
+
+      <footer className="border-t border-rule p-2.5">
+        <Button
+          tone="primary"
+          size="md"
+          block
+          onClick={() => {
+            onApply(draft)
+            onClose()
+          }}
+        >
+          {t('common.done')}
+        </Button>
+      </footer>
+    </Popover>
   )
 }
 

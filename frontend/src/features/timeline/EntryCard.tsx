@@ -11,6 +11,8 @@ import { SketchView } from '../sketch/SketchView'
 
 interface EntryCardProps {
   entry: Entry
+  /** Where the card sits in its day, so the day can arrive one line at a time. */
+  index?: number
   language: string
   zone: string
   selecting?: boolean
@@ -25,6 +27,7 @@ interface EntryCardProps {
  */
 export const EntryCard = memo(function EntryCard({
   entry,
+  index = 0,
   language,
   zone,
   selecting,
@@ -118,12 +121,22 @@ export const EntryCard = memo(function EntryCard({
   const frame = cn(
     'relative block overflow-hidden rounded-[20px] bg-leaf text-left shadow-[0_1px_2px_rgb(23_32_51/0.05)]',
     'transition-[transform,box-shadow] duration-200 active:scale-[0.985]',
+    'animate-reveal',
     selected && 'shadow-[0_0_0_2px_var(--wj-accent)]',
   )
+  // The cards of a day arrive one after the other, but only the first few:
+  // a long list must not take its time to show.
+  const arrive = { animationDelay: `${Math.min(index, 8) * 26}ms` }
 
   if (selecting) {
     return (
-      <button type="button" aria-pressed={selected} onClick={() => onToggle?.(entry.id)} className={cn(frame, 'w-full')}>
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={() => onToggle?.(entry.id)}
+        className={cn(frame, 'w-full')}
+        style={arrive}
+      >
         {pictures ? <div className="pointer-events-none">{pictures}</div> : null}
         {body}
         <span
@@ -144,7 +157,7 @@ export const EntryCard = memo(function EntryCard({
   }
 
   return (
-    <article className={frame}>
+    <article className={frame} style={arrive}>
       {pictures}
       <Link to={`/entry/${entry.id}`} className="block rounded-b-[20px]">
         {body}

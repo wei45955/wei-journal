@@ -124,48 +124,54 @@ export function SearchPage() {
 
   return (
     <>
-      <div className="sticky top-0 z-40 -mx-5 bg-paper/95 px-5 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 backdrop-blur-xl sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10">
-        <form
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault()
-            input.current?.blur()
-            if (text.trim()) searchFor(text.trim())
-          }}
-          className="relative"
-        >
-          <SearchIcon size={20} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-3" />
-          <input
-            ref={input}
-            type="search"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder={t('search.placeholder')}
-            aria-label={t('nav.search')}
-            enterKeyHint="search"
-            autoComplete="off"
-            className="h-12 w-full rounded-full bg-leaf pr-11 pl-11 text-[16px] text-ink shadow-[0_1px_2px_rgb(23_32_51/0.06)] outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_2px_var(--wj-accent)]"
-          />
-          {text ? (
-            <button
-              type="button"
-              aria-label={t('common.clear')}
-              onClick={() => {
-                setText('')
-                input.current?.focus()
-              }}
-              className="press absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-ink-3"
-            >
-              <CloseIcon size={18} />
-            </button>
-          ) : null}
-        </form>
-        <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 no-scrollbar sm:mx-0 sm:px-0" role="radiogroup" aria-label={t('search.scope')}>
-          {SCOPES.map((value) => (
-            <Chip key={value} selected={scope === value} onClick={() => setScope(value)} className="h-8 shrink-0 text-[0.8125rem]">
-              {value === 'all' ? t('search.everything') : t(`search.fields.${value}`)}
-            </Chip>
-          ))}
+      <div className="sticky top-0 z-40 -mx-5 sm:-mx-8 lg:-mx-10">
+        {/* The strip under the system status bar is plain paper. A frosted
+            band there reads as a tear in the page on a phone opened from the
+            home screen. */}
+        <div aria-hidden="true" className="h-[env(safe-area-inset-top)] bg-paper" />
+        <div className="bg-paper/95 px-5 pt-3 pb-3 backdrop-blur-xl sm:px-8 lg:px-10">
+          <form
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault()
+              input.current?.blur()
+              if (text.trim()) searchFor(text.trim())
+            }}
+            className="relative"
+          >
+            <SearchIcon size={20} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-3" />
+            <input
+              ref={input}
+              type="search"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder={t('search.placeholder')}
+              aria-label={t('nav.search')}
+              enterKeyHint="search"
+              autoComplete="off"
+              className="h-12 w-full rounded-full bg-leaf pr-11 pl-11 text-[16px] text-ink shadow-[0_1px_2px_rgb(23_32_51/0.06)] outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_2px_var(--wj-accent)]"
+            />
+            {text ? (
+              <button
+                type="button"
+                aria-label={t('common.clear')}
+                onClick={() => {
+                  setText('')
+                  input.current?.focus()
+                }}
+                className="press absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-ink-3"
+              >
+                <CloseIcon size={18} />
+              </button>
+            ) : null}
+          </form>
+          <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 no-scrollbar sm:mx-0 sm:px-0" role="radiogroup" aria-label={t('search.scope')}>
+            {SCOPES.map((value) => (
+              <Chip key={value} selected={scope === value} onClick={() => setScope(value)} className="h-8 shrink-0 text-[0.8125rem]">
+                {value === 'all' ? t('search.everything') : t(`search.fields.${value}`)}
+              </Chip>
+            ))}
+          </div>
         </div>
       </div>
 

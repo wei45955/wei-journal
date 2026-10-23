@@ -86,7 +86,7 @@ export function AppShell() {
         )}
       >
         <Suspense fallback={<div className="min-h-dvh" />}>
-          <div key={pageKeyOf(location.pathname)} className="animate-fade">
+          <div key={pageKeyOf(location.pathname)} className="animate-rise">
             <Outlet />
           </div>
         </Suspense>
@@ -125,7 +125,7 @@ function TabBar() {
                 active ? 'text-accent' : 'text-ink-2',
               )}
             >
-              <tab.icon size={23} strokeWidth={active ? 1.9 : 1.6} />
+              <tab.icon size={23} strokeWidth={active ? 1.9 : 1.6} className="transition-[stroke-width] duration-200" />
               <span className="text-[0.6875rem] leading-none font-medium">{t(tab.key)}</span>
             </Link>
           )

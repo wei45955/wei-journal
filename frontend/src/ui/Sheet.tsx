@@ -25,7 +25,7 @@ interface SheetProps {
   /** A control on the right of the title, such as "Done". */
   action?: ReactNode
   children: ReactNode
-  /** Fills most of the screen on a phone, for pickers with a list. */
+  /** May grow tall on a phone, for pickers with a long list. */
   tall?: boolean
   /** The panel width on a wide screen. */
   width?: 'sm' | 'md' | 'lg'
@@ -43,6 +43,7 @@ export function Sheet({ open, onClose, title, action, children, tall, width = 'm
   const start = useRef<{ y: number; time: number } | null>(null)
   const closeRef = useRef(onClose)
   closeRef.current = onClose
+  const releaseRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -64,6 +65,7 @@ export function Sheet({ open, onClose, title, action, children, tall, width = 'm
     if (!open) return
     const previous = document.activeElement as HTMLElement | null
     const release = lockBodyScroll()
+    releaseRef.current = release
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
@@ -97,10 +99,27 @@ export function Sheet({ open, onClose, title, action, children, tall, width = 'm
     return () => {
       document.removeEventListener('keydown', onKey)
       window.clearTimeout(timer)
-      release()
       previous?.focus?.({ preventScroll: true })
     }
   }, [open])
+
+  // The page stays held still until the panel has finished leaving, so the
+  // text behind it does not jump while it is still on screen.
+  useEffect(() => {
+    if (mounted) return
+    const release = releaseRef.current
+    releaseRef.current = null
+    release?.()
+  }, [mounted])
+
+  useEffect(
+    () => () => {
+      const release = releaseRef.current
+      releaseRef.current = null
+      release?.()
+    },
+    [],
+  )
 
   if (!mounted) return null
 
@@ -143,7 +162,10 @@ export function Sheet({ open, onClose, title, action, children, tall, width = 'm
         className={cn(
           'relative flex w-full flex-col overflow-hidden bg-leaf shadow-sheet outline-none',
           'rounded-t-[26px] sm:rounded-[22px]',
-          tall ? 'h-[88dvh] sm:h-auto sm:max-h-[80dvh]' : 'max-h-[88dvh] sm:max-h-[80dvh]',
+          // The panel is as tall as its content, up to a limit. A sheet that
+          // always fills the screen leaves a large blank band under a short
+          // list of choices.
+          tall ? 'max-h-[85dvh] sm:max-h-[80dvh]' : 'max-h-[72dvh] sm:max-h-[70dvh]',
           widths[width],
           'transition-transform duration-[220ms] ease-[var(--ease-sheet)]',
           leaving ? 'translate-y-full sm:translate-y-0 sm:opacity-0 sm:scale-[0.97]' : 'animate-sheet sm:animate-pop',
@@ -174,75 +196,19 @@ export function Sheet({ open, onClose, title, action, children, tall, width = 'm
             </header>
           ) : null}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5">{children}</div>
+        {/* The body carries the safe area itself, so a sheet without a footer
+            does not end in an empty white strip. */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {children}
+        </div>
         {footer ? (
           <footer className="shrink-0 border-t border-rule px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {footer}
           </footer>
-        ) : (
-          <div className="h-[env(safe-area-inset-bottom)] shrink-0 sm:hidden" aria-hidden="true" />
-        )}
+        ) : null}
       </div>
     </div>,
     document.body,
-  )
-}
-
-export interface SheetAction {
-  id: string
-  label: string
-  icon?: ReactNode
-  destructive?: boolean
-  checked?: boolean
-  disabled?: boolean
-  onSelect: () => void
-}
-
-/** A short list of actions, the way iOS presents "more". */
-export function ActionSheet({
-  open,
-  onClose,
-  title,
-  actions,
-}: {
-  open: boolean
-  onClose: () => void
-  title?: string
-  actions: SheetAction[]
-}) {
-  return (
-    <Sheet open={open} onClose={onClose} title={title} width="sm" label={title}>
-      <ul className="-mx-2 flex flex-col">
-        {actions.map((action) => (
-          <li key={action.id}>
-            <button
-              type="button"
-              disabled={action.disabled}
-              onClick={() => {
-                onClose()
-                action.onSelect()
-              }}
-              className={cn(
-                'flex min-h-[52px] w-full items-center gap-3.5 rounded-[14px] px-3 text-left text-[1rem] transition-colors active:bg-well disabled:opacity-40',
-                action.destructive ? 'text-danger' : 'text-ink',
-              )}
-            >
-              {action.icon ? (
-                <span className={cn('flex size-6 items-center justify-center', !action.destructive && 'text-ink-2')}>
-                  {action.icon}
-                </span>
-              ) : null}
-              <span className="min-w-0 flex-1 truncate">{action.label}</span>
-              {action.checked ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="text-accent">
-                  <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              ) : null}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Sheet>
   )
 }
 
