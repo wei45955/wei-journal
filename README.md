@@ -20,7 +20,9 @@ The interface is built for a phone first and scales up to a desktop. It is meant
 
 **The archive.** A calendar of the days that hold entries, statistics, the current and the longest run of days, and a map of the places.
 
-**The AI features are optional.** With a model provider configured, images are described, entries are summarised and tags are suggested. Without one, everything else still works. A model request that fails never fails the save of an entry, and no text leaves the server unless the provider is configured and the account has turned the feature on.
+**The map.** The places of the entries are drawn by whichever tile service the account names; OpenStreetMap and Amap are one tap away in the settings, and any other address can be written in. A Chinese service is recognised, so the pins land on the right spot instead of a few hundred metres off.
+
+**The AI features are optional.** With a model provider configured, images are described, entries are summarised and tags are suggested. A draft can also be rewritten: the writer says what they want in their own words, or picks one of a few common requests, and the result is shown before it replaces anything. Without a provider, everything else still works. A model request that fails never fails the save of an entry, and no text leaves the server unless the provider is configured and the account has turned the feature on.
 
 **Several accounts.** Each account has its own entries, folders, tags, files, sessions and settings. The records of one account are never visible to another, and the only way to become an administrator is to be the first account on an empty installation.
 
@@ -140,6 +142,9 @@ Everything is read from the environment, in two files.
 | `WJ_MAX_UPLOAD_MB` | `256` | The size limit of a single upload. |
 | `WJ_SESSION_TTL` | `168h` | How long an unused session lasts before it has to be renewed. Use slides the deadline forward. |
 | `OPENAI_API_KEY` | — | The key of the model provider. Optional. |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | The address of the model provider. Any OpenAI compatible endpoint works. |
+| `OPENAI_TEXT_MODEL` | `gpt-4o-mini` | The model that writes and rewrites the text. |
+| `OPENAI_VISION_MODEL` | `gpt-4o-mini` | The model that describes the images. |
 | `WJ_AI_ENABLED` | `true` | The server side switch of the AI features. |
 | `WJ_VERSION` | `dev` | The build version. Not `dev` in production, that turns the debug mode on. |
 | `WJ_LOG_FORMAT` | `text` | `json` when the logs are collected by a system. |

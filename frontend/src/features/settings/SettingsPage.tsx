@@ -26,6 +26,7 @@ import { ConfirmSheet, Sheet } from '../../ui/Sheet'
 import { SignOutIcon } from '../../ui/icons'
 import { FolderManager, TagManager } from './Managers'
 import { Group, Row, selectClass } from './parts'
+import { TILE_SOURCES } from '../places/tiles'
 
 const DATE_FORMATS = ['PPP', 'yyyy-MM-dd', 'd MMMM yyyy', 'MM/dd/yyyy', 'dd/MM/yyyy']
 const SIZES = [1280, 2048, 3072, 0]
@@ -67,6 +68,9 @@ export function SettingsPage() {
 
   const ai = useResource<AIStatus>('ai:status', () => api.aiStatus())
   const sessions = useResource<Session[]>('sessions', async () => (await api.sessions()).items)
+  const places = useResource<{ search: boolean; provider?: string }>('locations:capabilities', () =>
+    api.locationCapabilities(),
+  )
 
   const [tiles, setTiles] = useState(settings?.mapTileUrl ?? '')
   const [quality, setQuality] = useState(settings?.imageQuality ?? 80)
@@ -274,7 +278,30 @@ export function SettingsPage() {
           </Row>
         </Group>
 
-        <Group title={t('settings.map')} footer={t('settings.tilesHint')}>
+        <Group
+          title={t('settings.map')}
+          footer={
+            places.data?.provider === 'amap' ? `${t('settings.tilesHint')} ${t('settings.tilesAmapHint')}` : t('settings.tilesHint')
+          }
+        >
+          <div className="flex flex-wrap gap-1.5 p-3 pb-0">
+            {TILE_SOURCES.map((source) => (
+              <button
+                key={source.id}
+                type="button"
+                onClick={() => {
+                  setTiles(source.url)
+                  void save({ mapTileUrl: source.url })
+                }}
+                className={cn(
+                  'press h-9 rounded-full px-3.5 text-[0.875rem]',
+                  tiles.trim() === source.url ? 'bg-accent text-accent-on' : 'bg-well text-ink',
+                )}
+              >
+                {source.label}
+              </button>
+            ))}
+          </div>
           <div className="p-3">
             <TextInput
               value={tiles}

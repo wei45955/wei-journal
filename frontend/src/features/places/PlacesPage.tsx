@@ -14,19 +14,9 @@ import { Button, buttonClass, Chip, EmptyState, ErrorState, IconButton, inputCla
 import { Popover } from '../../ui/Popover'
 import { ChevronRightIcon, CloseIcon, FilterIcon, LocateIcon, PlaceIcon } from '../../ui/icons'
 import { MapCanvas } from './MapCanvas'
+import { DEFAULT_TILE_URL, creditFor } from './tiles'
 
-const OSM = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-
-function creditFor(url: string): string {
-  if (url === OSM) return OSM_CREDIT
-  try {
-    const host = new URL(url.replace(/\{[^}]*\}/g, '0')).host
-    return host.replace(/[<>&"]/g, '')
-  } catch {
-    return ''
-  }
-}
+const OSM = DEFAULT_TILE_URL
 
 interface PlaceFilters {
   folder: number | 'none' | ''

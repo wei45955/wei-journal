@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react'
-import type { LayerGroup, Map as LeafletMap } from 'leaflet'
+import type { LayerGroup, Map as LeafletMap, TileLayerOptions } from 'leaflet'
 import './leafletGlobal'
 import 'leaflet.markercluster'
 import { isChineseTiles, wgsToGcj } from '../../lib/coordinates'
 import type { MapPlace } from '../../lib/types'
+import { subdomainsFor } from './tiles'
 
 type LeafletApi = typeof import('leaflet')
 
@@ -74,7 +75,12 @@ export function MapCanvas({
   useEffect(() => {
     const L = leaflet()
     if (!L || !map.current) return
-    const tiles = L.tileLayer(tileUrl, { attribution, maxZoom: 19, className: 'wj-tiles' })
+    // A tile address may name several servers, and the Chinese service
+    // numbers them where the default letters do not fit.
+    const subdomains = subdomainsFor(tileUrl)
+    const options: TileLayerOptions = { attribution, maxZoom: 19, className: 'wj-tiles' }
+    if (subdomains) options.subdomains = subdomains
+    const tiles = L.tileLayer(tileUrl, options)
     tiles.on('tileerror', () => callbacks.current.onTileError())
     tiles.addTo(map.current)
     return () => {
