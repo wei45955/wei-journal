@@ -62,6 +62,12 @@ func NewServer(opts Options) *Server {
 	if geocoder == nil {
 		geocoder = geocode.NewDisabled()
 	}
+	// The same goes for the model: without one the AI features answer that
+	// they are unavailable instead of failing.
+	provider := opts.Provider
+	if provider == nil {
+		provider = ai.NewDisabledProvider()
+	}
 	return &Server{
 		cfg:      opts.Config,
 		handle:   opts.Handle,
@@ -71,7 +77,7 @@ func NewServer(opts Options) *Server {
 		index:    opts.Indexer,
 		storage:  opts.Storage,
 		queue:    opts.Queue,
-		provider: opts.Provider,
+		provider: provider,
 		geocoder: geocoder,
 		limiter:  auth.NewLimiter(opts.Config.RateLimitPerMin, time.Minute),
 		version:  opts.Version,
@@ -177,6 +183,7 @@ func (s *Server) Router() *gin.Engine {
 	secure.GET("/ai/status", s.handleAIStatus)
 	secure.GET("/ai/metadata", s.handleAIMetadata)
 	secure.POST("/ai/reprocess", s.handleAIReprocess)
+	secure.POST("/ai/polish", s.handleAIPolish)
 
 	secure.GET("/export", s.handleExport)
 

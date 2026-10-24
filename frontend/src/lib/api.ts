@@ -405,7 +405,7 @@ export const api = {
   reverseGeocode: (latitude: number, longitude: number) =>
     list<GeocodeResult>('/api/locations/reverse', { lat: latitude, lon: longitude }),
   locationCapabilities: () =>
-    request<{ search: boolean }>('/api/locations/capabilities'),
+    request<{ search: boolean; provider?: string }>('/api/locations/capabilities'),
   ownLocations: (q: string) => list<GeocodeResult>('/api/locations/own', { q }),
 
   // --- bulk ---------------------------------------------------------------
@@ -423,6 +423,8 @@ export const api = {
     list<AIMetadata>('/api/ai/metadata', query),
   reprocessAI: (payload: { entryId?: number; mediaId?: number; all?: boolean }) =>
     request<{ queued: number }>('/api/ai/reprocess', { method: 'POST', body: payload }),
+  polish: (payload: { text: string; instruction?: string }) =>
+    request<{ text: string; original: string }>('/api/ai/polish', { method: 'POST', body: payload }),
   exportJournal: (includeMedia = false) =>
     request<Record<string, unknown>>('/api/export', {
       query: { includeMedia: includeMedia ? 'true' : undefined },

@@ -40,6 +40,8 @@ type Provider interface {
 	DescribeImage(ctx context.Context, image []byte, mime string, opts DescribeOptions) (*ImageDescription, error)
 	// SummarizeText summarises the written content of an entry.
 	SummarizeText(ctx context.Context, text string, opts SummarizeOptions) (*TextSummary, error)
+	// PolishText rewrites a draft the way the writer asked for.
+	PolishText(ctx context.Context, text string, opts PolishOptions) (string, error)
 }
 
 // DescribeOptions tunes image description.
@@ -52,4 +54,11 @@ type DescribeOptions struct {
 type SummarizeOptions struct {
 	Language string
 	MaxWords int
+}
+
+// PolishOptions tunes the rewriting of a draft. The instruction is what the
+// writer asked for, in their own words; an empty one means a plain polish.
+type PolishOptions struct {
+	Language    string
+	Instruction string
 }

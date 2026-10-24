@@ -20,3 +20,7 @@ func (disabledProvider) DescribeImage(ctx context.Context, image []byte, mime st
 func (disabledProvider) SummarizeText(ctx context.Context, text string, opts SummarizeOptions) (*TextSummary, error) {
 	return nil, ErrNotConfigured
 }
+
+func (disabledProvider) PolishText(ctx context.Context, text string, opts PolishOptions) (string, error) {
+	return "", ErrNotConfigured
+}

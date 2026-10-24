@@ -70,18 +70,21 @@ type chatResponse struct {
 	} `json:"error"`
 }
 
-func (p *OpenAIProvider) complete(ctx context.Context, model string, messages []chatMessage) (string, error) {
+func (p *OpenAIProvider) complete(ctx context.Context, model string, messages []chatMessage, maxTokens int) (string, error) {
 	if !p.Available() {
 		return "", ErrNotConfigured
 	}
 	if model == "" {
 		return "", fmt.Errorf("%w: no model configured", ErrNotConfigured)
 	}
+	if maxTokens <= 0 {
+		maxTokens = 700
+	}
 	body, err := json.Marshal(chatRequest{
 		Model:       model,
 		Messages:    messages,
 		Temperature: 0.2,
-		MaxTokens:   700,
+		MaxTokens:   maxTokens,
 	})
 	if err != nil {
 		return "", err
@@ -154,7 +157,7 @@ func (p *OpenAIProvider) DescribeImage(ctx context.Context, image []byte, mime s
 		{Type: "text", Text: prompt},
 		{Type: "image_url", ImageURL: &imageURL{URL: dataURL}},
 	}
-	raw, err := p.complete(ctx, p.cfg.VisionModel, []chatMessage{{Role: "user", Content: content}})
+	raw, err := p.complete(ctx, p.cfg.VisionModel, []chatMessage{{Role: "user", Content: content}}, 700)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +199,7 @@ func (p *OpenAIProvider) SummarizeText(ctx context.Context, text string, opts Su
 	raw, err := p.complete(ctx, p.cfg.TextModel, []chatMessage{
 		{Role: "system", Content: "You are a careful assistant that summarises personal notes."},
 		{Role: "user", Content: prompt + "\n\n---\n" + trimmed},
-	})
+	}, 700)
 	if err != nil {
 		return nil, err
 	}
@@ -207,6 +210,77 @@ func (p *OpenAIProvider) SummarizeText(ctx context.Context, text string, opts Su
 	summary.Keywords = sanitizeList(summary.Keywords)
 	summary.SuggestedTags = sanitizeList(summary.SuggestedTags)
 	return summary, nil
+}
+
+// The instruction used when the writer did not say what they wanted.
+const defaultPolishInstruction = "润色这段文字：语句更通顺，节奏更好，保留原来的意思、事实和语气，去掉多余的话。"
+
+// PolishText rewrites a draft the way the writer asked. The answer is the
+// rewritten text and nothing else, so it can be read back into the entry.
+func (p *OpenAIProvider) PolishText(ctx context.Context, text string, opts PolishOptions) (string, error) {
+	instruction := strings.TrimSpace(opts.Instruction)
+	if instruction == "" {
+		instruction = defaultPolishInstruction
+	}
+	trimmed := text
+	if len([]rune(trimmed)) > 12000 {
+		trimmed = string([]rune(trimmed)[:12000])
+	}
+	if strings.TrimSpace(trimmed) == "" {
+		return "", fmt.Errorf("there is no text to rewrite")
+	}
+	system := "You rewrite personal journal entries in the writer's own voice and in the language they wrote in. " +
+		"Follow the instruction exactly. " +
+		"Keep the facts, the names, the details and the feeling of the original; never invent anything that is not there. " +
+		"Answer with the rewritten text only: no preamble, no label, no quotation marks, no notes and no explanation."
+	raw, err := p.complete(ctx, p.cfg.TextModel, []chatMessage{
+		{Role: "system", Content: system},
+		{Role: "user", Content: instruction + "\n\n---\n" + trimmed},
+	}, 2000)
+	if err != nil {
+		return "", err
+	}
+	polished := trimModelText(raw)
+	if polished == "" {
+		return "", fmt.Errorf("the model returned no text")
+	}
+	return polished, nil
+}
+
+// trimModelText removes the wrappers a model sometimes puts around its
+// answer: a code fence, a leading label, or the marks around the whole thing.
+func trimModelText(raw string) string {
+	text := strings.TrimSpace(raw)
+	if strings.HasPrefix(text, "```") {
+		if idx := strings.Index(text, "\n"); idx >= 0 {
+			text = text[idx+1:]
+		}
+		if idx := strings.LastIndex(text, "```"); idx > 0 {
+			text = text[:idx]
+		}
+		text = strings.TrimSpace(text)
+	}
+	// A leading label is not part of the entry.
+	for _, label := range []string{
+		"润色后：", "润色后:", "改写后：", "改写后:", "修改后：", "修改后:",
+		"润色结果：", "润色结果:", "以下是润色后的内容：", "以下是润色后的内容:",
+		"Rewritten:", "Polished:", "Result:",
+	} {
+		if strings.HasPrefix(text, label) {
+			text = strings.TrimSpace(strings.TrimPrefix(text, label))
+			break
+		}
+	}
+	// The whole answer in quotation marks.
+	runes := []rune(text)
+	if len(runes) > 1 {
+		first, last := runes[0], runes[len(runes)-1]
+		if (first == '"' && last == '"') || (first == '“' && last == '”') ||
+			(first == '「' && last == '」') || (first == '‘' && last == '’') {
+			text = strings.TrimSpace(string(runes[1 : len(runes)-1]))
+		}
+	}
+	return text
 }
 
 // decodeJSONObject extracts a JSON object from a model response that may be

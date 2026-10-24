@@ -3,11 +3,13 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/wei/journal/backend/internal/ai"
 	"github.com/wei/journal/backend/internal/auth"
 	"github.com/wei/journal/backend/internal/httpx"
 	"github.com/wei/journal/backend/internal/models"
@@ -133,6 +135,58 @@ func (s *Server) handleAIReprocess(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, gin.H{"queued": queued})
+}
+
+// handleAIPolish rewrites the text of a draft the way the writer asked. The
+// answer comes back as plain text, so the writer can read it before it
+// replaces anything.
+func (s *Server) handleAIPolish(c *gin.Context) {
+	user := auth.CurrentUser(c)
+	var payload struct {
+		Text        string `json:"text"`
+		Instruction string `json:"instruction"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		httpx.ValidationError(c, "invalid request body", nil)
+		return
+	}
+	text := strings.TrimSpace(payload.Text)
+	if text == "" {
+		httpx.ValidationError(c, "there is nothing to rewrite", map[string]string{
+			"text": "write something first",
+		})
+		return
+	}
+	if len([]rune(text)) > 20000 {
+		httpx.ValidationError(c, "the text is too long to rewrite", map[string]string{
+			"text": "at most 20000 characters",
+		})
+		return
+	}
+	if !s.cfg.AIConfigured() {
+		httpx.Fail(c, http.StatusServiceUnavailable, &httpx.Error{
+			Code:    "unavailable",
+			Message: "no language model provider is configured on this server",
+		})
+		return
+	}
+	// The rewriting is not part of the automatic processing, so it does not
+	// wait for the switch that turns the summaries and the photo
+	// descriptions on. The writer asked for it, right here.
+	settings, err := s.loadSettings(user.ID)
+	if err != nil {
+		httpx.Internal(c, s.log, err, "load settings")
+		return
+	}
+	polished, err := s.provider.PolishText(c.Request.Context(), text, ai.PolishOptions{
+		Language:    settings.Language,
+		Instruction: payload.Instruction,
+	})
+	if err != nil {
+		httpx.Internal(c, s.log, err, "polish text")
+		return
+	}
+	httpx.OK(c, gin.H{"text": polished, "original": text})
 }
 
 // enqueueImageDescription creates the metadata record and schedules the job.

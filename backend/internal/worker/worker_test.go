@@ -150,6 +150,10 @@ func (failingProvider) SummarizeText(ctx context.Context, text string, opts ai.S
 	return nil, errors.New("model backend is down")
 }
 
+func (failingProvider) PolishText(ctx context.Context, text string, opts ai.PolishOptions) (string, error) {
+	return "", errors.New("model backend is down")
+}
+
 // TestWorkerRunsARegisteredJobAndCompletesIt checks that a registered
 // handler is executed and that the job is marked as completed afterwards.
 func TestWorkerRunsARegisteredJobAndCompletesIt(t *testing.T) {

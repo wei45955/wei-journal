@@ -316,9 +316,14 @@ func (s *Server) handleGeocode(c *gin.Context) {
 
 // handleLocationCapabilities tells the interface what this installation can
 // do. The place search is optional, and the dialog says so instead of
-// pretending to work.
+// pretending to work. The name of the service is given as well, so the map
+// can offer the tiles that speak the same coordinate system.
 func (s *Server) handleLocationCapabilities(c *gin.Context) {
-	httpx.OK(c, gin.H{"search": s.geocodingEnabled()})
+	provider := "none"
+	if s.geocoder != nil {
+		provider = s.geocoder.Name()
+	}
+	httpx.OK(c, gin.H{"search": s.geocodingEnabled(), "provider": provider})
 }
 
 // handleReverseGeocode names a point. It needs the same optional service as

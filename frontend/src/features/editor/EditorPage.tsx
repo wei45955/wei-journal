@@ -6,11 +6,11 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style'
 import { ApiError, api } from '../../lib/api'
-import { peek, prime } from '../../lib/cache'
+import { peek, prime, useResource } from '../../lib/cache'
 import { cn } from '../../lib/cn'
 import { displayTimezone, formatTime, localDateKey, longDate, wallInputToISO } from '../../lib/format'
 import { dropDraft, readDraft, writeDraft, type Draft } from '../../lib/drafts'
-import type { DocNode, Entry, Media, PlaceRef, Stroke, Tag } from '../../lib/types'
+import type { AIStatus, DocNode, Entry, Media, PlaceRef, Stroke, Tag } from '../../lib/types'
 import { usePrefs } from '../../state/auth'
 import { afterEntryChange, useFolders } from '../../state/library'
 import { useToast } from '../../state/toast'
@@ -26,6 +26,7 @@ import { SketchView } from '../sketch/SketchView'
 import { EditorToolbar, type EditorTool } from './EditorToolbar'
 import { FolderSheet, LinkSheet, StyleMenu, TagSheet, TimeSheet } from './EditorSheets'
 import { PlaceSheet } from './PlaceSheet'
+import { PolishSheet } from './PolishSheet'
 
 const AUTOSAVE_MS = 1200
 const EMPTY_DOC: DocNode = { type: 'doc', content: [{ type: 'paragraph' }] }
@@ -139,6 +140,8 @@ export function EditorPage() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [viewer, setViewer] = useState<number | null>(null)
   const [removing, setRemoving] = useState<Media | null>(null)
+  // The model that rewrites the draft, when there is one.
+  const ai = useResource<AIStatus>('ai:status', () => api.aiStatus())
 
   // --- the save engine ---------------------------------------------------
   const stateRef = useRef(state)
@@ -465,11 +468,31 @@ export function EditorPage() {
     setDraft(null)
   }
 
+  /** The polished text takes the place of the body, line by line. */
+  function applyPolish(text: string) {
+    const lines = text
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+    const document: DocNode = {
+      type: 'doc',
+      content: lines.length
+        ? lines.map((line) => ({ type: 'paragraph', content: [{ type: 'text', text: line }] }))
+        : [{ type: 'paragraph' }],
+    }
+    editor?.commands.setContent(document as never)
+    editor?.commands.focus('end')
+    setTool(null)
+  }
+
   // --- view --------------------------------------------------------------
   const visual = useMemo(() => media.filter((item) => isPicture(item) || isFilm(item) || item.kind === 'file' || item.kind === 'audio'), [media])
   const day = localDateKey(new Date(state.eventTime), state.timezone)
   const folderName = folders.find((folder) => folder.id === state.folderId)?.name
   const textStyle = editor?.getAttributes('textStyle') ?? {}
+  // The model is only there when the server has one.
+  const polishReady = Boolean(ai.data?.configured)
+  const polishReason = ai.loading ? t('common.loading') : !ai.data?.configured ? t('polish.noModel') : ''
 
   if (loadError && !seed) {
     return (
@@ -679,6 +702,14 @@ export function EditorPage() {
         current={state.location}
         onSelect={(location) => update({ location })}
         onRemove={() => update({ location: null })}
+      />
+      <PolishSheet
+        open={tool === 'polish'}
+        onClose={() => setTool(null)}
+        text={editor?.getText() ?? ''}
+        available={polishReady}
+        reason={polishReason}
+        onApply={applyPolish}
       />
       <Sheet open={tool === 'sketch'} onClose={() => setTool(null)} title={t('sketch.title')} width="lg">
         <SketchPad strokes={state.drawing} onChange={(drawing) => update({ drawing })} />

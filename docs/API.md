@@ -617,3 +617,19 @@ or
 ```
 
 Returns `503 unavailable` when no provider is configured and `403 forbidden` when the account has the features turned off.
+
+### `POST /api/ai/polish`
+
+Rewrites a draft the way the writer asked. The answer is the rewritten text and nothing else, so it can be read before it replaces anything.
+
+```json
+{ "text": "今天天气很好，我去了公园…", "instruction": "写得更简洁一些" }
+```
+
+`instruction` is optional; without one the text is polished in the usual way. The answer:
+
+```json
+{ "data": { "text": "今天天气很好，我去了公园…", "original": "今天天气很好，我去了公园…" } }
+```
+
+The text may be at most 20000 characters. Returns `503 unavailable` when no provider is configured. The rewriting is not part of the automatic processing, so it does not wait for the switch that turns the summaries and the photo descriptions on: the writer asked for it here.

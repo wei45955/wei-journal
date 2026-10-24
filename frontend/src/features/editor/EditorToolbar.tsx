@@ -18,6 +18,7 @@ import {
   QuoteIcon,
   RedoIcon,
   SketchIcon,
+  SparkIcon,
   StrikeIcon,
   TagIcon,
   TextIcon,
@@ -43,7 +44,7 @@ export function useKeyboardInset(): number {
   return inset
 }
 
-export type EditorTool = 'attach' | 'sketch' | 'place' | 'tags' | 'folder' | 'time' | 'style' | 'link'
+export type EditorTool = 'attach' | 'sketch' | 'place' | 'tags' | 'folder' | 'time' | 'style' | 'link' | 'polish'
 
 function Tool({
   label,
@@ -167,6 +168,9 @@ export function EditorToolbar({
               </Tool>
               <Tool label={t('editor.time')} keepFocus={false} onPress={() => onTool('time')}>
                 <ClockIcon size={22} />
+              </Tool>
+              <Tool label={t('editor.polish')} keepFocus={false} onPress={() => onTool('polish')}>
+                <SparkIcon size={21} />
               </Tool>
             </>
           ) : (
