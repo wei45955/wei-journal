@@ -30,7 +30,10 @@ export function AiNotes({ entry }: { entry: Entry }) {
   const images = metadata.filter((item) => item.kind === 'image' && item.description)
   const working = metadata.some((item) => item.status === 'pending' || item.status === 'processing')
   const failed = metadata.some((item) => item.status === 'failed')
-  const unavailable = metadata.every((item) => item.status === 'unavailable')
+  // An empty list has nothing to say about the model: every() on no rows is
+  // true, which would report a model as missing for an entry that was never
+  // looked at.
+  const unavailable = metadata.length > 0 && metadata.every((item) => item.status === 'unavailable')
   const existing = new Set(entry.tags.map((tag) => tag.name.trim().toLowerCase()))
   const suggestions = Array.from(
     new Set(metadata.flatMap((item: AIMetadata) => item.suggestedTags ?? []).map((name) => name.trim()).filter(Boolean)),
@@ -73,7 +76,7 @@ export function AiNotes({ entry }: { entry: Entry }) {
         <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink">{text.summary}</p>
       ) : working ? (
         <p className="mt-2 text-[0.9375rem] text-ink-2">{t('ai.pending')}</p>
-      ) : unavailable ? (
+      ) : askable ? null : unavailable ? (
         <p className="mt-2 text-[0.9375rem] text-ink-2">{t('ai.unavailable')}</p>
       ) : failed ? (
         <p className="mt-2 text-[0.9375rem] text-ink-2">{t('ai.failed')}</p>

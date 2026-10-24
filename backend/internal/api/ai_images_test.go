@@ -66,6 +66,11 @@ func TestAttachingAPictureQueuesItsDescription(t *testing.T) {
 	if meta.Status != models.AIPending {
 		t.Errorf("the metadata status is %q, want %q", meta.Status, models.AIPending)
 	}
+	// The entry page finds the notes on a picture through the entry, so the
+	// row has to name it.
+	if meta.EntryID == nil || *meta.EntryID != entry.ID {
+		t.Errorf("the metadata row names entry %v, want %d", meta.EntryID, entry.ID)
+	}
 
 	// Saving the entry again must not queue the same picture a second time.
 	_ = c.do(http.MethodPatch, "/api/entries/"+itoa(entry.ID), map[string]any{
@@ -115,6 +120,70 @@ func TestADescriptionIsNotQueuedWhenTheAccountTurnedAIOff(t *testing.T) {
 	h.handle.DB().Model(&models.Job{}).Where("type = ?", "ai.describe_image").Count(&count)
 	if count != 0 {
 		t.Errorf("%d describe jobs were queued although the account said no", count)
+	}
+}
+
+// TestAPictureNoteReachesTheEntryPage covers the other half: the notes on a
+// picture are shown on the entry it belongs to, and an older row that was
+// written before the entry was known still finds its way there.
+func TestAPictureNoteReachesTheEntryPage(t *testing.T) {
+	h := newHarness(t)
+	c := h.register("note-reader", "a-long-password-123")
+
+	upload := c.upload("/api/media", "files", "photo.png",
+		encodePNG(t, newRGBAImage(32, 32)), nil)
+	if upload.status != http.StatusCreated {
+		t.Fatalf("upload: status %d body %s", upload.status, upload.body)
+	}
+	var assets []struct {
+		ID uint `json:"id"`
+	}
+	upload.json(t, &assets)
+
+	created := c.do(http.MethodPost, "/api/entries", map[string]any{
+		"title":    "A picture",
+		"document": `{"type":"doc","content":[{"type":"paragraph"}]}`,
+		"mediaIds": []uint{assets[0].ID},
+	}, c.csrf)
+	if created.status != http.StatusCreated {
+		t.Fatalf("create entry: status %d body %s", created.status, created.body)
+	}
+	var entry struct {
+		ID uint `json:"id"`
+	}
+	created.json(t, &entry)
+
+	// An older row, written before the picture knew which entry it was in.
+	mediaID := assets[0].ID
+	row := models.AIMetadata{
+		UserID:      c.userID,
+		MediaID:     &mediaID,
+		Kind:        "image",
+		Status:      models.AICompleted,
+		Description: "a soft blue square",
+	}
+	if err := h.handle.DB().Create(&row).Error; err != nil {
+		t.Fatalf("create the note: %v", err)
+	}
+
+	read := c.do(http.MethodGet, "/api/entries/"+itoa(entry.ID), nil, "")
+	if read.status != http.StatusOK {
+		t.Fatalf("read entry: status %d body %s", read.status, read.body)
+	}
+	var got struct {
+		AIMetadata []struct {
+			Kind        string `json:"kind"`
+			Description string `json:"description"`
+			Status      string `json:"status"`
+		} `json:"aiMetadata"`
+	}
+	read.json(t, &got)
+
+	if len(got.AIMetadata) != 1 {
+		t.Fatalf("the entry carries %d notes, want 1: %+v", len(got.AIMetadata), got.AIMetadata)
+	}
+	if got.AIMetadata[0].Description != "a soft blue square" {
+		t.Errorf("the note reads %q", got.AIMetadata[0].Description)
 	}
 }
 

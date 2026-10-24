@@ -255,6 +255,7 @@ func (s *Server) enqueueImageDescription(userID uint, asset *models.MediaAsset) 
 		meta = models.AIMetadata{
 			UserID:  userID,
 			MediaID: &asset.ID,
+			EntryID: asset.EntryID,
 			Kind:    "image",
 			Status:  models.AIPending,
 		}
@@ -267,6 +268,11 @@ func (s *Server) enqueueImageDescription(userID uint, asset *models.MediaAsset) 
 		meta.Status = models.AIPending
 		meta.Error = ""
 		meta.UpdatedAt = time.Now().UTC()
+		// The picture may have been put in an entry after it was first
+		// looked at, and the entry page finds its notes by the entry.
+		if asset.EntryID != nil {
+			meta.EntryID = asset.EntryID
+		}
 		if err := s.handle.DB().Save(&meta).Error; err != nil {
 			return err
 		}

@@ -769,16 +769,44 @@ func (s *Server) buildEntryDTOs(userID uint, entries []models.Entry) ([]EntryDTO
 		}
 	}
 
-	// AI metadata for the entry text
+	// AI metadata for the entry: the summary of its words and the notes on
+	// the pictures it carries. A picture's row is found through the picture,
+	// which is the only record of which entry it belongs to.
 	var aiRows []models.AIMetadata
 	if err := s.handle.DB().Where("entry_id IN ?", ids).Find(&aiRows).Error; err != nil {
 		return nil, err
 	}
+	seenAI := map[uint]bool{}
 	for _, a := range aiRows {
+		if a.EntryID == nil {
+			continue
+		}
 		pos, ok := index[*a.EntryID]
 		if !ok {
 			continue
 		}
+		seenAI[a.ID] = true
+		out[pos].AIMetadata = append(out[pos].AIMetadata, toAIMetadataDTO(&a))
+	}
+	for _, a := range aiByMedia {
+		if seenAI[a.ID] {
+			continue
+		}
+		if a.MediaID == nil {
+			continue
+		}
+		var asset models.MediaAsset
+		if err := s.handle.DB().Select("entry_id").Where("id = ?", *a.MediaID).First(&asset).Error; err != nil {
+			continue
+		}
+		if asset.EntryID == nil {
+			continue
+		}
+		pos, ok := index[*asset.EntryID]
+		if !ok {
+			continue
+		}
+		seenAI[a.ID] = true
 		out[pos].AIMetadata = append(out[pos].AIMetadata, toAIMetadataDTO(&a))
 	}
 
