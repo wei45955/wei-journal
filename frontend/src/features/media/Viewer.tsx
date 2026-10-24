@@ -61,6 +61,8 @@ export function Viewer({
   const current = Math.min(Math.max(index, 0), items.length - 1)
   const media = items[current]
   const motion = media ? motionOf(media, all ?? items) : null
+  const isPhoto = media ? isPicture(media) : false
+  const film = media ? isFilm(media) : false
 
   const [view, setView] = useState<View>(RESET)
   const [dragX, setDragX] = useState(0)
@@ -286,6 +288,13 @@ export function Viewer({
       if (dy > 120 || (dy > 40 && dy / elapsed > 0.5)) onClose()
       else setDragY(0)
     } else if (g.kind !== 'pinch' && Math.hypot(dx, dy) < 8 && elapsed < 250) {
+      // A video has its own controls, and the phone hands the picture to
+      // the system player. A tap there belongs to the video, so it neither
+      // closes the picture nor zooms it.
+      if (film) {
+        g.kind = 'none'
+        return
+      }
       const now = Date.now()
       if (now - lastTap.current < TAP_WINDOW) {
         // The second tap of a double tap: look closer, or come back. The
@@ -309,8 +318,6 @@ export function Viewer({
   }
 
   if (!media) return null
-  const isPhoto = isPicture(media)
-  const film = isFilm(media)
   const fade = 1 - Math.min(dragY / 400, 0.6)
 
   return createPortal(
@@ -371,6 +378,8 @@ export function Viewer({
         onClick={(event) => {
           // A finger has already been listened to; this is the mouse.
           if (pointerType.current === 'touch') return
+          // A video belongs to its own controls.
+          if (film) return
           if (event.detail > 1) {
             // The second click of a double click. The close that the first
             // one booked is called off.
@@ -383,6 +392,8 @@ export function Viewer({
           // A double tap on a phone also sends a double click, a moment
           // later. That one has already done the work.
           if (Date.now() - lastTouchZoom.current < 500) return
+          // A video is not zoomed; its controls need the tap.
+          if (film) return
           cancelPendingClose()
           toggleZoom(event.clientX, event.clientY)
         }}

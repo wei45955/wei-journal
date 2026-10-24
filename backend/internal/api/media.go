@@ -482,6 +482,12 @@ func (s *Server) handleLinkLivePhoto(c *gin.Context) {
 	httpx.OK(c, gin.H{"livePhotoId": liveID})
 }
 
+// assetCacheControl tells the browser to keep the derived pictures for a
+// week. The file behind an address never changes once it is written, so the
+// browser does not have to ask for it again on every visit, and the server
+// does not have to send it again.
+const assetCacheControl = "private, max-age=604800"
+
 // serveAsset streams a stored file to the authenticated owner. Derived files
 // live in their own tree, so the caller states which root the path is in.
 func (s *Server) serveAsset(c *gin.Context, relPath, mime, name string, cacheControl string, derived bool) {
@@ -520,7 +526,7 @@ func (s *Server) handleMediaFile(c *gin.Context) {
 	if !ok {
 		return
 	}
-	s.serveAsset(c, asset.StoredPath, asset.MimeType, asset.OriginalName, "private, max-age=3600", false)
+	s.serveAsset(c, asset.StoredPath, asset.MimeType, asset.OriginalName, assetCacheControl, false)
 }
 
 func (s *Server) handleMediaThumb(c *gin.Context) {
@@ -530,10 +536,13 @@ func (s *Server) handleMediaThumb(c *gin.Context) {
 		return
 	}
 	if asset.DerivedPath == "" {
+		// The picture is not ready yet. The answer must not be kept, or the
+		// browser would keep asking for a file that does not exist.
+		c.Header("Cache-Control", "no-store")
 		httpx.NotFound(c, "thumbnail not ready")
 		return
 	}
-	s.serveAsset(c, asset.DerivedPath, "image/jpeg", "thumb.jpg", "private, max-age=86400", true)
+	s.serveAsset(c, asset.DerivedPath, "image/jpeg", "thumb.jpg", assetCacheControl, true)
 }
 
 func (s *Server) handleMediaPreview(c *gin.Context) {
@@ -543,10 +552,13 @@ func (s *Server) handleMediaPreview(c *gin.Context) {
 		return
 	}
 	if asset.PreviewPath == "" {
+		// As with the thumbnail: the file is still being made, so the
+		// answer is not kept.
+		c.Header("Cache-Control", "no-store")
 		httpx.NotFound(c, "preview not ready")
 		return
 	}
-	s.serveAsset(c, asset.PreviewPath, "image/jpeg", "preview.jpg", "private, max-age=86400", true)
+	s.serveAsset(c, asset.PreviewPath, "image/jpeg", "preview.jpg", assetCacheControl, true)
 }
 
 func (s *Server) lookupAsset(c *gin.Context, user *models.User) (*models.MediaAsset, bool) {
