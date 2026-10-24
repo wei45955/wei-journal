@@ -152,15 +152,20 @@ export function Popover<T extends HTMLElement = HTMLElement>({
     return () => observer.disconnect()
   }, [mounted, measure])
 
-  // The panel follows the control while the page moves under it.
+  // The panel follows the control while the page moves under it. A control
+  // that sits in a row of its own can be moved by that row scrolling, and
+  // such a scroll does not reach the window, so the document watches for it
+  // on the way down.
   useEffect(() => {
     if (!open) return
     const onMove = () => measure()
     window.addEventListener('scroll', onMove, { passive: true })
     window.addEventListener('resize', onMove)
+    document.addEventListener('scroll', onMove, { passive: true, capture: true })
     return () => {
       window.removeEventListener('scroll', onMove)
       window.removeEventListener('resize', onMove)
+      document.removeEventListener('scroll', onMove, true)
     }
   }, [open, measure])
 

@@ -40,9 +40,13 @@ git checkout config.env
 
 Three places can decide a value, and the later one wins.
 
-1. `config.env`, the committed settings.
-2. `.env`, the local file. It overrides the same value in `config.env`.
-3. The `environment:` block of `docker-compose.yml`. It sets the four paths inside the container, the listening address and `WJ_VERSION`, and it wins over both files. Those are fixed on purpose, so a `WJ_DATA_DIR` in `config.env` does not move the data out of the volume.
+1. The `ENV` lines of `backend/Dockerfile`, which fix the paths inside the container and the listening address.
+2. `config.env`, the committed settings.
+3. `.env`, the local file. It overrides the same value in `config.env`.
+
+The `environment:` block of `docker-compose.yml` sits above all of them and sets the build version, which has to match the tag of the image.
+
+This means a `WJ_DATA_DIR` in `config.env` or in `.env` **does** move the data out of the volume: the container then writes to that path inside the container, which is not the volume, and the journal comes up empty. Leave `WJ_DATA_DIR` alone unless the volume itself is moved.
 
 To see what a container actually received:
 

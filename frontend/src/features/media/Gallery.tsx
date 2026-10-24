@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import type { Media } from '../../lib/types'
-import { LiveIcon, VideoIcon } from '../../ui/icons'
-import { isFilm, Thumb } from './Thumb'
+import { FileIcon, ImageIcon, LiveIcon, VideoIcon } from '../../ui/icons'
+import { isFilm, isPicture, Thumb } from './Thumb'
 
 /**
  * The pictures of an entry.
@@ -35,7 +35,11 @@ export function Gallery({
 /** The one picture of an entry, whole and centred. */
 function Plate({ media, onOpen, className }: { media: Media; onOpen: () => void; className?: string }) {
   const { t } = useTranslation()
+  const [failed, setFailed] = useState(false)
   const source = media.hasPreview ? media.previewUrl : media.url
+  // A picture the browser cannot read, a HEIC sent straight to the server,
+  // shows its kind instead of a broken frame.
+  const Icon = isFilm(media) ? VideoIcon : isPicture(media) ? ImageIcon : FileIcon
   return (
     <figure className={cn('mb-7', className)}>
       <div className="relative mx-auto w-fit max-w-full overflow-hidden rounded-[18px] bg-well">
@@ -48,14 +52,21 @@ function Plate({ media, onOpen, className }: { media: Media; onOpen: () => void;
           aria-label={media.originalName || t('media.open')}
           className="press flex items-center justify-center"
         >
-          <img
-            src={source}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-            className="max-h-[52svh] max-w-full object-contain"
-          />
+          {failed ? (
+            <span className="flex size-32 items-center justify-center text-ink-3">
+              <Icon size={26} />
+            </span>
+          ) : (
+            <img
+              src={source}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              onError={() => setFailed(true)}
+              className="max-h-[52svh] max-w-full object-contain"
+            />
+          )}
         </button>
         <Badge media={media} />
       </div>
@@ -94,6 +105,12 @@ function Strip({
     element.addEventListener('scroll', onScroll, { passive: true })
     return () => element.removeEventListener('scroll', onScroll)
   }, [onScroll])
+
+  // A picture may be taken away while the strip is open, so the counter
+  // never points past the last one.
+  useEffect(() => {
+    setCurrent((value) => Math.min(value, Math.max(0, items.length - 1)))
+  }, [items.length])
 
   return (
     <figure className={cn('mb-7', className)}>

@@ -64,9 +64,9 @@ func (a *Amap) Search(ctx context.Context, query string, limit int) ([]Place, er
 		Status string `json:"status"`
 		Info   string `json:"info"`
 		Pois   []struct {
-			Name     string `json:"name"`
-			Address  string `json:"address"`
-			Location string `json:"location"`
+			Name     string      `json:"name"`
+			Address  looseString `json:"address"`
+			Location string      `json:"location"`
 		} `json:"pois"`
 	}
 	if err := json.Unmarshal(body, &raw); err != nil {
@@ -83,7 +83,7 @@ func (a *Amap) Search(ctx context.Context, query string, limit int) ([]Place, er
 		}
 		places = append(places, Place{
 			Name:      strings.TrimSpace(poi.Name),
-			Address:   strings.TrimSpace(poi.Address),
+			Address:   poi.Address.String(),
 			Latitude:  lat,
 			Longitude: lon,
 		})
@@ -92,8 +92,9 @@ func (a *Amap) Search(ctx context.Context, query string, limit int) ([]Place, er
 }
 
 // Reverse names a point. The point arrives in WGS-84, the system the
-// journal keeps, and the service answers in GCJ-02, so it is moved on the way
-// there and the answer is moved back.
+// journal keeps, and the service reads its own system, so it is moved on the
+// way there. The answer only names the place: the point that was asked
+// about is the one that is kept.
 func (a *Amap) Reverse(ctx context.Context, lat, lon float64) (*Place, error) {
 	params := url.Values{}
 	params.Set("key", a.Key)
@@ -114,9 +115,8 @@ func (a *Amap) Reverse(ctx context.Context, lat, lon float64) (*Place, error) {
 		Regeocode struct {
 			FormattedAddress looseString `json:"formatted_address"`
 			POIs             []struct {
-				Name     string      `json:"name"`
-				Address  looseString `json:"address"`
-				Location string      `json:"location"`
+				Name    string      `json:"name"`
+				Address looseString `json:"address"`
 			} `json:"pois"`
 		} `json:"regeocode"`
 	}
@@ -127,7 +127,9 @@ func (a *Amap) Reverse(ctx context.Context, lat, lon float64) (*Place, error) {
 		return nil, fmt.Errorf("place search failed: %s", raw.Info)
 	}
 	// The answer keeps the point it was given, which is already in the
-	// system the journal keeps. A place of its own replaces it.
+	// system the journal keeps. A place of its own only names it: the
+	// position asked for is the position of the writer, and the place
+	// nearby may be a few hundred metres away.
 	place := &Place{
 		Name:      raw.Regeocode.FormattedAddress.String(),
 		Address:   raw.Regeocode.FormattedAddress.String(),
@@ -138,9 +140,6 @@ func (a *Amap) Reverse(ctx context.Context, lat, lon float64) (*Place, error) {
 		place.Name = strings.TrimSpace(raw.Regeocode.POIs[0].Name)
 		if address := raw.Regeocode.POIs[0].Address.String(); address != "" {
 			place.Address = address
-		}
-		if poiLat, poiLon, ok := parseAmapLocation(raw.Regeocode.POIs[0].Location); ok {
-			place.Latitude, place.Longitude = poiLat, poiLon
 		}
 	}
 	return place, nil

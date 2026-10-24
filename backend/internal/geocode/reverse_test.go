@@ -111,3 +111,27 @@ func TestNominatimReverseSaysWhenItDoesNotKnow(t *testing.T) {
 		t.Fatalf("an unknown point was given a name: %+v", place)
 	}
 }
+
+// TestAmapSearchReadsAPoiWithoutAnAddress covers a place the service has no
+// street address for, which it sends as an empty list. Reading that as a
+// text fails the whole search.
+func TestAmapSearchReadsAPoiWithoutAnAddress(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"status": "1",
+			"info": "OK",
+			"pois": [{"name": "a park", "address": [], "location": "118.6,24.8"}]
+		}`))
+	}))
+	defer server.Close()
+
+	provider := NewAmap("secret", server.URL)
+	places, err := provider.Search(context.Background(), "a park", 5)
+	if err != nil {
+		t.Fatalf("search failed: %v", err)
+	}
+	if len(places) != 1 || places[0].Name != "a park" {
+		t.Fatalf("the place was not read: %+v", places)
+	}
+}
