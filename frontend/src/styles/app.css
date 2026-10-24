@@ -29,9 +29,6 @@
   --wj-ok: #2f6b4f;
   --wj-scrim: rgb(13 18 25 / 0.36);
   --wj-glass: rgb(248 249 251 / 0.82);
-  /* The frosted paper as an opaque colour. The strip under the system status
-     bar uses it, so the bar never shows a blurred slice of the page. */
-  --wj-glass-solid: #f6f7f9;
   --wj-float-shadow: 0 1px 2px rgb(23 32 51 / 0.06), 0 8px 28px rgb(23 32 51 / 0.12);
   --wj-sheet-shadow: 0 -2px 30px rgb(23 32 51 / 0.14);
 }
@@ -54,7 +51,6 @@
   --wj-ok: #7cc3a0;
   --wj-scrim: rgb(0 0 0 / 0.55);
   --wj-glass: rgb(22 29 40 / 0.82);
-  --wj-glass-solid: #141b25;
   --wj-float-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.45);
   --wj-sheet-shadow: 0 -2px 30px rgb(0 0 0 / 0.5);
 }
@@ -78,7 +74,6 @@
     --wj-ok: #7cc3a0;
     --wj-scrim: rgb(0 0 0 / 0.55);
     --wj-glass: rgb(22 29 40 / 0.82);
-    --wj-glass-solid: #141b25;
     --wj-float-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.45);
     --wj-sheet-shadow: 0 -2px 30px rgb(0 0 0 / 0.5);
   }

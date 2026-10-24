@@ -124,12 +124,11 @@ export function SearchPage() {
 
   return (
     <>
-      <div className="sticky top-0 z-40 -mx-5 sm:-mx-8 lg:-mx-10">
-        {/* The strip under the system status bar is plain paper. A frosted
-            band there reads as a tear in the page on a phone opened from the
-            home screen. */}
-        <div aria-hidden="true" className="h-[env(safe-area-inset-top)] bg-paper" />
-        <div className="bg-paper/95 px-5 pt-3 pb-3 backdrop-blur-xl sm:px-8 lg:px-10">
+      <div className="sticky top-0 z-40 -mx-5 bg-paper sm:-mx-8 lg:-mx-10">
+        {/* Plain paper, not frosted: this bar starts at the very top of the
+            screen, which on a phone is under the system status bar. */}
+        <div aria-hidden="true" className="h-[env(safe-area-inset-top)]" />
+        <div className="px-5 pt-3 pb-3 sm:px-8 lg:px-10">
           <form
             role="search"
             onSubmit={(event) => {

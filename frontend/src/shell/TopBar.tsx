@@ -19,12 +19,14 @@ export function useScrolled(threshold = 8): boolean {
 
 /**
  * The bar at the top of a page. It is transparent over the page title and
- * turns to frosted glass, with the title, once the page scrolls under it.
+ * turns to a solid bar, with the title, once the page scrolls under it.
  *
- * The strip under the system status bar is never frosted. On a phone opened
- * from the home screen the page runs up behind the status bar, and a blurred
- * band there reads as a tear in the page. That strip stays the plain colour
- * of the paper instead, so the bar and the status bar are one calm surface.
+ * It is deliberately opaque rather than frosted. On a phone opened from the
+ * home screen the page runs up behind the system status bar, and iOS draws
+ * its own blur over that edge; a `backdrop-filter` here made the two meet in
+ * a visible band that did not match the rest of the page. A plain colour is
+ * the same on every iOS version, and the strip under the status bar can
+ * never pick up a blurred copy of the page.
  */
 export function TopBar({
   title,
@@ -47,15 +49,8 @@ export function TopBar({
       <div
         aria-hidden="true"
         className={cn(
-          'absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] transition-opacity duration-200',
-          scrolled ? 'bg-[var(--wj-glass-solid)] opacity-100' : 'opacity-0',
-        )}
-      />
-      <div
-        aria-hidden="true"
-        className={cn(
-          'absolute inset-x-0 bottom-0 top-[env(safe-area-inset-top)] -z-10 transition-opacity duration-200',
-          scrolled ? 'glass shadow-[0_0.5px_0_var(--wj-rule)] opacity-100' : 'opacity-0',
+          'absolute inset-0 -z-10 transition-opacity duration-200',
+          scrolled ? 'bg-paper opacity-100 shadow-[0_0.5px_0_var(--wj-rule)]' : 'opacity-0',
         )}
       />
       <div className="relative flex h-[52px] items-center gap-1">
