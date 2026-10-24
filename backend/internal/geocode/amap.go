@@ -91,12 +91,18 @@ func (a *Amap) Search(ctx context.Context, query string, limit int) ([]Place, er
 	return places, nil
 }
 
-// Reverse names a point.
+// Reverse names a point. The point arrives in WGS-84, the system the
+// journal keeps, and the service answers in GCJ-02, so it is moved on the way
+// there and the answer is moved back.
 func (a *Amap) Reverse(ctx context.Context, lat, lon float64) (*Place, error) {
 	params := url.Values{}
 	params.Set("key", a.Key)
-	params.Set("location", fmt.Sprintf("%f,%f", lon, lat))
-	params.Set("extensions", "base")
+	// The service reads the point in its own system.
+	gcjLat, gcjLon := wgsToGcj(lat, lon)
+	params.Set("location", fmt.Sprintf("%f,%f", gcjLon, gcjLat))
+	// The points of interest carry the name of the place; without them the
+	// answer is only an address.
+	params.Set("extensions", "all")
 
 	body, err := a.get(ctx, "/v3/geocode/regeo", params)
 	if err != nil {
@@ -106,11 +112,11 @@ func (a *Amap) Reverse(ctx context.Context, lat, lon float64) (*Place, error) {
 		Status    string `json:"status"`
 		Info      string `json:"info"`
 		Regeocode struct {
-			FormattedAddress string `json:"formatted_address"`
+			FormattedAddress looseString `json:"formatted_address"`
 			POIs             []struct {
-				Name     string `json:"name"`
-				Address  string `json:"address"`
-				Location string `json:"location"`
+				Name     string      `json:"name"`
+				Address  looseString `json:"address"`
+				Location string      `json:"location"`
 			} `json:"pois"`
 		} `json:"regeocode"`
 	}
@@ -120,23 +126,47 @@ func (a *Amap) Reverse(ctx context.Context, lat, lon float64) (*Place, error) {
 	if raw.Status != "1" {
 		return nil, fmt.Errorf("place search failed: %s", raw.Info)
 	}
+	// The answer keeps the point it was given, which is already in the
+	// system the journal keeps. A place of its own replaces it.
 	place := &Place{
-		Name:    strings.TrimSpace(raw.Regeocode.FormattedAddress),
-		Address: strings.TrimSpace(raw.Regeocode.FormattedAddress),
+		Name:      raw.Regeocode.FormattedAddress.String(),
+		Address:   raw.Regeocode.FormattedAddress.String(),
+		Latitude:  lat,
+		Longitude: lon,
 	}
 	if len(raw.Regeocode.POIs) > 0 {
 		place.Name = strings.TrimSpace(raw.Regeocode.POIs[0].Name)
-		if addr := strings.TrimSpace(raw.Regeocode.POIs[0].Address); addr != "" {
-			place.Address = addr
+		if address := raw.Regeocode.POIs[0].Address.String(); address != "" {
+			place.Address = address
 		}
-		if lat, lon, ok := parseAmapLocation(raw.Regeocode.POIs[0].Location); ok {
-			place.Latitude, place.Longitude = lat, lon
+		if poiLat, poiLon, ok := parseAmapLocation(raw.Regeocode.POIs[0].Location); ok {
+			place.Latitude, place.Longitude = poiLat, poiLon
 		}
 	}
-	// Without a place of its own the answer keeps the point it was given,
-	// which already is in the coordinate system the journal keeps.
 	return place, nil
 }
+
+// looseString reads a string that the service sometimes sends as an empty
+// list instead of an empty text.
+type looseString string
+
+// UnmarshalJSON accepts both a string and a list.
+func (s *looseString) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := json.Unmarshal(data, &text); err == nil {
+		*s = looseString(text)
+		return nil
+	}
+	var list []any
+	if err := json.Unmarshal(data, &list); err == nil {
+		*s = ""
+		return nil
+	}
+	return fmt.Errorf("the place service sent an address that is neither a text nor a list")
+}
+
+// String gives the text back.
+func (s looseString) String() string { return strings.TrimSpace(string(s)) }
 
 func (a *Amap) get(ctx context.Context, path string, params url.Values) ([]byte, error) {
 	endpoint := a.BaseURL + path + "?" + params.Encode()

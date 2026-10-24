@@ -30,6 +30,15 @@ func gcjToWgs(lat, lon float64) (float64, float64) {
 	return lat - dLat, lon - dLon
 }
 
+// wgsToGcj moves a WGS-84 coordinate to where the Chinese service places it.
+func wgsToGcj(lat, lon float64) (float64, float64) {
+	if outOfChina(lat, lon) {
+		return lat, lon
+	}
+	dLat, dLon := offset(lat, lon)
+	return lat + dLat, lon + dLon
+}
+
 // offset is the distance between the two coordinate systems at a point.
 func offset(lat, lon float64) (float64, float64) {
 	dLat := transformLat(lon-105.0, lat-35.0)

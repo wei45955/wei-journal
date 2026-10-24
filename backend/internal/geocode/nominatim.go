@@ -84,9 +84,17 @@ func (n *Nominatim) Reverse(ctx context.Context, lat, lon float64) (*Place, erro
 		Name        string `json:"name"`
 		Lat         string `json:"lat"`
 		Lon         string `json:"lon"`
+		// The service answers with an error in this field when it does not
+		// know the point, and still with the year 200.
+		Error string `json:"error"`
 	}
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, err
+	}
+	if raw.Error != "" {
+		// The point is not known here. Saying so is better than handing
+		// back a place with no name.
+		return nil, nil
 	}
 	name := raw.Name
 	if name == "" {

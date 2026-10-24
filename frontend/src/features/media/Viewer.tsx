@@ -12,7 +12,12 @@ const MAX_SCALE = 4
 /** How close two taps must be to count as one double tap. */
 const TAP_WINDOW = 280
 /** How long a single tap waits to see whether a second one follows. */
-const CLOSE_DELAY = 300
+const TOUCH_CLOSE_DELAY = 300
+/**
+ * The same wait for the mouse. It is longer, because a double click by
+ * hand is slower than a double tap by finger.
+ */
+const MOUSE_CLOSE_DELAY = 400
 
 interface View {
   scale: number
@@ -120,6 +125,9 @@ export function Viewer({
     setPlaying(false)
     setDragX(0)
     setDragY(0)
+    // Another picture is on the screen, so the closing is called off.
+    cancelPendingClose()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [media?.id])
 
   const clamp = useCallback((next: View): View => {
@@ -173,12 +181,12 @@ export function Viewer({
   }
 
   /** One tap closes the picture, unless a second tap follows it. */
-  function scheduleClose() {
+  function scheduleClose(delay: number) {
     cancelPendingClose()
     pendingClose.current = window.setTimeout(() => {
       pendingClose.current = null
       closeRef.current()
-    }, CLOSE_DELAY)
+    }, delay)
   }
 
   useEffect(() => {
@@ -187,6 +195,7 @@ export function Viewer({
     const onWheel = (event: WheelEvent) => {
       if (!event.ctrlKey && Math.abs(event.deltaY) < 4) return
       event.preventDefault()
+      cancelPendingClose()
       setAnimating(false)
       zoomAt(viewRef.current.scale * (event.deltaY < 0 ? 1.12 : 0.89), { x: event.clientX, y: event.clientY })
     }
@@ -201,6 +210,9 @@ export function Viewer({
 
   function onTouchStart(event: React.TouchEvent) {
     setAnimating(false)
+    // A new gesture means the reader is looking at the picture, not at
+    // leaving it.
+    cancelPendingClose()
     const g = gesture.current
     if (event.touches.length === 2) {
       stopHold()
@@ -276,21 +288,18 @@ export function Viewer({
     } else if (g.kind !== 'pinch' && Math.hypot(dx, dy) < 8 && elapsed < 250) {
       const now = Date.now()
       if (now - lastTap.current < TAP_WINDOW) {
-        // The second tap of a double tap: look closer, or come back.
+        // The second tap of a double tap: look closer, or come back. The
+        // close that the first tap booked is called off, so a double tap
+        // never closes the picture.
         lastTap.current = 0
         cancelPendingClose()
         toggleZoom(touch.clientX, touch.clientY)
         lastTouchZoom.current = now
-      } else if (viewRef.current.scale > 1.02) {
-        // The picture is enlarged. A tap puts it back rather than closing
-        // it, so a look at the detail is not lost by a stray finger.
-        lastTap.current = 0
-        cancelPendingClose()
-        setAnimating(true)
-        setView(RESET)
       } else {
+        // The first tap of a possible double tap. The picture closes a
+        // moment later, unless a second tap follows and takes that back.
         lastTap.current = now
-        scheduleClose()
+        scheduleClose(TOUCH_CLOSE_DELAY)
       }
     } else if (viewRef.current.scale < 1.02) {
       // A drag that was not a drag: put the picture back where it was.
@@ -363,17 +372,12 @@ export function Viewer({
           // A finger has already been listened to; this is the mouse.
           if (pointerType.current === 'touch') return
           if (event.detail > 1) {
+            // The second click of a double click. The close that the first
+            // one booked is called off.
             cancelPendingClose()
             return
           }
-          if (viewRef.current.scale > 1.02) {
-            // The picture is enlarged: a click puts it back rather than
-            // closing it.
-            setAnimating(true)
-            setView(RESET)
-            return
-          }
-          scheduleClose()
+          scheduleClose(MOUSE_CLOSE_DELAY)
         }}
         onDoubleClick={(event) => {
           // A double tap on a phone also sends a double click, a moment
