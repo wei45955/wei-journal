@@ -56,6 +56,12 @@ type Options struct {
 
 // NewServer builds the API server.
 func NewServer(opts Options) *Server {
+	// A place service is optional. Without one the search simply stays off,
+	// rather than failing on every request that asks about it.
+	geocoder := opts.Geocoder
+	if geocoder == nil {
+		geocoder = geocode.NewDisabled()
+	}
 	return &Server{
 		cfg:      opts.Config,
 		handle:   opts.Handle,
@@ -66,7 +72,7 @@ func NewServer(opts Options) *Server {
 		storage:  opts.Storage,
 		queue:    opts.Queue,
 		provider: opts.Provider,
-		geocoder: opts.Geocoder,
+		geocoder: geocoder,
 		limiter:  auth.NewLimiter(opts.Config.RateLimitPerMin, time.Minute),
 		version:  opts.Version,
 	}

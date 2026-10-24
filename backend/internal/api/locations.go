@@ -384,5 +384,8 @@ func (s *Server) handleSearchOwnLocations(c *gin.Context) {
 
 // geocodingEnabled reports whether the external place search may be used.
 func (s *Server) geocodingEnabled() bool {
-	return s.cfg.GeocodingEnabled && s.geocoder.Available()
+	if !s.cfg.GeocodingEnabled || s.geocoder == nil {
+		return false
+	}
+	return s.geocoder.Available()
 }
