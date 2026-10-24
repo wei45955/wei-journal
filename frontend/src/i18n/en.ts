@@ -159,6 +159,8 @@ export const en = {
     suggested: 'Suggested tags',
     photos: 'About the photos',
     added: 'Tag added',
+    ask: 'Describe these photos',
+    nothingYet: 'Nothing has been written about this entry yet.',
   },
   polish: {
     title: 'Polish the text',

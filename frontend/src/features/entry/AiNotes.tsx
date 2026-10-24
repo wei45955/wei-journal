@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../lib/api'
-import type { AIMetadata, Entry } from '../../lib/types'
+import { useResource } from '../../lib/cache'
+import type { AIMetadata, AIStatus, Entry } from '../../lib/types'
 import { afterEntryChange } from '../../state/library'
 import { useToast } from '../../state/toast'
 import { prime } from '../../lib/cache'
@@ -17,8 +18,13 @@ export function AiNotes({ entry }: { entry: Entry }) {
   const { t } = useTranslation()
   const { notify, describe } = useToast()
   const [busy, setBusy] = useState(false)
+  const status = useResource<AIStatus>('ai:status', () => api.aiStatus())
   const metadata = entry.aiMetadata ?? []
-  if (metadata.length === 0) return null
+  const ready = Boolean(status.data?.configured && status.data?.enabled)
+  // An entry that has never been looked at has nothing to show, but there
+  // is still something to ask for.
+  const askable = ready && metadata.length === 0 && (entry.media?.length ?? 0) > 0
+  if (metadata.length === 0 && !askable) return null
 
   const text = metadata.find((item) => item.kind === 'text')
   const images = metadata.filter((item) => item.kind === 'image' && item.description)
@@ -106,8 +112,12 @@ export function AiNotes({ entry }: { entry: Entry }) {
       ) : null}
 
       <div className="mt-3.5 flex items-center justify-between gap-3">
-        <p className="text-[0.75rem] leading-snug text-ink-3">{t('ai.note')}</p>
-        {failed || unavailable || text?.summary ? (
+        <p className="text-[0.75rem] leading-snug text-ink-3">{askable ? t('ai.nothingYet') : t('ai.note')}</p>
+        {askable ? (
+          <Button size="sm" tone="quiet" loading={busy} onClick={() => void again()} className="-mr-3">
+            {t('ai.ask')}
+          </Button>
+        ) : failed || unavailable || text?.summary ? (
           <Button size="sm" tone="quiet" loading={busy} onClick={() => void again()} className="-mr-3">
             {t('ai.again')}
           </Button>

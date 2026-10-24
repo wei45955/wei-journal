@@ -161,6 +161,8 @@ export const zh: Dictionary = {
     suggested: '建议标签',
     photos: '关于照片',
     added: '已添加标签',
+    ask: '描述这些照片',
+    nothingYet: '这篇日记还没有生成任何内容。',
   },
   polish: {
     title: '润色文字',
