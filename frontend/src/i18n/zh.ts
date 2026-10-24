@@ -398,7 +398,7 @@ export const zh: Dictionary = {
     tagDeleted: '标签已删除',
     map: '地图',
     tiles: '地图图块地址',
-    tilesHint: '留空则使用 OpenStreetMap。{z}、{x}、{y} 会被自动替换。',
+    tilesHint: '留空则使用 OpenStreetMap。{z}、{x}、{y} 会被自动替换。若填的是国内地图服务，地图上的标记会自动偏移对齐。',
     ai: 'AI',
     aiToggle: '摘要与照片描述',
     aiHint: '开启后，日记正文和照片会发送到此服务器配置的模型服务商，用于生成摘要和建议标签。',

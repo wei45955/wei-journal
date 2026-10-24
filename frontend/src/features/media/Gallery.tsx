@@ -6,23 +6,65 @@ import { LiveIcon, VideoIcon } from '../../ui/icons'
 import { isFilm, Thumb } from './Thumb'
 
 /**
- * The shape of a picture, held between two limits so a very tall or very
- * wide photograph still reads as a photograph and never becomes a banner.
- */
-function shapeOf(media: Media) {
-  const ratio = media.width && media.height ? media.width / media.height : 4 / 3
-  return Math.min(Math.max(ratio, 0.62), 1.75)
-}
-
-/**
- * The pictures of an entry, laid out as a strip that can be swiped.
+ * The pictures of an entry.
  *
- * One picture stands on its own, centred and whole, with the paper showing
- * at its sides. More than one lie side by side and are moved along with a
- * finger, each one whole and never cropped. The strip runs to the edges of
- * the screen so the next picture is already waiting at the border.
+ * One picture stands on its own, whole and quiet: it keeps its own shape and
+ * is never taller than half the screen, so the words of the entry stay the
+ * subject.
+ *
+ * More than one lie side by side in a strip that can be moved along with a
+ * finger. Every picture in the strip sits in the same frame, so the row does
+ * not jump about while it is read. The frame is four to three, which is the
+ * proportion of a picture in the middle of a page; sixteen to nine belongs
+ * to a banner, and reads as an advertisement rather than a photograph.
  */
 export function Gallery({
+  items,
+  onOpen,
+  className,
+}: {
+  items: Media[]
+  onOpen?: (index: number) => void
+  className?: string
+}) {
+  if (items.length === 0) return null
+  if (items.length === 1) return <Plate media={items[0]} onOpen={() => onOpen?.(0)} className={className} />
+  return <Strip items={items} onOpen={onOpen} className={className} />
+}
+
+/** The one picture of an entry, whole and centred. */
+function Plate({ media, onOpen, className }: { media: Media; onOpen: () => void; className?: string }) {
+  const { t } = useTranslation()
+  const source = media.hasPreview ? media.previewUrl : media.url
+  return (
+    <figure className={cn('mb-7', className)}>
+      <div className="relative mx-auto w-fit max-w-full overflow-hidden rounded-[18px] bg-well">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault()
+            onOpen()
+          }}
+          aria-label={media.originalName || t('media.open')}
+          className="press flex items-center justify-center"
+        >
+          <img
+            src={source}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            className="max-h-[52svh] max-w-full object-contain"
+          />
+        </button>
+        <Badge media={media} />
+      </div>
+    </figure>
+  )
+}
+
+/** Several pictures, side by side, in one frame. */
+function Strip({
   items,
   onOpen,
   className,
@@ -53,18 +95,11 @@ export function Gallery({
     return () => element.removeEventListener('scroll', onScroll)
   }, [onScroll])
 
-  if (items.length === 0) return null
-
-  const single = items.length === 1
-
   return (
     <figure className={cn('mb-7', className)}>
       <div
         ref={strip}
-        className={cn(
-          '-mx-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 no-scrollbar sm:mx-0 sm:px-0',
-          single && 'justify-center',
-        )}
+        className="-mx-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 no-scrollbar sm:mx-0 sm:px-0"
       >
         {items.map((media, index) => (
           <button
@@ -75,28 +110,38 @@ export function Gallery({
               onOpen?.(index)
             }}
             aria-label={media.originalName || t('media.open')}
-            className="relative shrink-0 snap-center overflow-hidden rounded-[18px] bg-well"
-            style={{ width: single ? 'min(88%, 30rem)' : 'min(86%, 26rem)', aspectRatio: String(shapeOf(media)) }}
+            className="relative w-[min(86%,24rem)] shrink-0 snap-center overflow-hidden rounded-[18px] bg-well"
+            style={{ aspectRatio: '4 / 3' }}
           >
             <Thumb media={media} large />
-            {isFilm(media) ? (
-              <span className="absolute bottom-2.5 left-2.5 flex size-7 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm">
-                <VideoIcon size={15} />
-              </span>
-            ) : media.kind === 'live-still' ? (
-              <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[0.6875rem] font-medium text-white backdrop-blur-sm">
-                <LiveIcon size={13} />
-                {t('media.live')}
-              </span>
-            ) : null}
+            <Badge media={media} />
           </button>
         ))}
       </div>
-      {!single ? (
-        <figcaption className="tnum mt-2 text-center text-[0.75rem] text-ink-3">
-          {t('media.position', { index: current + 1, total: items.length })}
-        </figcaption>
-      ) : null}
+      <figcaption className="tnum mt-2 text-center text-[0.75rem] text-ink-3">
+        {t('media.position', { index: current + 1, total: items.length })}
+      </figcaption>
     </figure>
   )
+}
+
+/** The mark of a picture that is more than a picture. */
+function Badge({ media }: { media: Media }) {
+  const { t } = useTranslation()
+  if (isFilm(media)) {
+    return (
+      <span className="absolute bottom-2.5 left-2.5 flex size-7 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm">
+        <VideoIcon size={15} />
+      </span>
+    )
+  }
+  if (media.kind === 'live-still') {
+    return (
+      <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[0.6875rem] font-medium text-white backdrop-blur-sm">
+        <LiveIcon size={13} />
+        {t('media.live')}
+      </span>
+    )
+  }
+  return null
 }

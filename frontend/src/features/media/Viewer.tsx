@@ -281,6 +281,13 @@ export function Viewer({
         cancelPendingClose()
         toggleZoom(touch.clientX, touch.clientY)
         lastTouchZoom.current = now
+      } else if (viewRef.current.scale > 1.02) {
+        // The picture is enlarged. A tap puts it back rather than closing
+        // it, so a look at the detail is not lost by a stray finger.
+        lastTap.current = 0
+        cancelPendingClose()
+        setAnimating(true)
+        setView(RESET)
       } else {
         lastTap.current = now
         scheduleClose()
@@ -357,6 +364,13 @@ export function Viewer({
           if (pointerType.current === 'touch') return
           if (event.detail > 1) {
             cancelPendingClose()
+            return
+          }
+          if (viewRef.current.scale > 1.02) {
+            // The picture is enlarged: a click puts it back rather than
+            // closing it.
+            setAnimating(true)
+            setView(RESET)
             return
           }
           scheduleClose()

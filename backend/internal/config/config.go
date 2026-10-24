@@ -36,14 +36,16 @@ type Config struct {
 	AIRequestTimout    time.Duration
 	JobWorkers         int
 	JobInterval        time.Duration
-	MaxSearchRows      int
 	RateLimitPerMin    int
 	TrustedProxy       bool
 	TrustedProxyCIDRs  []string
 	Version            string
 	GeocodingEnabled   bool
+	GeocodingProvider  string
 	GeocodingURL       string
 	GeocodingUserAgent string
+	AmapKey            string
+	AmapCity           string
 }
 
 // Load reads configuration from the environment, applying defaults that make
@@ -71,14 +73,16 @@ func Load() (*Config, error) {
 		AIRequestTimout:    envDuration("WJ_AI_TIMEOUT", 90*time.Second),
 		JobWorkers:         envInt("WJ_JOB_WORKERS", 2),
 		JobInterval:        envDuration("WJ_JOB_INTERVAL", 2*time.Second),
-		MaxSearchRows:      envInt("WJ_MAX_SEARCH_ROWS", 500),
 		RateLimitPerMin:    envInt("WJ_RATE_LIMIT_PER_MIN", 120),
 		TrustedProxy:       envBool("WJ_TRUSTED_PROXY", false),
 		TrustedProxyCIDRs:  envList("WJ_TRUSTED_PROXY_CIDRS"),
 		Version:            env("WJ_VERSION", "dev"),
 		GeocodingEnabled:   envBool("WJ_GEOCODING_ENABLED", false),
+		GeocodingProvider:  env("WJ_GEOCODING_PROVIDER", "nominatim"),
 		GeocodingURL:       env("WJ_GEOCODING_URL", "https://nominatim.openstreetmap.org"),
 		GeocodingUserAgent: env("WJ_GEOCODING_USER_AGENT", "wei-journal/1.0 (self-hosted journal)"),
+		AmapKey:            env("WJ_AMAP_KEY", ""),
+		AmapCity:           env("WJ_AMAP_CITY", ""),
 	}
 
 	if c.DatabaseURL == "" {

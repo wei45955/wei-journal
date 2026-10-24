@@ -494,6 +494,8 @@ The places of the account for the map, at most 1000.
 
 Place name search. Disabled with `503 unavailable` unless `WJ_GEOCODING_ENABLED=true`, because the query is sent to a third party service.
 
+The service is chosen by `WJ_GEOCODING_PROVIDER`: `nominatim` (the default, no key) or `amap` (the Chinese service, which needs `WJ_AMAP_KEY`). The answer is the same either way, and the coordinates are always WGS-84, whatever the service speaks.
+
 | Query | Meaning |
 | --- | --- |
 | `q` | The place name. Required. |
@@ -508,7 +510,7 @@ What this installation can do: { search: true } when the place search is configu
 
 ### GET /api/locations/reverse
 
-The name of a point. Disabled with 503 unavailable unless WJ_GEOCODING_ENABLED=true, because the point is sent to a third party service. The query holds lat and lon, and the answer is an array with at most one place.
+The name of a point. Disabled with 503 unavailable unless WJ_GEOCODING_ENABLED=true, because the point is sent to a third party service. The query holds lat and lon, and the answer is an array with at most one place. The name comes back in the coordinate system the journal keeps, WGS-84.
 
 ---
 

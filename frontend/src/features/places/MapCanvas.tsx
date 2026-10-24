@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { LayerGroup, Map as LeafletMap } from 'leaflet'
 import './leafletGlobal'
 import 'leaflet.markercluster'
+import { isChineseTiles, wgsToGcj } from '../../lib/coordinates'
 import type { MapPlace } from '../../lib/types'
 
 type LeafletApi = typeof import('leaflet')
@@ -84,7 +85,11 @@ export function MapCanvas({
   const fit = () => {
     const L = leaflet()
     if (!L || !map.current || places.length === 0) return
-    const bounds = L.latLngBounds(places.map((place) => [place.latitude, place.longitude]))
+    const chinese = isChineseTiles(tileUrl)
+    const bounds = L.latLngBounds(places.map((place) => {
+      const [latitude, longitude] = chinese ? wgsToGcj(place.latitude, place.longitude) : [place.latitude, place.longitude]
+      return [latitude, longitude]
+    }))
     if (bounds.isValid()) map.current.fitBounds(bounds, { padding: [48, 48], maxZoom: 14 })
   }
 
@@ -92,6 +97,10 @@ export function MapCanvas({
     const L = leaflet()
     if (!L || !map.current || !layer.current) return
     layer.current.clearLayers()
+    // The Chinese tiles are drawn in their own coordinate system, so the
+    // points have to be moved to match them or they sit a few hundred
+    // metres away from the place they mark.
+    const chinese = isChineseTiles(tileUrl)
     const markers = places.map((place) => {
       const thumb = safeThumb(place.thumbUrl)
       const html = thumb
@@ -103,7 +112,8 @@ export function MapCanvas({
         iconSize: thumb ? [56, 56] : [18, 18],
         iconAnchor: thumb ? [28, 28] : [9, 9],
       })
-      const marker = L.marker([place.latitude, place.longitude], { icon, title: place.name || place.title, keyboard: true })
+      const [latitude, longitude] = chinese ? wgsToGcj(place.latitude, place.longitude) : [place.latitude, place.longitude]
+      const marker = L.marker([latitude, longitude], { icon, title: place.name || place.title, keyboard: true })
       marker.on('click', () => callbacks.current.onSelect(place))
       return marker
     })
@@ -130,8 +140,9 @@ export function MapCanvas({
 
   useEffect(() => {
     if (!focus || !map.current) return
-    map.current.setView([focus.latitude, focus.longitude], Math.max(map.current.getZoom(), 14), { animate: true })
-  }, [focus])
+    const [latitude, longitude] = isChineseTiles(tileUrl) ? wgsToGcj(focus.latitude, focus.longitude) : [focus.latitude, focus.longitude]
+    map.current.setView([latitude, longitude], Math.max(map.current.getZoom(), 14), { animate: true })
+  }, [focus, tileUrl])
 
   return <div ref={container} className="size-full" role="application" aria-label={label} />
 }

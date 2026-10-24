@@ -27,28 +27,42 @@ function pageKeyOf(path: string) {
 }
 
 const scrollPlaces = new Map<string, number>()
+const scrollTabs = new Map<string, number>()
 
 /**
  * A new page opens at its top; a page that is returned to opens where it was
  * left. Because the data of a visited page is cached, the place can be set
  * before the first paint.
+ *
+ * The four main pages each keep their own place, the way a tab bar does:
+ * leaving one and coming back finds it where it was.
  */
 function useScrollMemory() {
   const location = useLocation()
   const type = useNavigationType()
   const keyRef = useRef(location.key)
+  const pathRef = useRef(location.pathname)
   const page = pageKeyOf(location.pathname)
 
   useEffect(() => {
     history.scrollRestoration = 'manual'
-    const remember = () => scrollPlaces.set(keyRef.current, window.scrollY)
+    const remember = () => {
+      if (isTabPage(pathRef.current)) scrollTabs.set(pathRef.current, window.scrollY)
+      else scrollPlaces.set(keyRef.current, window.scrollY)
+    }
     window.addEventListener('scroll', remember, { passive: true })
     return () => window.removeEventListener('scroll', remember)
   }, [])
 
   useLayoutEffect(() => {
     keyRef.current = location.key
-    const target = type === 'POP' ? (scrollPlaces.get(location.key) ?? 0) : 0
+    pathRef.current = location.pathname
+    const tab = isTabPage(location.pathname)
+    const target = tab
+      ? (scrollTabs.get(location.pathname) ?? 0)
+      : type === 'POP'
+        ? (scrollPlaces.get(location.key) ?? 0)
+        : 0
     window.scrollTo(0, target)
     if (target <= 0) return
     // Pictures further down may still be arriving; hold the place briefly.
@@ -73,8 +87,13 @@ function useScrollMemory() {
 
 export function AppShell() {
   const location = useLocation()
+  const type = useNavigationType()
   useScrollMemory()
   const tabs = isTabPage(location.pathname)
+
+  // Coming back is not a new page arriving; the page one is already there.
+  // Animating it in only shows the empty paper for a moment.
+  const arriving = type !== 'POP'
 
   return (
     <div className="min-h-dvh lg:pl-[17rem]">
@@ -86,7 +105,7 @@ export function AppShell() {
         )}
       >
         <Suspense fallback={<div className="min-h-dvh" />}>
-          <div key={pageKeyOf(location.pathname)} className="animate-rise">
+          <div key={pageKeyOf(location.pathname)} className={arriving ? 'animate-rise' : undefined}>
             <Outlet />
           </div>
         </Suspense>
@@ -115,7 +134,10 @@ function TabBar() {
             <Link
               key={tab.to}
               to={tab.to}
-              replace={active}
+              // The four pages are siblings, not a staircase. Moving between
+              // them replaces the entry, so the back gesture never walks
+              // from one of them to another.
+              replace
               onClick={() => {
                 if (active) window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
@@ -170,7 +192,16 @@ function Sidebar() {
 
       <nav aria-label={t('nav.main')} className="mt-6 flex flex-col gap-0.5">
         {TABS.map((tab) => (
-          <Link key={tab.to} to={tab.to} className={row(tab.match(pathname) && !pathname.startsWith('/folder/'))}>
+          <Link
+            key={tab.to}
+            to={tab.to}
+            // The four pages are siblings; moving between them replaces the
+            // entry rather than stacking another one on the history. From a
+            // page that is pushed on top of them the entry is kept, so the
+            // back gesture still finds it.
+            replace={isTabPage(pathname)}
+            className={row(tab.match(pathname) && !pathname.startsWith('/folder/'))}
+          >
             <tab.icon size={20} />
             {t(tab.key)}
           </Link>

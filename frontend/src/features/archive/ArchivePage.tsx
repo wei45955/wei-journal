@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
@@ -11,7 +12,7 @@ import type { CalendarResponse, Entry, Media, Stats } from '../../lib/types'
 import { usePrefs } from '../../state/auth'
 import { PageTitle, TopBar } from '../../shell/TopBar'
 import { buttonClass, IconButton, Segmented, Skeleton } from '../../ui'
-import { ChevronLeftIcon, ChevronRightIcon, GearIcon, PenIcon } from '../../ui/icons'
+import { ArchiveIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, FileIcon, GearIcon, ImageIcon, PenIcon, SparkIcon, TextIcon, VideoIcon } from '../../ui/icons'
 import { splitMedia, Thumb } from '../media/Thumb'
 import { EntryCard } from '../timeline/EntryCard'
 
@@ -38,6 +39,17 @@ export function ArchivePage() {
   }
 
   const stats = useResource<Stats>(`stats:${zone}`, () => api.stats(zone))
+
+  // The page keeps its state in the query string, so the path never changes
+  // and the shell never restores the scroll. A new month, or a new view, is
+  // a new page: it opens at its top.
+  const period = `${view}:${anchor.slice(0, 7)}`
+  const lastPeriod = useRef(period)
+  useEffect(() => {
+    if (lastPeriod.current === period) return
+    lastPeriod.current = period
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [period])
 
   return (
     <>
@@ -218,6 +230,22 @@ function lastDayOf(first: string) {
   return `${first.slice(0, 7)}-${String(days).padStart(2, '0')}`
 }
 
+/**
+ * The days of a month, without the weeks that hold none of it. A calendar
+ * always has six weeks, but a small month only needs five, and the empty
+ * week at the end is only space.
+ */
+function weeksOf(cells: { key: string; inMonth: boolean }[]) {
+  const weeks: { key: string; inMonth: boolean }[][] = []
+  for (let index = 0; index < cells.length; index += 7) {
+    weeks.push(cells.slice(index, index + 7))
+  }
+  while (weeks.length > 4 && weeks[weeks.length - 1].every((cell) => !cell.inMonth)) {
+    weeks.pop()
+  }
+  return weeks.flat()
+}
+
 function DayEntries({ day, today, language, zone }: { day: string; today: string; language: string; zone: string }) {
   const { t } = useTranslation()
   const list = useResource<Entry[]>(`calendar:day:${day}`, async () => (await api.entries({ from: day, to: day, limit: 50, order: 'asc' })).items)
@@ -278,7 +306,7 @@ function YearView({
           {counts.data ? t('archive.yearTotal', { count: counts.data.total, year }) : null}
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-x-4 gap-y-5 sm:grid-cols-4">
+      <div className="grid grid-cols-4 gap-x-3 gap-y-4 sm:grid-cols-6 sm:gap-x-4">
         {Array.from({ length: 12 }, (_, index) => {
           const month = `${year}-${String(index + 1).padStart(2, '0')}`
           const cells = monthMatrix(`${month}-01`, weekStart)
@@ -293,18 +321,18 @@ function YearView({
               className="press rounded-[10px] text-left disabled:opacity-35"
               aria-label={`${monthLabel(month, language)}, ${written}`}
             >
-              <span className="mb-1.5 flex items-baseline justify-between text-[0.8125rem]">
-                <span className={cn(month === today.slice(0, 7) ? 'font-semibold text-accent' : 'text-ink')}>
+              <span className="mb-1 flex items-baseline justify-between gap-1 text-[0.6875rem]">
+                <span className={cn('truncate', month === today.slice(0, 7) ? 'font-semibold text-accent' : 'text-ink')}>
                   {format(new Date(`${month}-01T00:00:00`), language === 'zh-CN' ? 'M月' : 'MMM', { locale: localeFor(language) })}
                 </span>
-                {written ? <span className="tnum text-[0.75rem] text-ink-3">{written}</span> : null}
+                {written ? <span className="tnum shrink-0 text-[0.625rem] text-ink-3">{written}</span> : null}
               </span>
-              <span className="grid grid-cols-7 gap-[3px]" aria-hidden="true">
-                {cells.slice(0, 42).map((cell) => (
+              <span className="grid grid-cols-7 gap-[2px]" aria-hidden="true">
+                {weeksOf(cells).map((cell) => (
                   <span
                     key={cell.key}
                     className={cn(
-                      'aspect-square rounded-[2px]',
+                      'aspect-square rounded-[1.5px]',
                       cell.inMonth ? shade[level(byDay.get(cell.key) ?? 0)] : 'bg-transparent',
                       cell.key === today && 'ring-1 ring-ink',
                     )}
@@ -330,28 +358,74 @@ function YearView({
 
 function Numbers({ stats, language }: { stats: Stats; language: string }) {
   const { t } = useTranslation()
-  const rows: Array<[string, number]> = [
-    [t('archive.statEntries'), stats.totalEntries],
-    [t('archive.statDays'), stats.activeDays],
-    [t('archive.statWords'), stats.totalWords],
-    [t('archive.statPhotos'), stats.totalPhotos],
-    [t('archive.statVideos'), stats.totalVideos],
-    [t('archive.statFiles'), stats.totalFiles + (stats.totalAudios ?? 0)],
-    [`${t('archive.statYear')} ${stats.currentYear}`, stats.entriesThisYear],
+
+  // The three that carry the journal, then what it holds, then the year.
+  const main: Array<{ key: string; label: string; value: number; icon: ReactNode }> = [
+    { key: 'entries', label: t('archive.statEntries'), value: stats.totalEntries, icon: <PenIcon size={15} /> },
+    { key: 'days', label: t('archive.statDays'), value: stats.activeDays, icon: <ClockIcon size={15} /> },
+    { key: 'words', label: t('archive.statWords'), value: stats.totalWords, icon: <TextIcon size={15} /> },
   ]
+  const media: Array<{ key: string; label: string; value: number; icon: ReactNode }> = [
+    { key: 'photos', label: t('archive.statPhotos'), value: stats.totalPhotos, icon: <ImageIcon size={15} /> },
+    { key: 'videos', label: t('archive.statVideos'), value: stats.totalVideos, icon: <VideoIcon size={15} /> },
+    { key: 'files', label: t('archive.statFiles'), value: stats.totalFiles + (stats.totalAudios ?? 0), icon: <FileIcon size={15} /> },
+  ]
+
   return (
-    <>
-      <dl className="mt-4 grid grid-cols-2 gap-x-6 sm:grid-cols-3">
-        {rows.map(([label, value]) => (
-          <div key={label} className="border-t border-rule py-3.5">
-            <dt className="text-[0.8125rem] text-ink-2">{label}</dt>
-            <dd className="tnum mt-0.5 font-serif text-[1.75rem] leading-tight text-ink [font-variation-settings:'opsz'_48]">
-              {formatNumber(value, language)}
+    <div className="mt-4 overflow-hidden rounded-[20px] bg-leaf">
+      <dl className="grid grid-cols-3 divide-x divide-rule border-b border-rule">
+        {main.map((cell) => (
+          <div key={cell.key} className="px-3 py-3.5">
+            <dt className="flex items-center gap-1.5 text-[0.75rem] leading-tight text-ink-2">
+              <span className="shrink-0 text-ink-3">{cell.icon}</span>
+              <span className="truncate">{cell.label}</span>
+            </dt>
+            <dd className="tnum mt-1 font-serif text-[1.5rem] leading-none text-ink [font-variation-settings:'opsz'_40]">
+              {formatNumber(cell.value, language)}
             </dd>
           </div>
         ))}
       </dl>
-      <p className="mt-4 text-[0.875rem] text-ink-2">{t('archive.longest', { count: stats.longestStreak })}</p>
-    </>
+
+      <dl className="grid grid-cols-3 divide-x divide-rule border-b border-rule">
+        {media.map((cell) => (
+          <div key={cell.key} className="px-3 py-3">
+            <dt className="flex items-center gap-1.5 text-[0.75rem] leading-tight text-ink-2">
+              <span className="shrink-0 text-ink-3">{cell.icon}</span>
+              <span className="truncate">{cell.label}</span>
+            </dt>
+            <dd className="tnum mt-0.5 font-serif text-[1.125rem] leading-none text-ink-2 [font-variation-settings:'opsz'_30]">
+              {formatNumber(cell.value, language)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="flex items-center justify-between gap-4 px-3 py-3">
+        <span className="flex min-w-0 items-center gap-1.5 text-[0.8125rem] text-ink-2">
+          <SparkIcon size={15} className="shrink-0 text-ink-3" />
+          <span className="truncate">
+            {t('archive.statYear')} {stats.currentYear}
+          </span>
+        </span>
+        <span className="tnum shrink-0 font-serif text-[1.125rem] leading-none text-ink [font-variation-settings:'opsz'_30]">
+          {formatNumber(stats.entriesThisYear, language)}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-4 border-t border-rule px-3 py-3">
+        <span className="flex min-w-0 items-center gap-1.5 text-[0.8125rem] text-ink-2">
+          <ArchiveIcon size={15} className="shrink-0 text-ink-3" />
+          <span className="truncate">{t('archive.longest', { count: stats.longestStreak })}</span>
+        </span>
+        {/* The run of days, drawn as the chain it is. */}
+        <span className="flex shrink-0 items-center gap-[3px]" aria-hidden="true">
+          {Array.from({ length: Math.min(stats.longestStreak, 12) }, (_, index) => (
+            <span key={index} className="size-[5px] rounded-full bg-accent" />
+          ))}
+          {stats.longestStreak > 12 ? <span className="tnum pl-1 text-[0.6875rem] text-ink-3">+{stats.longestStreak - 12}</span> : null}
+        </span>
+      </div>
+    </div>
   )
 }

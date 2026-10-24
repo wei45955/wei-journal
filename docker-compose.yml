@@ -22,16 +22,9 @@ services:
       - path: .env
         required: false
     environment:
-      # These four are fixed by the image and are the same on every machine,
-      # so they are not in config.env. The paths have to point inside the
-      # container, and the address has to be the one the frontend proxies to.
-      WJ_ADDR: ":8080"
-      WJ_DATA_DIR: /data
-      WJ_UPLOAD_DIR: /data/uploads
-      WJ_DERIVED_DIR: /data/derived
-      # The version decides the Gin mode. "dev" turns the debug mode on, so
-      # the default here is a real version. It is also the build stamp, so it
-      # is taken from the same place as the image tag.
+      # The listening address and the paths inside the container are baked
+      # into the image, so they are not repeated here. The version is the
+      # build stamp of the image, so it comes from the same place as the tag.
       WJ_VERSION: ${WJ_VERSION:-1.0.0}
     volumes:
       - journal-data:/data

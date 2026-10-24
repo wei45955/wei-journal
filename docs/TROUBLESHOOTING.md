@@ -259,6 +259,8 @@ Check that the entry body really contains the text. The index holds the plain te
 
 - The place has to be attached to an entry or a media asset. A place that is only a coordinate in the media metadata does not appear on the map.
 - The place search needs `WJ_GEOCODING_ENABLED=true`, and it is off by default because the typed text is sent to a third party. The own places search always works.
+- Chinese place names come out much better from the Chinese service. Set `WJ_GEOCODING_PROVIDER=amap` and put a "web service" key in `WJ_AMAP_KEY` in `.env`. The coordinates are converted to the system the journal keeps, so the points on the map stay where they belong.
+- A Chinese tile service in the "map tile address" setting of the settings page is recognised, and the points on the map are moved to match it.
 
 ## The statistics look wrong
 
@@ -270,7 +272,6 @@ Check that the entry body really contains the text. The index holds the plain te
 
 - The database is SQLite. A single writer serialises the writes, so a large archive with many concurrent writes is slower than PostgreSQL. Switch with the `postgres` profile.
 - A reverse proxy that buffers the response makes the media downloads slower. The frontend nginx already sets `proxy_buffering off`.
-- The search scans a bounded number of rows, `WJ_MAX_SEARCH_ROWS` by default. A larger value makes the search more complete and slower.
 - Check whether the machine is swapping. The backend holds the file index in memory.
 
 ## The data looks wrong after a restore

@@ -1,14 +1,10 @@
 package api
 
 import (
-	"errors"
-	"fmt"
 	"math"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -282,11 +278,11 @@ type geocodeResult struct {
 	Longitude float64 `json:"longitude"`
 }
 
-// handleGeocode searches for a place name. The provider is OpenStreetMap's
-// Nominatim service, which is rate limited; the endpoint is therefore
-// disabled unless it is explicitly enabled in the configuration.
+// handleGeocode searches for a place name. The service behind it is chosen
+// in the configuration, so the journal works with the OpenStreetMap one out
+// of the box and with a Chinese one when a key is given. The service is rate
+// limited, so the search is off unless it is explicitly enabled.
 func (s *Server) handleGeocode(c *gin.Context) {
-	user := auth.CurrentUser(c)
 	query := strings.TrimSpace(c.Query("q"))
 	if query == "" {
 		httpx.ValidationError(c, "invalid request body", map[string]string{
@@ -301,12 +297,20 @@ func (s *Server) handleGeocode(c *gin.Context) {
 		})
 		return
 	}
-	results, err := s.geocode(query)
+	places, err := s.geocoder.Search(c.Request.Context(), query, 8)
 	if err != nil {
 		httpx.Internal(c, s.log, err, "geocode")
 		return
 	}
-	_ = user
+	results := make([]geocodeResult, 0, len(places))
+	for _, place := range places {
+		results = append(results, geocodeResult{
+			Name:      place.Name,
+			Address:   place.Address,
+			Latitude:  place.Latitude,
+			Longitude: place.Longitude,
+		})
+	}
 	httpx.OK(c, results)
 }
 
@@ -335,65 +339,21 @@ func (s *Server) handleReverseGeocode(c *gin.Context) {
 		})
 		return
 	}
-	result, err := s.reverseGeocode(lat, lon)
+	place, err := s.geocoder.Reverse(c.Request.Context(), lat, lon)
 	if err != nil {
 		httpx.Internal(c, s.log, err, "reverse geocode")
 		return
 	}
-	if result == nil {
+	if place == nil {
 		httpx.OK(c, []geocodeResult{})
 		return
 	}
-	httpx.OK(c, []geocodeResult{*result})
-}
-
-// reverseGeocode asks the configured service for the name of a point.
-func (s *Server) reverseGeocode(lat, lon float64) (*geocodeResult, error) {
-	endpoint := fmt.Sprintf("%s/reverse?format=jsonv2&lat=%f&lon=%f",
-		s.cfg.GeocodingURL, lat, lon)
-	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", s.cfg.GeocodingUserAgent)
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("place search failed")
-	}
-	var raw []struct {
-		DisplayName string `json:"display_name"`
-		Name        string `json:"name"`
-		Lat         string `json:"lat"`
-		Lon         string `json:"lon"`
-	}
-	if err := decodeJSONBody(resp.Body, &raw); err != nil {
-		return nil, err
-	}
-	if len(raw) == 0 {
-		return nil, nil
-	}
-	name := raw[0].Name
-	if name == "" {
-		name = raw[0].DisplayName
-	}
-	if idx := strings.Index(name, ","); idx > 0 {
-		name = name[:idx]
-	}
-	parsedLat, parsedLon, ok := parseCoordinate(raw[0].Lat, raw[0].Lon)
-	if !ok {
-		parsedLat, parsedLon = lat, lon
-	}
-	return &geocodeResult{
-		Name:      strings.TrimSpace(name),
-		Address:   raw[0].DisplayName,
-		Latitude:  parsedLat,
-		Longitude: parsedLon,
-	}, nil
+	httpx.OK(c, []geocodeResult{{
+		Name:      place.Name,
+		Address:   place.Address,
+		Latitude:  place.Latitude,
+		Longitude: place.Longitude,
+	}})
 }
 
 // handleSearchOwnLocations offers the user's own places as suggestions, which
@@ -422,57 +382,7 @@ func (s *Server) handleSearchOwnLocations(c *gin.Context) {
 	httpx.OK(c, out)
 }
 
-var errGeocodeDisabled = errors.New("geocoding is disabled")
-
-// geocodeEnabled reports whether the external place search may be used.
+// geocodingEnabled reports whether the external place search may be used.
 func (s *Server) geocodingEnabled() bool {
-	return s.cfg.GeocodingEnabled
-}
-
-// geocode queries the configured Nominatim instance.
-func (s *Server) geocode(query string) ([]geocodeResult, error) {
-	if !s.geocodingEnabled() {
-		return nil, errGeocodeDisabled
-	}
-	endpoint := s.cfg.GeocodingURL + "/search?format=jsonv2&limit=8&q=" + url.QueryEscape(query)
-	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", s.cfg.GeocodingUserAgent)
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("place search failed")
-	}
-	var raw []struct {
-		DisplayName string `json:"display_name"`
-		Lat         string `json:"lat"`
-		Lon         string `json:"lon"`
-	}
-	if err := decodeJSONBody(resp.Body, &raw); err != nil {
-		return nil, err
-	}
-	out := make([]geocodeResult, 0, len(raw))
-	for _, r := range raw {
-		lat, lon, ok := parseCoordinate(r.Lat, r.Lon)
-		if !ok {
-			continue
-		}
-		name := r.DisplayName
-		if idx := strings.Index(name, ","); idx > 0 {
-			name = name[:idx]
-		}
-		out = append(out, geocodeResult{
-			Name:      strings.TrimSpace(name),
-			Address:   r.DisplayName,
-			Latitude:  lat,
-			Longitude: lon,
-		})
-	}
-	return out, nil
+	return s.cfg.GeocodingEnabled && s.geocoder.Available()
 }

@@ -143,6 +143,9 @@ Everything is read from the environment, in two files.
 | `WJ_AI_ENABLED` | `true` | The server side switch of the AI features. |
 | `WJ_VERSION` | `dev` | The build version. Not `dev` in production, that turns the debug mode on. |
 | `WJ_LOG_FORMAT` | `text` | `json` when the logs are collected by a system. |
+| `WJ_GEOCODING_ENABLED` | `false` | Turn the place name search on. It is off because the typed text is sent to a third party. |
+| `WJ_GEOCODING_PROVIDER` | `nominatim` | Which place service answers: `nominatim` or `amap`. |
+| `WJ_AMAP_KEY` | — | The key of the Chinese place service, when it is the one in use. A secret, so it belongs in `.env`. |
 
 The full list is in `config.env` and in `.env.example`. The defaults in the table are the ones built into the application; `config.env` changes some of them, and the Compose file sets the paths inside the container and the build version.
 

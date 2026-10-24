@@ -396,7 +396,7 @@ export const en = {
     tagDeleted: 'Tag deleted',
     map: 'Map',
     tiles: 'Map tile address',
-    tilesHint: 'Leave empty to use OpenStreetMap. {z}, {x} and {y} are filled in.',
+    tilesHint: 'Leave empty to use OpenStreetMap. {z}, {x} and {y} are filled in. A Chinese tile service is recognised, and the points on the map are moved to match it.',
     ai: 'AI',
     aiToggle: 'Summaries and photo descriptions',
     aiHint: 'When this is on, the text of your entries and your photos are sent to the model provider set up on this server, to write summaries and suggest tags.',

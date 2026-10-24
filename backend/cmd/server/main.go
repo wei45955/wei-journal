@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/wei/journal/backend/internal/bootstrap"
 	"github.com/wei/journal/backend/internal/config"
 	"github.com/wei/journal/backend/internal/db"
+	"github.com/wei/journal/backend/internal/geocode"
 	"github.com/wei/journal/backend/internal/indexer"
 	"github.com/wei/journal/backend/internal/jobs"
 	"github.com/wei/journal/backend/internal/media"
@@ -66,6 +68,7 @@ func run() error {
 	queue := jobs.NewQueue(handle.DB(), log)
 
 	provider := buildProvider(cfg)
+	geocoder := buildGeocoder(cfg, log)
 
 	if err := bootstrap.EnsureAdmin(handle.DB(), log, bootstrap.Admin{
 		Username: cfg.AdminUsername,
@@ -88,6 +91,7 @@ func run() error {
 		Storage:  storage,
 		Queue:    queue,
 		Provider: provider,
+		Geocoder: geocoder,
 		Version:  appVersion,
 	})
 
@@ -173,6 +177,28 @@ func buildProvider(cfg *config.Config) ai.Provider {
 		TextModel:   cfg.OpenAIText,
 		Timeout:     cfg.AIRequestTimout,
 	})
+}
+
+// buildGeocoder returns the configured place service, or a disabled one
+// when nothing is set up. The journal works without it; only the search by
+// name is missing.
+func buildGeocoder(cfg *config.Config, log *slog.Logger) geocode.Geocoder {
+	switch strings.ToLower(strings.TrimSpace(cfg.GeocodingProvider)) {
+	case "amap":
+		amap := geocode.NewAmap(cfg.AmapKey, "")
+		amap.CityCode = cfg.AmapCity
+		if amap.Available() {
+			return amap
+		}
+		log.Warn("amap is selected but no key is set; place search stays off")
+		return geocode.NewDisabled()
+	default:
+		nominatim := geocode.NewNominatim(cfg.GeocodingURL, cfg.GeocodingUserAgent)
+		if nominatim.Available() {
+			return nominatim
+		}
+		return geocode.NewDisabled()
+	}
 }
 
 // newLogger builds the structured logger used across the process.

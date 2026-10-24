@@ -17,6 +17,7 @@ import (
 	"github.com/wei/journal/backend/internal/db"
 	"github.com/wei/journal/backend/internal/httpx"
 	"github.com/wei/journal/backend/internal/indexer"
+	"github.com/wei/journal/backend/internal/geocode"
 	"github.com/wei/journal/backend/internal/jobs"
 	"github.com/wei/journal/backend/internal/media"
 	"github.com/wei/journal/backend/internal/search"
@@ -33,6 +34,7 @@ type Server struct {
 	storage  *media.Storage
 	queue    *jobs.Queue
 	provider ai.Provider
+	geocoder geocode.Geocoder
 	limiter  *auth.Limiter
 	version  string
 }
@@ -48,6 +50,7 @@ type Options struct {
 	Storage  *media.Storage
 	Queue    *jobs.Queue
 	Provider ai.Provider
+	Geocoder geocode.Geocoder
 	Version  string
 }
 
@@ -63,6 +66,7 @@ func NewServer(opts Options) *Server {
 		storage:  opts.Storage,
 		queue:    opts.Queue,
 		provider: opts.Provider,
+		geocoder: opts.Geocoder,
 		limiter:  auth.NewLimiter(opts.Config.RateLimitPerMin, time.Minute),
 		version:  opts.Version,
 	}

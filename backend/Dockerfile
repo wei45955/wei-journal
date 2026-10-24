@@ -43,10 +43,11 @@ COPY --from=builder /out/server /app/server
 
 USER journal
 
+# The listening address and where the data lives. The uploads and the
+# derived images are placed beside the database, so they need no name of
+# their own.
 ENV WJ_ADDR=":8080" \
     WJ_DATA_DIR="/data" \
-    WJ_UPLOAD_DIR="/data/uploads" \
-    WJ_DERIVED_DIR="/data/derived" \
     WJ_VERSION="1.0.0"
 
 EXPOSE 8080
