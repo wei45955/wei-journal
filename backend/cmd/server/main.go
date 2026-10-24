@@ -185,7 +185,7 @@ func buildProvider(cfg *config.Config) ai.Provider {
 func buildGeocoder(cfg *config.Config, log *slog.Logger) geocode.Geocoder {
 	switch strings.ToLower(strings.TrimSpace(cfg.GeocodingProvider)) {
 	case "amap":
-		amap := geocode.NewAmap(cfg.AmapKey, "")
+		amap := geocode.NewAmap(cfg.AmapKey, cfg.AmapSecret, "")
 		amap.CityCode = cfg.AmapCity
 		if amap.Available() {
 			return amap

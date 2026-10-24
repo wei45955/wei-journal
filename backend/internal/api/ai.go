@@ -117,6 +117,18 @@ func (s *Server) handleAIReprocess(c *gin.Context) {
 		}
 		s.scheduleEntrySummary(user.ID, &entry, entry.PlainText)
 		queued++
+		// Asking again about an entry means its pictures too, so one call
+		// covers everything the panel shows.
+		var pictures []models.MediaAsset
+		s.handle.DB().Where("user_id = ? AND entry_id = ? AND kind IN ?", user.ID, entry.ID,
+			[]string{models.MediaImage, models.MediaLiveStill}).Find(&pictures)
+		for i := range pictures {
+			if err := s.enqueueImageDescription(user.ID, &pictures[i]); err != nil {
+				s.log.Warn("queue image description failed", "media", pictures[i].ID, "error", err)
+				continue
+			}
+			queued++
+		}
 	case payload.All:
 		var assets []models.MediaAsset
 		s.handle.DB().Where("user_id = ? AND kind IN ?", user.ID,
@@ -187,6 +199,52 @@ func (s *Server) handleAIPolish(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, gin.H{"text": polished, "original": text})
+}
+
+// scheduleImageDescriptions queues a description for every still picture of
+// an entry that has not been looked at yet. A picture that already has a row
+// is left alone, so saving an entry again does not pay for the model twice.
+func (s *Server) scheduleImageDescriptions(userID, entryID uint) {
+	if !s.cfg.AIConfigured() || !s.aiEnabled(userID) {
+		return
+	}
+	var assets []models.MediaAsset
+	if err := s.handle.DB().
+		Where("user_id = ? AND entry_id = ? AND kind IN ?", userID, entryID,
+			[]string{models.MediaImage, models.MediaLiveStill}).
+		Find(&assets).Error; err != nil {
+		s.log.Warn("load entry pictures failed", "entry", entryID, "error", err)
+		return
+	}
+	if len(assets) == 0 {
+		return
+	}
+	ids := make([]uint, 0, len(assets))
+	for _, asset := range assets {
+		ids = append(ids, asset.ID)
+	}
+	// A picture that was already looked at once is not sent again: the
+	// answer is kept, and a picture that failed is retried through the
+	// explicit reprocess call, not on every save of the entry.
+	seen := map[uint]bool{}
+	var rows []models.AIMetadata
+	if err := s.handle.DB().
+		Where("media_id IN ? AND kind = ?", ids, "image").
+		Find(&rows).Error; err == nil {
+		for _, row := range rows {
+			if row.MediaID != nil {
+				seen[*row.MediaID] = true
+			}
+		}
+	}
+	for i := range assets {
+		if seen[assets[i].ID] {
+			continue
+		}
+		if err := s.enqueueImageDescription(userID, &assets[i]); err != nil {
+			s.log.Warn("queue image description failed", "media", assets[i].ID, "error", err)
+		}
+	}
 }
 
 // enqueueImageDescription creates the metadata record and schedules the job.

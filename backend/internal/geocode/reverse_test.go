@@ -22,7 +22,7 @@ func TestAmapReverseKeepsThePointItWasGiven(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider := NewAmap("secret", server.URL)
+	provider := NewAmap("secret", "", server.URL)
 	place, err := provider.Reverse(context.Background(), 24.799999, 118.666666)
 	if err != nil {
 		t.Fatalf("reverse failed: %v", err)
@@ -47,7 +47,7 @@ func TestAmapReverseAsksInItsOwnSystem(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider := NewAmap("secret", server.URL)
+	provider := NewAmap("secret", "", server.URL)
 	if _, err := provider.Reverse(context.Background(), 24.799999, 118.666666); err != nil {
 		t.Fatalf("reverse failed: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestAmapReverseReadsAnEmptyAddressList(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider := NewAmap("secret", server.URL)
+	provider := NewAmap("secret", "", server.URL)
 	place, err := provider.Reverse(context.Background(), 24.799999, 118.666666)
 	if err != nil {
 		t.Fatalf("reverse failed: %v", err)
@@ -126,7 +126,7 @@ func TestAmapSearchReadsAPoiWithoutAnAddress(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider := NewAmap("secret", server.URL)
+	provider := NewAmap("secret", "", server.URL)
 	places, err := provider.Search(context.Background(), "a park", 5)
 	if err != nil {
 		t.Fatalf("search failed: %v", err)

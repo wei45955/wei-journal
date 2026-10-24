@@ -45,6 +45,7 @@ type Config struct {
 	GeocodingURL       string
 	GeocodingUserAgent string
 	AmapKey            string
+	AmapSecret         string
 	AmapCity           string
 }
 
@@ -82,6 +83,7 @@ func Load() (*Config, error) {
 		GeocodingURL:       env("WJ_GEOCODING_URL", "https://nominatim.openstreetmap.org"),
 		GeocodingUserAgent: env("WJ_GEOCODING_USER_AGENT", "wei-journal/1.0 (self-hosted journal)"),
 		AmapKey:            env("WJ_AMAP_KEY", ""),
+		AmapSecret:         env("WJ_AMAP_SECRET", ""),
 		AmapCity:           env("WJ_AMAP_CITY", ""),
 	}
 

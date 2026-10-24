@@ -296,6 +296,10 @@ func (s *Server) handleCreateEntry(c *gin.Context) {
 		s.log.Warn("reindex after create failed", "entry", entry.ID, "error", err)
 	}
 	s.scheduleEntrySummary(user.ID, &entry, plain)
+	// A picture that lands with the entry is described once the words are
+	// stored. The job is queued here because this is the first moment the
+	// picture belongs to an entry.
+	s.scheduleImageDescriptions(user.ID, entry.ID)
 
 	dtos, err := s.buildEntryDTOs(user.ID, []models.Entry{entry})
 	if err != nil {
@@ -468,6 +472,11 @@ func (s *Server) handleUpdateEntry(c *gin.Context) {
 	// Only regenerate the summary when the written content actually changed.
 	if payload.Document != "" {
 		s.scheduleEntrySummary(user.ID, &entry, entry.PlainText)
+	}
+	// Pictures are attached by the save, so one that was added with it is
+	// described here.
+	if payload.MediaIDs != nil || payload.Document != "" {
+		s.scheduleImageDescriptions(user.ID, entry.ID)
 	}
 
 	dtos, err := s.buildEntryDTOs(user.ID, []models.Entry{entry})

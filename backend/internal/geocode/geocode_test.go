@@ -81,7 +81,7 @@ func TestAmapSearchConvertsToWgs(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider := NewAmap("secret", server.URL)
+	provider := NewAmap("secret", "", server.URL)
 	places, err := provider.Search(context.Background(), "天主教堂", 8)
 	if err != nil {
 		t.Fatalf("search failed: %v", err)
@@ -109,7 +109,7 @@ func TestAmapReportsAFailedSearch(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider := NewAmap("wrong", server.URL)
+	provider := NewAmap("wrong", "", server.URL)
 	if _, err := provider.Search(context.Background(), "anything", 8); err == nil {
 		t.Fatal("a failed search was reported as a success")
 	}

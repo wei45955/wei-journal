@@ -2,11 +2,14 @@ package geocode
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -16,20 +19,25 @@ import (
 // than the OpenStreetMap one at Chinese place names, which is what makes it
 // worth having. It answers in GCJ-02, so the coordinates are converted back
 // to WGS-84 before they leave this package.
+//
+// A key whose account has the digital signature switched on also needs the
+// secret: every request then carries a signature over its own parameters.
 type Amap struct {
 	Key      string
+	Secret   string
 	BaseURL  string
 	Client   *http.Client
 	CityCode string
 }
 
 // NewAmap builds a client for the Amap web service.
-func NewAmap(key, baseURL string) *Amap {
+func NewAmap(key, secret, baseURL string) *Amap {
 	if baseURL == "" {
 		baseURL = "https://restapi.amap.com"
 	}
 	return &Amap{
 		Key:     strings.TrimSpace(key),
+		Secret:  strings.TrimSpace(secret),
 		BaseURL: strings.TrimRight(baseURL, "/"),
 		Client:  &http.Client{Timeout: 10 * time.Second},
 	}
@@ -168,6 +176,7 @@ func (s *looseString) UnmarshalJSON(data []byte) error {
 func (s looseString) String() string { return strings.TrimSpace(string(s)) }
 
 func (a *Amap) get(ctx context.Context, path string, params url.Values) ([]byte, error) {
+	params = a.sign(params)
 	endpoint := a.BaseURL + path + "?" + params.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -182,6 +191,40 @@ func (a *Amap) get(ctx context.Context, path string, params url.Values) ([]byte,
 		return nil, fmt.Errorf("place search failed with status %d", resp.StatusCode)
 	}
 	return io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+}
+
+// sign adds the signature an account with the digital signature switched on
+// requires: the parameters in the order of their names, joined into one
+// string, with the secret behind it, hashed. Without it that account is
+// answered with an invalid-user-key error.
+func (a *Amap) sign(params url.Values) url.Values {
+	if a.Secret == "" {
+		return params
+	}
+	names := make([]string, 0, len(params))
+	for name := range params {
+		if name == "sig" {
+			continue
+		}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var joined strings.Builder
+	for i, name := range names {
+		if i > 0 {
+			joined.WriteByte('&')
+		}
+		joined.WriteString(name)
+		joined.WriteByte('=')
+		joined.WriteString(params.Get(name))
+	}
+	sum := md5.Sum([]byte(joined.String() + a.Secret))
+	signed := url.Values{}
+	for name, values := range params {
+		signed[name] = values
+	}
+	signed.Set("sig", hex.EncodeToString(sum[:]))
+	return signed
 }
 
 // parseAmapLocation reads a coordinate pair written as "longitude,latitude"
