@@ -95,6 +95,43 @@ func TestAmapReverseReadsAnEmptyAddressList(t *testing.T) {
 	}
 }
 
+// TestAmapReverseNamesTheNearestPlace covers the order of the answer: the
+// service does not put the nearest place first, and the first one is often a
+// building a hundred metres away rather than the square underfoot.
+func TestAmapReverseNamesTheNearestPlace(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"status": "1",
+			"info": "OK",
+			"regeocode": {
+				"formatted_address": "somewhere",
+				"pois": [
+					{"name": "a far building", "address": "one road", "distance": "107.159"},
+					{"name": "the square", "address": "other road", "distance": "24.2732"},
+					{"name": "an office", "address": "third road", "distance": "153.818"}
+				]
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	provider := NewAmap("secret", "", server.URL)
+	place, err := provider.Reverse(context.Background(), 24.799999, 118.666666)
+	if err != nil {
+		t.Fatalf("reverse failed: %v", err)
+	}
+	if place == nil {
+		t.Fatal("the reverse lookup answered with nothing")
+	}
+	if place.Name != "the square" {
+		t.Errorf("the point was named %q, want %q", place.Name, "the square")
+	}
+	if place.Address != "other road" {
+		t.Errorf("the address is %q, want %q", place.Address, "other road")
+	}
+}
+
 func TestNominatimReverseSaysWhenItDoesNotKnow(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

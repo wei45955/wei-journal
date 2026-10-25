@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -122,10 +123,7 @@ func (a *Amap) Reverse(ctx context.Context, lat, lon float64) (*Place, error) {
 		Info      string `json:"info"`
 		Regeocode struct {
 			FormattedAddress looseString `json:"formatted_address"`
-			POIs             []struct {
-				Name    string      `json:"name"`
-				Address looseString `json:"address"`
-			} `json:"pois"`
+			POIs             []amapPOI   `json:"pois"`
 		} `json:"regeocode"`
 	}
 	if err := json.Unmarshal(body, &raw); err != nil {
@@ -144,13 +142,44 @@ func (a *Amap) Reverse(ctx context.Context, lat, lon float64) (*Place, error) {
 		Latitude:  lat,
 		Longitude: lon,
 	}
-	if len(raw.Regeocode.POIs) > 0 {
-		place.Name = strings.TrimSpace(raw.Regeocode.POIs[0].Name)
-		if address := raw.Regeocode.POIs[0].Address.String(); address != "" {
+	// The nearest place names the point best, and the service does not put
+	// them in that order.
+	if nearest := closestPOI(raw.Regeocode.POIs); nearest != nil {
+		place.Name = strings.TrimSpace(nearest.Name)
+		if address := nearest.Address.String(); address != "" {
 			place.Address = address
 		}
 	}
 	return place, nil
+}
+
+// amapPOI is a point of interest in a reverse answer. The distance is how
+// far it stands from the point that was asked about, in metres.
+type amapPOI struct {
+	Name     string      `json:"name"`
+	Address  looseString `json:"address"`
+	Distance looseString `json:"distance"`
+}
+
+// closestPOI picks the place that stands nearest the point. A place without
+// a distance is not a candidate; when none has one, the first is used.
+func closestPOI(pois []amapPOI) *amapPOI {
+	if len(pois) == 0 {
+		return nil
+	}
+	best := 0
+	bestDistance := math.MaxFloat64
+	for i := range pois {
+		distance, err := strconv.ParseFloat(pois[i].Distance.String(), 64)
+		if err != nil {
+			continue
+		}
+		if distance < bestDistance {
+			best = i
+			bestDistance = distance
+		}
+	}
+	return &pois[best]
 }
 
 // looseString reads a string that the service sometimes sends as an empty
