@@ -8,7 +8,7 @@ import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style'
 import { ApiError, api } from '../../lib/api'
 import { peek, prime, useResource } from '../../lib/cache'
 import { cn } from '../../lib/cn'
-import { displayTimezone, formatTime, localDateKey, longDate, wallInputToISO } from '../../lib/format'
+import { dayParts, displayTimezone, formatTime, localDateKey, longDate, wallInputToISO } from '../../lib/format'
 import { dropDraft, readDraft, writeDraft, type Draft } from '../../lib/drafts'
 import type { AIStatus, DocNode, Entry, Media, PlaceRef, Stroke, Tag } from '../../lib/types'
 import { usePrefs } from '../../state/auth'
@@ -17,7 +17,8 @@ import { useToast } from '../../state/toast'
 import { TopBar, useBack } from '../../shell/TopBar'
 import { Button, Skeleton, Spinner, ErrorState } from '../../ui'
 import { ConfirmSheet, Sheet } from '../../ui/Sheet'
-import { CheckIcon, ChevronDownIcon, CloseIcon, FolderIcon, PlaceIcon, StarFilledIcon, StarIcon } from '../../ui/icons'
+import { Seal } from '../../ui/Seal'
+import { ChevronDownIcon, CloseIcon, FolderIcon, PlaceIcon, StarFilledIcon, StarIcon } from '../../ui/icons'
 import { Thumb, isPicture, isFilm } from '../media/Thumb'
 import { Viewer } from '../media/Viewer'
 import { useUploader } from '../media/upload'
@@ -504,7 +505,7 @@ export function EditorPage() {
   }
 
   return (
-    <div className="pb-40">
+    <div className="pb-32">
       <TopBar
         alwaysTitle
         title={<SaveStatus state={saveState} onRetry={() => void save()} />}
@@ -517,16 +518,16 @@ export function EditorPage() {
       />
 
       {saveState === 'conflict' ? (
-        <div role="alert" className="mb-4 rounded-[16px] bg-danger-soft px-4 py-3 text-[0.875rem] leading-snug text-danger animate-fade">
+        <div role="alert" className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-sm leading-snug text-danger animate-fade">
           {t('editor.conflict')}
-          <Button size="sm" tone="secondary" className="mt-2.5 bg-leaf" onClick={() => void loadNewer()}>
+          <Button size="sm" tone="secondary" className="mt-2 bg-leaf" onClick={() => void loadNewer()}>
             {t('editor.loadLatest')}
           </Button>
         </div>
       ) : null}
 
       {draft ? (
-        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[16px] bg-accent-soft px-4 py-3 text-[0.875rem] text-ink animate-fade">
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-accent-soft px-4 py-3 text-sm text-ink animate-fade">
           <span className="min-w-0 flex-1">{t('editor.draftFound', { time: formatTime(new Date(draft.savedAt).toISOString(), language, zone) })}</span>
           <span className="flex gap-1">
             <Button size="sm" tone="quiet" onClick={() => { dropDraft(draftKey()); setDraft(null) }}>
@@ -541,10 +542,10 @@ export function EditorPage() {
 
       {loading ? (
         <div className="flex flex-col gap-3 pt-2" aria-busy="true">
-          <Skeleton className="h-4 w-48 rounded-md" />
+          <Skeleton className="h-4 w-48 rounded" />
           <Skeleton className="h-10 w-2/3 rounded-lg" />
-          <Skeleton className="h-4 w-full rounded-md" />
-          <Skeleton className="h-4 w-5/6 rounded-md" />
+          <Skeleton className="h-4 w-full rounded" />
+          <Skeleton className="h-4 w-5/6 rounded" />
         </div>
       ) : null}
 
@@ -552,11 +553,14 @@ export function EditorPage() {
         <button
           type="button"
           onClick={() => setTool('time')}
-          className="press -ml-1 flex items-center gap-1.5 rounded-full px-1 py-1 text-[0.9375rem] text-ink-2"
+          className="press -ml-1 flex items-center gap-2 rounded-lg py-1 pr-1 text-left text-sm text-ink-2"
         >
-          <span>{longDate(day, language)}</span>
+          <Seal size={28} muted label={longDate(day, language)}>
+            {dayParts(day, language).day}
+          </Seal>
+          <span className="font-medium text-ink">{longDate(day, language)}</span>
           <span className="tnum text-ink-3">{formatTime(state.eventTime, language, state.timezone)}</span>
-          <ChevronDownIcon size={16} className="text-ink-3" />
+          <ChevronDownIcon size={15} className="text-ink-3" />
         </button>
 
         <textarea
@@ -572,7 +576,7 @@ export function EditorPage() {
           placeholder={t('editor.titlePlaceholder')}
           aria-label={t('editor.titlePlaceholder')}
           maxLength={300}
-          className="mt-2 block w-full resize-none bg-transparent font-serif text-[1.875rem] leading-[1.2] font-medium text-ink outline-none [field-sizing:content] placeholder:text-ink-3/70 [font-variation-settings:'opsz'_60]"
+          className="heading-1 mt-3 block w-full resize-none bg-transparent text-ink outline-none [field-sizing:content] placeholder:text-ink-3/70"
         />
 
         {visual.length > 0 || uploader.busy ? (
@@ -580,11 +584,11 @@ export function EditorPage() {
             {visual.map((item, index) => {
               const cover = state.coverMediaId === item.id
               return (
-                <div key={item.id} className="relative size-[6.5rem] shrink-0 overflow-hidden rounded-[14px] bg-well">
+                <div key={item.id} className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-well">
                   <button type="button" className="block size-full" aria-label={item.originalName} onClick={() => setViewer(index)}>
                     <Thumb media={item} />
                     {!isPicture(item) && !isFilm(item) ? (
-                      <span className="absolute inset-x-1.5 bottom-1.5 truncate text-[0.6875rem] text-ink-2">{item.originalName}</span>
+                      <span className="absolute inset-x-1.5 bottom-1.5 truncate text-xs text-ink-2">{item.originalName}</span>
                     ) : null}
                   </button>
                   {isPicture(item) ? (
@@ -617,9 +621,9 @@ export function EditorPage() {
               )
             })}
             {uploader.busy ? (
-              <div className="flex size-[6.5rem] shrink-0 flex-col items-center justify-center gap-2 rounded-[14px] bg-well text-ink-2" role="status">
+              <div className="flex size-24 shrink-0 flex-col items-center justify-center gap-2 rounded-xl bg-well text-ink-2" role="status">
                 <Spinner size={20} />
-                <span className="tnum text-[0.75rem]">
+                <span className="tnum text-xs">
                   {uploader.phase.state === 'uploading' ? t('media.uploading', { percent: uploader.phase.percent }) : t('media.preparing')}
                 </span>
               </div>
@@ -635,7 +639,7 @@ export function EditorPage() {
           <button
             type="button"
             onClick={() => setTool('sketch')}
-            className="mt-2 block w-full overflow-hidden rounded-[18px] bg-leaf p-2 text-left"
+            className="mt-2 block w-full overflow-hidden rounded-xl bg-leaf p-2 text-left hairline"
             aria-label={t('editor.sketch')}
           >
             <SketchView strokes={state.drawing} className="block aspect-[4/3] max-h-64 w-full" />
@@ -645,19 +649,19 @@ export function EditorPage() {
         {folderName || state.location || state.tags.length ? (
           <div className="mt-6 flex flex-wrap gap-2">
             {folderName ? (
-              <button type="button" onClick={() => setTool('folder')} className="press flex h-9 items-center gap-1.5 rounded-full bg-well px-3.5 text-[0.875rem] text-ink">
+              <button type="button" onClick={() => setTool('folder')} className="press flex h-9 items-center gap-1.5 rounded-md bg-well px-3 text-sm text-ink">
                 <FolderIcon size={16} className="text-ink-3" />
                 {folderName}
               </button>
             ) : null}
             {state.location ? (
-              <button type="button" onClick={() => setTool('place')} className="press flex h-9 max-w-full items-center gap-1.5 rounded-full bg-well px-3.5 text-[0.875rem] text-ink">
+              <button type="button" onClick={() => setTool('place')} className="press flex h-9 max-w-full items-center gap-1.5 rounded-md bg-well px-3 text-sm text-ink">
                 <PlaceIcon size={16} className="shrink-0 text-ink-3" />
                 <span className="truncate">{state.location.name || state.location.address}</span>
               </button>
             ) : null}
             {state.tags.map((tag) => (
-              <button key={tag.id} type="button" onClick={() => setTool('tags')} className="press flex h-9 items-center rounded-full bg-accent-soft px-3.5 text-[0.875rem] text-accent">
+              <button key={tag.id} type="button" onClick={() => setTool('tags')} className="press flex h-9 items-center rounded-md bg-accent-soft px-3 text-sm text-accent">
                 #{tag.name}
               </button>
             ))}
@@ -781,7 +785,7 @@ export function EditorPage() {
 function CloseButton({ onClick }: { onClick: () => void }) {
   const { t } = useTranslation()
   return (
-    <button type="button" onClick={onClick} aria-label={t('nav.back')} className="press -ml-1 flex size-11 items-center justify-center rounded-full text-ink-2">
+    <button type="button" onClick={onClick} aria-label={t('nav.back')} className="press -ml-1 flex size-11 items-center justify-center rounded-lg text-ink-2 hover:bg-well hover:text-ink">
       <CloseIcon size={22} />
     </button>
   )
@@ -789,20 +793,22 @@ function CloseButton({ onClick }: { onClick: () => void }) {
 
 function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
   const { t } = useTranslation()
-  if (state === 'saving') return <span className="text-[0.8125rem] font-normal text-ink-3">{t('editor.saving')}</span>
+  if (state === 'saving') return <span className="caption text-ink-3">{t('editor.saving')}</span>
   if (state === 'saved')
     return (
-      <span className="inline-flex items-center gap-1 text-[0.8125rem] font-normal text-ink-3 animate-fade">
-        <CheckIcon size={14} strokeWidth={2} />
+      <span className="caption inline-flex items-center gap-1.5 text-ink-3 animate-fade">
+        <Seal size={17} stamp>
+          {''}
+        </Seal>
         {t('editor.saved')}
       </span>
     )
   if (state === 'error')
     return (
-      <button type="button" onClick={onRetry} className="pointer-events-auto text-[0.8125rem] font-medium text-danger">
+      <button type="button" onClick={onRetry} className="pointer-events-auto caption font-medium text-danger">
         {t('editor.failed')} <span className="underline underline-offset-2">{t('editor.retry')}</span>
       </button>
     )
-  if (state === 'dirty') return <span className="text-[0.8125rem] font-normal text-ink-3">{t('editor.unsaved')}</span>
+  if (state === 'dirty') return <span className="caption text-ink-3">{t('editor.unsaved')}</span>
   return null
 }

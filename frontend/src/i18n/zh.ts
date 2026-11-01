@@ -59,6 +59,8 @@ export const zh: Dictionary = {
     taken: '这个用户名已被使用。',
     tooShort: '密码至少需要 8 个字符。',
     firstAdmin: '新安装后创建的第一个账户会成为管理员。',
+    tagline: '把今天，写下来。',
+    taglineLead: '一天一页，留给明天的自己。',
   },
   timeline: {
     allEntries: '全部日记',
@@ -73,6 +75,8 @@ export const zh: Dictionary = {
     emptyFilteredBody: '调整或清除筛选条件，查看更多日记。',
     older: '显示更早的日记',
     end: '已经是全部了。',
+    todayPrompt: '今天，想记下什么？',
+    writeToday: '写今天',
     newestFirst: '最新在前',
     oldestFirst: '最早在前',
     filter: '筛选',

@@ -8,10 +8,11 @@ import { usePrefs } from '../../state/auth'
 import { activeFilterCount, noFilters, toQuery, useJournal } from '../../state/journal'
 import { useFolders, useTags } from '../../state/library'
 import { useToast } from '../../state/toast'
-import { PageTitle, TopBar } from '../../shell/TopBar'
+import { TopBar } from '../../shell/TopBar'
 import { Button, EmptyState, ErrorState, IconButton, Skeleton, Spinner } from '../../ui'
+import { Seal } from '../../ui/Seal'
 import { Menu } from '../../ui/Popover'
-import { ChevronDownIcon, CloseIcon, FilterIcon, FolderIcon, GearIcon, MoreIcon, SelectIcon, SortIcon } from '../../ui/icons'
+import { ChevronDownIcon, CloseIcon, FilterIcon, FolderIcon, GearIcon, MoreIcon, PenIcon, SelectIcon, SortIcon } from '../../ui/icons'
 import { Viewer } from '../media/Viewer'
 import { splitMedia } from '../media/Thumb'
 import { BatchBar } from './BatchBar'
@@ -162,7 +163,7 @@ export function TimelinePage() {
         alwaysTitle={selecting}
         leading={
           selecting ? (
-            <button type="button" onClick={exitSelection} className="press h-11 rounded-full px-2 text-[1rem] text-accent">
+            <button type="button" onClick={exitSelection} className="press h-11 rounded-lg px-2 text-base font-medium text-accent">
               {t('common.cancel')}
             </button>
           ) : null
@@ -172,7 +173,7 @@ export function TimelinePage() {
             <button
               type="button"
               onClick={() => setSelected(allSelected ? [] : entries.map((entry) => entry.id))}
-              className="press h-11 rounded-full px-2 text-[1rem] text-accent"
+              className="press h-11 rounded-lg px-2 text-base font-medium text-accent"
             >
               {allSelected ? t('batch.selectNone') : t('batch.selectAll')}
             </button>
@@ -194,36 +195,56 @@ export function TimelinePage() {
         }
       />
 
-      <PageTitle
-        sub={
-          selecting ? (
-            t('batch.prompt')
-          ) : folder ? (
-            t('timeline.count', { count: folder.entryCount })
-          ) : scope === undefined ? (
-            longDate(today, language)
-          ) : null
-        }
-      >
-        <button
-          ref={scopeRef}
-          type="button"
-          onClick={() => setMenu(menu === 'scope' ? null : 'scope')}
-          disabled={selecting}
-          className="press -ml-0.5 inline-flex max-w-full items-center gap-1.5 rounded-[10px] text-left disabled:opacity-100"
-          aria-haspopup="dialog"
-        >
-          <span className="truncate">{title || '\u00a0'}</span>
-          {!selecting ? <ChevronDownIcon size={22} strokeWidth={2} className="mt-1.5 shrink-0 text-ink-3" /> : null}
-        </button>
-      </PageTitle>
+      {selecting ? (
+        <p className="body-2 pt-1 pb-6 text-ink-2">{t('batch.prompt')}</p>
+      ) : scope === undefined ? (
+        <>
+          <div className="flex items-center justify-between pt-1">
+            <button
+              ref={scopeRef}
+              type="button"
+              onClick={() => setMenu(menu === 'scope' ? null : 'scope')}
+              className="press inline-flex h-9 max-w-full items-center gap-1 rounded-lg text-sm text-ink-2 hover:text-ink"
+              aria-haspopup="dialog"
+            >
+              <span className="truncate">{title}</span>
+              <ChevronDownIcon size={16} className="shrink-0 text-ink-3" />
+            </button>
+          </div>
+          <TodayHero today={today} language={language} />
+        </>
+      ) : (
+        <div className="flex items-start justify-between gap-4 pt-2 pb-8">
+          <div className="min-w-0">
+            <button
+              ref={scopeRef}
+              type="button"
+              onClick={() => setMenu(menu === 'scope' ? null : 'scope')}
+              className="press inline-flex max-w-full items-center gap-1.5 rounded-lg text-left"
+              aria-haspopup="dialog"
+            >
+              <span className="heading-1 truncate text-ink">{title || '\u00a0'}</span>
+              <ChevronDownIcon size={22} strokeWidth={1.7} className="mt-1 shrink-0 text-ink-3" />
+            </button>
+            {folder ? <p className="body-2 mt-2 text-ink-2">{t('timeline.count', { count: folder.entryCount })}</p> : null}
+          </div>
+          <Button
+            tone="primary"
+            size="sm"
+            icon={<PenIcon size={16} />}
+            onClick={() => navigate(typeof scope === 'number' ? `/write?folder=${scope}` : '/write')}
+          >
+            {t('nav.write')}
+          </Button>
+        </div>
+      )}
 
       {chips.length > 0 ? (
         <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 no-scrollbar sm:mx-0 sm:px-0">
           {chips.map((chip) => (
-            <span key={chip.id} className="flex h-8 shrink-0 items-center gap-0.5 rounded-full bg-accent-soft pr-0.5 pl-3 text-[0.8125rem] text-accent">
+            <span key={chip.id} className="flex h-8 shrink-0 items-center gap-0.5 rounded-md bg-accent-soft pr-1 pl-3 text-sm text-accent">
               <span className="max-w-[14rem] truncate">{chip.label}</span>
-              <button type="button" aria-label={t('common.clear')} onClick={chip.clear} className="press flex size-7 items-center justify-center rounded-full">
+              <button type="button" aria-label={t('common.clear')} onClick={chip.clear} className="press flex size-6 items-center justify-center rounded">
                 <CloseIcon size={14} strokeWidth={2} />
               </button>
             </span>
@@ -247,20 +268,23 @@ export function TimelinePage() {
             title={scope === undefined ? t('timeline.emptyTitle') : t('timeline.emptyFolderTitle')}
             body={scope === undefined ? t('timeline.emptyBody') : t('timeline.emptyFolderBody')}
             action={
-              <Button tone="primary" onClick={() => navigate(typeof scope === 'number' ? `/write?folder=${scope}` : '/write')}>
-                {t('nav.write')}
-              </Button>
+              scope === undefined ? undefined : (
+                <Button tone="primary" onClick={() => navigate(typeof scope === 'number' ? `/write?folder=${scope}` : '/write')}>
+                  {t('nav.write')}
+                </Button>
+              )
             }
           />
         )
       ) : (
-        <div className="flex flex-col gap-9">
+        <div className="flex flex-col gap-10">
           {months.map((month, monthIndex) => (
             <section key={month.month} aria-label={monthLabel(month.month, language)}>
               {monthIndex > 0 || month.month !== today.slice(0, 7) ? (
-                <h2 className="mb-4 font-serif text-[1.25rem] text-ink-2 [font-variation-settings:'opsz'_30]">
-                  {monthLabel(month.month, language)}
-                </h2>
+                <div className="mb-4 flex items-baseline gap-3">
+                  <h2 className="heading-3 text-ink-2">{monthLabel(month.month, language)}</h2>
+                  <span aria-hidden="true" className="h-px flex-1 bg-rule" />
+                </div>
               ) : null}
               <div className="flex flex-col gap-6">
                 {month.days.map((group) => (
@@ -292,7 +316,7 @@ export function TimelinePage() {
                 {t('timeline.older')}
               </Button>
             ) : (
-              <p className="font-serif text-[0.9375rem] text-ink-3 italic">{t('timeline.end')}</p>
+              <p className="font-serif text-base text-ink-3">{t('timeline.end')}</p>
             )}
           </div>
         </div>
@@ -364,7 +388,7 @@ function DayRow({
   const parts = dayParts(group.day, language)
   const isToday = group.day === today
   return (
-    <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-3 sm:grid-cols-[3.5rem_minmax(0,1fr)] sm:gap-x-5">
+    <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3 sm:grid-cols-[3.5rem_minmax(0,1fr)] sm:gap-x-6">
       <Link
         to={`/archive?day=${group.day}`}
         className="sticky top-[calc(env(safe-area-inset-top)+64px)] flex flex-col items-center self-start pt-1 text-center"
@@ -372,15 +396,16 @@ function DayRow({
       >
         <span
           className={cn(
-            'tnum font-serif text-[1.75rem] leading-none font-medium [font-variation-settings:"opsz"_48]',
-            isToday ? 'text-accent' : 'text-ink',
+            'tnum font-serif text-3xl leading-none font-medium [font-variation-settings:"opsz"_48]',
+            isToday ? 'text-seal' : 'text-ink',
           )}
         >
           {parts.day}
         </span>
-        <span className={cn('mt-1.5 text-[0.75rem] leading-none', isToday ? 'font-medium text-accent' : 'text-ink-3')}>
+        <span className={cn('mt-1.5 text-xs leading-none', isToday ? 'font-medium text-seal' : 'text-ink-3')}>
           {isToday ? t('common.today') : parts.weekday}
         </span>
+        {isToday ? <span aria-hidden="true" className="mt-1 size-1 rounded-full bg-seal" /> : null}
       </Link>
       <div className="flex flex-col gap-3">
         {group.entries.map((entry, index) => (
@@ -401,21 +426,54 @@ function DayRow({
   )
 }
 
+function TodayHero({ today, language }: { today: string; language: string }) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const parts = dayParts(today, language)
+  const year = today.slice(0, 4)
+
+  return (
+    <section className="pt-6 pb-8 sm:pt-8 sm:pb-10" aria-label={t('common.today')}>
+      <div className="flex items-start gap-4">
+        <span className="date-numeral text-ink">{parts.day}</span>
+        <div className="flex items-end gap-3 pt-1">
+          <div>
+            <p className="title-3 text-ink">{parts.weekday}</p>
+            <p className="caption tnum mt-0.5 text-ink-3">
+              {year} · {parts.month}
+            </p>
+          </div>
+          <Seal size={38} stamp label={t('common.today')}>
+            今
+          </Seal>
+        </div>
+      </div>
+
+      <div className="mt-6 flex items-center justify-between gap-4 border-t border-rule pt-4">
+        <p className="reading max-w-[18ch] text-balance text-ink-2">{t('timeline.todayPrompt')}</p>
+        <Button tone="primary" icon={<PenIcon size={17} />} onClick={() => navigate('/write')}>
+          {t('timeline.writeToday')}
+        </Button>
+      </div>
+    </section>
+  )
+}
+
 function TimelineSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true">
       {[0, 1, 2].map((index) => (
-        <div key={index} className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-3 sm:grid-cols-[3.5rem_minmax(0,1fr)] sm:gap-x-5">
+        <div key={index} className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3 sm:grid-cols-[3.5rem_minmax(0,1fr)] sm:gap-x-6">
           <div className="flex flex-col items-center gap-2 pt-1">
-            <Skeleton className="h-7 w-8 rounded-md" />
+            <Skeleton className="h-7 w-7 rounded" />
             <Skeleton className="h-3 w-6 rounded" />
           </div>
-          <div className="overflow-hidden rounded-[20px] bg-leaf">
+          <div className="overflow-hidden rounded-xl bg-leaf">
             {index === 0 ? <Skeleton className="aspect-[4/3] rounded-none" /> : null}
             <div className="flex flex-col gap-2.5 p-4">
-              <Skeleton className="h-5 w-2/3 rounded-md" />
-              <Skeleton className="h-4 w-full rounded-md" />
-              <Skeleton className="h-4 w-4/5 rounded-md" />
+              <Skeleton className="h-5 w-2/3 rounded" />
+              <Skeleton className="h-4 w-full rounded" />
+              <Skeleton className="h-4 w-4/5 rounded" />
             </div>
           </div>
         </div>

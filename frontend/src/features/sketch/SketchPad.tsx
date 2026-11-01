@@ -98,7 +98,7 @@ export function SketchPad({ strokes, onChange }: { strokes: Stroke[]; onChange: 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-hidden rounded-[18px] bg-paper hairline">
+      <div className="overflow-hidden rounded-xl bg-paper hairline">
         <svg
           ref={svg}
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}

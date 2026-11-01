@@ -69,7 +69,11 @@ export function load<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
     },
     (error) => {
       if (mine !== generation) return
-      slots.set(key, { data: current?.data, error, at: current?.at ?? 0 })
+      // A failed read counts as fresh so the effect above does not fire it
+      // again on the very next render. Without this a failure, a rate limit
+      // above all, turns into an endless stream of requests. The error stays
+      // visible and the reader can retry it by hand.
+      slots.set(key, { data: current?.data, error, at: Date.now() })
       emit(key)
     },
   )

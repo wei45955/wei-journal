@@ -84,16 +84,16 @@ export function PlacesPage() {
       <PageTitle sub={places.data ? t('map.count', { count: visible.length }) : null}>{t('map.title')}</PageTitle>
 
       {places.loading ? (
-        <Skeleton className="-mx-5 h-[58dvh] rounded-none sm:mx-0 sm:rounded-[22px]" />
+        <Skeleton className="h-[52dvh] min-h-80 w-full rounded-xl" />
       ) : places.error && !places.data ? (
         <ErrorState message={describe(places.error)} onRetry={() => void places.reload()} />
       ) : (places.data ?? []).length === 0 && !filtered ? (
         <EmptyState art={<MapArt />} title={t('map.emptyTitle')} body={t('map.emptyBody')} />
       ) : (
         <>
-          <div className="relative isolate -mx-5 h-[58dvh] min-h-[22rem] overflow-hidden bg-well sm:mx-0 sm:rounded-[22px]">
+          <div className="relative isolate h-[52dvh] min-h-80 overflow-hidden rounded-xl bg-well hairline">
             {unavailable ? (
-              <p className="flex size-full items-center justify-center px-8 text-center text-[0.9375rem] text-ink-2">{t('map.unavailable')}</p>
+              <p className="body-2 flex size-full items-center justify-center px-8 text-center text-ink-2">{t('map.unavailable')}</p>
             ) : (
               <MapCanvas
                 places={visible}
@@ -107,7 +107,7 @@ export function PlacesPage() {
                 label={t('map.title')}
               />
             )}
-            <div className="absolute top-3 right-3 z-[500] flex flex-col overflow-hidden rounded-[14px] glass shadow-float">
+            <div className="absolute top-3 right-3 z-[500] flex flex-col overflow-hidden rounded-lg glass hairline shadow-float">
               <button
                 type="button"
                 aria-label={t('map.fit')}
@@ -125,9 +125,9 @@ export function PlacesPage() {
               <PlaceCard place={selected} language={language} dateFormat={dateFormat} onClose={() => setSelected(null)} />
             ) : null}
           </div>
-          {tileError ? <p className="mt-2 text-[0.8125rem] text-ink-3">{t('map.tileError')}</p> : null}
+          {tileError ? <p className="caption mt-2 text-ink-3">{t('map.tileError')}</p> : null}
 
-          <ul className="mt-6 overflow-hidden rounded-[20px] bg-leaf">
+          <ul className="mt-5 overflow-hidden rounded-xl bg-leaf hairline">
             {visible.map((place, index) => (
               <li key={place.id} className={cn(index > 0 && 'border-t border-rule')}>
                 <button
@@ -136,22 +136,22 @@ export function PlacesPage() {
                     setSelected(place)
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
-                  className="flex min-h-[64px] w-full items-center gap-3 px-4 py-2.5 text-left active:bg-well"
+                  className="press flex min-h-16 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-well/60"
                 >
                   {place.thumbUrl ? (
-                    <img src={place.thumbUrl} alt="" loading="lazy" className="size-11 shrink-0 rounded-[10px] bg-well object-cover" />
+                    <img src={place.thumbUrl} alt="" loading="lazy" className="size-11 shrink-0 rounded-lg bg-well object-cover" />
                   ) : (
-                    <span className="flex size-11 shrink-0 items-center justify-center rounded-[10px] bg-accent-soft text-accent">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
                       <PlaceIcon size={20} />
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[1rem] text-ink">{place.name || place.title || t('map.unnamed')}</span>
-                    <span className="block truncate text-[0.8125rem] text-ink-3">
+                    <span className="title-2 block truncate text-ink">{place.name || place.title || t('map.unnamed')}</span>
+                    <span className="caption block truncate text-ink-3">
                       {place.date ? formatEventDate(place.date, language, dateFormat) : place.address}
                     </span>
                   </span>
-                  {place.entryCount > 1 ? <span className="tnum text-[0.8125rem] text-ink-3">{place.entryCount}</span> : null}
+                  {place.entryCount > 1 ? <span className="tnum caption text-ink-3">{place.entryCount}</span> : null}
                   <ChevronRightIcon size={18} className="shrink-0 text-ink-3" />
                 </button>
               </li>
@@ -175,17 +175,17 @@ function PlaceCard({ place, language, dateFormat, onClose }: { place: MapPlace; 
   const { t } = useTranslation()
   return (
     <div className="absolute inset-x-3 bottom-3 z-[500] animate-rise">
-      <div className="glass flex items-center gap-3 rounded-[18px] p-2.5 shadow-float">
+      <div className="glass flex items-center gap-3 rounded-xl p-2.5 shadow-float hairline">
         {place.thumbUrl ? (
-          <img src={place.thumbUrl} alt="" className="size-14 shrink-0 rounded-[12px] bg-well object-cover" />
+          <img src={place.thumbUrl} alt="" className="size-14 shrink-0 rounded-lg bg-well object-cover" />
         ) : (
-          <span className="flex size-14 shrink-0 items-center justify-center rounded-[12px] bg-accent-soft text-accent">
+          <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
             <PlaceIcon size={24} />
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[1rem] font-medium text-ink">{place.name || place.title || t('map.unnamed')}</p>
-          <p className="truncate text-[0.8125rem] text-ink-2">
+          <p className="title-2 truncate text-ink">{place.name || place.title || t('map.unnamed')}</p>
+          <p className="caption truncate text-ink-2">
             {place.entryCount > 1 ? t('map.here', { count: place.entryCount }) : place.date ? formatEventDate(place.date, language, dateFormat) : place.address}
           </p>
         </div>
@@ -230,21 +230,21 @@ function PlaceFilterMenu({
       anchorRef={anchorRef}
       placement="bottom-end"
       label={t('map.filter')}
-      className="w-[19rem] max-w-[calc(100vw_-_1.5rem)] overflow-hidden"
+      className="w-76 max-w-[calc(100vw_-_1.5rem)] overflow-hidden"
     >
       <header className="flex items-center justify-between gap-3 border-b border-rule px-4 py-2.5">
-        <h2 className="text-[0.9375rem] font-semibold text-ink">{t('map.filter')}</h2>
+        <h2 className="title-2 text-ink">{t('map.filter')}</h2>
         <button
           type="button"
           onClick={() => setDraft(NONE)}
-          className="press -mr-1 h-8 rounded-full px-2 text-[0.875rem] font-medium text-ink-2"
+          className="press -mr-1 h-8 rounded-md px-2 text-sm font-medium text-ink-2 hover:bg-well hover:text-ink"
         >
           {t('common.clear')}
         </button>
       </header>
 
       <div className="max-h-[min(58vh,25rem)] overflow-y-auto overscroll-contain px-4 py-3">
-      <h3 className="mb-2.5 text-[0.8125rem] font-semibold text-ink-2">{t('folder.title')}</h3>
+      <h3 className="caption mb-2.5 text-ink-3">{t('folder.title')}</h3>
       <div className="flex flex-wrap gap-1.5">
         <Chip selected={draft.folder === ''} onClick={() => setDraft({ ...draft, folder: '' })}>
           {t('map.anyFolder')}
@@ -260,7 +260,7 @@ function PlaceFilterMenu({
       </div>
       {tags.length > 0 ? (
         <>
-          <h3 className="mt-5 mb-2.5 text-[0.8125rem] font-semibold text-ink-2">{t('filters.tags')}</h3>
+          <h3 className="caption mt-5 mb-2.5 text-ink-3">{t('filters.tags')}</h3>
           <div className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
               <Chip
@@ -276,14 +276,14 @@ function PlaceFilterMenu({
           </div>
         </>
       ) : null}
-      <h3 className="mt-5 mb-2.5 text-[0.8125rem] font-semibold text-ink-2">{t('filters.dates')}</h3>
+      <h3 className="caption mt-5 mb-2.5 text-ink-3">{t('filters.dates')}</h3>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-[0.75rem] text-ink-3">{t('filters.from')}</span>
+          <span className="caption text-ink-3">{t('filters.from')}</span>
           <input type="date" value={draft.from} max={draft.to || undefined} onChange={(event) => setDraft({ ...draft, from: event.target.value })} className={inputClass} />
         </label>
         <label className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-[0.75rem] text-ink-3">{t('filters.to')}</span>
+          <span className="caption text-ink-3">{t('filters.to')}</span>
           <input type="date" value={draft.to} min={draft.from || undefined} onChange={(event) => setDraft({ ...draft, to: event.target.value })} className={inputClass} />
         </label>
       </div>

@@ -57,6 +57,8 @@ export const en = {
     taken: 'That username is taken.',
     tooShort: 'Use at least 8 characters for the password.',
     firstAdmin: 'The first account on a new installation becomes the administrator.',
+    tagline: 'Write today down.',
+    taglineLead: 'One page a day, for the person you will be tomorrow.',
   },
   timeline: {
     allEntries: 'All entries',
@@ -71,6 +73,8 @@ export const en = {
     emptyFilteredBody: 'Change or clear the filters to see more.',
     older: 'Show older entries',
     end: 'That’s everything.',
+    todayPrompt: 'What is worth remembering today?',
+    writeToday: 'Write today',
     newestFirst: 'Newest first',
     oldestFirst: 'Oldest first',
     filter: 'Filter',

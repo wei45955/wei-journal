@@ -66,28 +66,28 @@ export function AiNotes({ entry }: { entry: Entry }) {
   }
 
   return (
-    <section className="rounded-[20px] bg-well/60 px-5 py-4">
-      <h2 className="flex items-center gap-2 text-[0.875rem] font-semibold text-ink-2">
+    <section className="border-t border-rule pt-5">
+      <h2 className="title-3 flex items-center gap-2 text-ink-2">
         <SparkIcon size={17} className="text-accent" />
         {t('ai.title')}
       </h2>
 
       {text?.summary ? (
-        <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink">{text.summary}</p>
+        <p className="body-1 mt-2 text-ink">{text.summary}</p>
       ) : working ? (
-        <p className="mt-2 text-[0.9375rem] text-ink-2">{t('ai.pending')}</p>
+        <p className="body-2 mt-2 text-ink-2">{t('ai.pending')}</p>
       ) : askable ? null : unavailable ? (
-        <p className="mt-2 text-[0.9375rem] text-ink-2">{t('ai.unavailable')}</p>
+        <p className="body-2 mt-2 text-ink-2">{t('ai.unavailable')}</p>
       ) : failed ? (
-        <p className="mt-2 text-[0.9375rem] text-ink-2">{t('ai.failed')}</p>
+        <p className="body-2 mt-2 text-ink-2">{t('ai.failed')}</p>
       ) : null}
 
       {images.length > 0 ? (
         <div className="mt-3">
-          <p className="text-[0.8125rem] text-ink-3">{t('ai.photos')}</p>
+          <p className="caption text-ink-3">{t('ai.photos')}</p>
           <ul className="mt-1 flex flex-col gap-1.5">
             {images.map((item) => (
-              <li key={item.id} className="text-[0.9375rem] leading-relaxed text-ink-2">
+              <li key={item.id} className="body-2 text-ink-2">
                 {item.description}
               </li>
             ))}
@@ -96,15 +96,15 @@ export function AiNotes({ entry }: { entry: Entry }) {
       ) : null}
 
       {suggestions.length > 0 ? (
-        <div className="mt-3.5">
-          <p className="text-[0.8125rem] text-ink-3">{t('ai.suggested')}</p>
+        <div className="mt-4">
+          <p className="caption text-ink-3">{t('ai.suggested')}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {suggestions.slice(0, 8).map((name) => (
               <button
                 key={name}
                 type="button"
                 onClick={() => void addTag(name)}
-                className="press flex h-8 items-center gap-1 rounded-full bg-leaf pr-3 pl-2 text-[0.8125rem] text-ink"
+                className="press flex h-8 items-center gap-1 rounded-md bg-well pr-3 pl-2 text-sm text-ink hover:text-accent"
               >
                 <PlusIcon size={14} className="text-accent" />
                 {name}
@@ -114,8 +114,8 @@ export function AiNotes({ entry }: { entry: Entry }) {
         </div>
       ) : null}
 
-      <div className="mt-3.5 flex items-center justify-between gap-3">
-        <p className="text-[0.75rem] leading-snug text-ink-3">{askable ? t('ai.nothingYet') : t('ai.note')}</p>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <p className="caption text-ink-3">{askable ? t('ai.nothingYet') : t('ai.note')}</p>
         {askable ? (
           <Button size="sm" tone="quiet" loading={busy} onClick={() => void again()} className="-mr-3">
             {t('ai.ask')}

@@ -45,14 +45,14 @@ export function FilterMenu({
       anchorRef={anchorRef}
       placement="bottom-end"
       label={t('filters.title')}
-      className="w-[20rem] max-w-[calc(100vw_-_1.5rem)] overflow-hidden"
+      className="w-80 max-w-[calc(100vw_-_1.5rem)] overflow-hidden"
     >
       <header className="flex items-center justify-between gap-3 border-b border-rule px-4 py-2.5">
-        <h2 className="text-[0.9375rem] font-semibold text-ink">{t('filters.title')}</h2>
+        <h2 className="title-2 text-ink">{t('filters.title')}</h2>
         <button
           type="button"
           onClick={() => setDraft({ ...noFilters })}
-          className="press -mr-1 h-8 rounded-full px-2 text-[0.875rem] font-medium text-ink-2"
+          className="press -mr-1 h-8 rounded-md px-2 text-sm font-medium text-ink-2 hover:bg-well hover:text-ink"
         >
           {t('common.clear')}
         </button>
@@ -61,7 +61,7 @@ export function FilterMenu({
       <div className="max-h-[min(58vh,25rem)] overflow-y-auto overscroll-contain px-4 py-3">
         <section>
           <div className="mb-2.5 flex items-center justify-between gap-3">
-            <h3 className="text-[0.8125rem] font-semibold text-ink-2">{t('filters.tags')}</h3>
+            <h3 className="caption text-ink-3">{t('filters.tags')}</h3>
             {draft.tagIds.length > 1 ? (
               <Segmented
                 label={t('filters.tags')}
@@ -71,12 +71,12 @@ export function FilterMenu({
                   { value: 'any', label: t('filters.anyTag') },
                   { value: 'all', label: t('filters.allTags') },
                 ]}
-                className="w-[11.5rem]"
+                className="w-44"
               />
             ) : null}
           </div>
           {tags.length === 0 ? (
-            <p className="text-[0.875rem] text-ink-3">{t('filters.noTags')}</p>
+            <p className="body-2 text-ink-3">{t('filters.noTags')}</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => (
@@ -89,10 +89,10 @@ export function FilterMenu({
         </section>
 
         <section className="mt-5">
-          <h3 className="mb-2.5 text-[0.8125rem] font-semibold text-ink-2">{t('filters.dates')}</h3>
+          <h3 className="caption mb-2.5 text-ink-3">{t('filters.dates')}</h3>
           <div className="grid grid-cols-2 gap-2">
             <label className="flex min-w-0 flex-col gap-1.5">
-              <span className="text-[0.75rem] text-ink-3">{t('filters.from')}</span>
+              <span className="caption text-ink-3">{t('filters.from')}</span>
               <input
                 type="date"
                 value={draft.from ?? ''}
@@ -102,7 +102,7 @@ export function FilterMenu({
               />
             </label>
             <label className="flex min-w-0 flex-col gap-1.5">
-              <span className="text-[0.75rem] text-ink-3">{t('filters.to')}</span>
+              <span className="caption text-ink-3">{t('filters.to')}</span>
               <input
                 type="date"
                 value={draft.to ?? ''}
@@ -115,7 +115,7 @@ export function FilterMenu({
         </section>
 
         <section className="mt-5">
-          <h3 className="mb-2.5 text-[0.8125rem] font-semibold text-ink-2">{t('filters.contains')}</h3>
+          <h3 className="caption mb-2.5 text-ink-3">{t('filters.contains')}</h3>
           <div className="flex flex-wrap gap-1.5">
             {KINDS.map((kind) => (
               <Chip
@@ -129,8 +129,8 @@ export function FilterMenu({
           </div>
         </section>
 
-        <section className="mt-5 flex items-center justify-between gap-4 rounded-[14px] bg-paper px-3.5 py-2.5">
-          <span className="text-[0.9375rem] text-ink">{t('filters.pinnedOnly')}</span>
+        <section className="mt-5 flex items-center justify-between gap-4 rounded-lg bg-well px-3.5 py-2.5">
+          <span className="body-2 text-ink">{t('filters.pinnedOnly')}</span>
           <Switch
             label={t('filters.pinnedOnly')}
             checked={Boolean(draft.pinned)}

@@ -41,13 +41,13 @@ export function Mosaic({
           <VideoIcon size={15} />
         </span>
       ) : media.kind === 'live-still' ? (
-        <span className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[0.6875rem] font-medium text-white backdrop-blur-sm">
+        <span className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
           <LiveIcon size={13} />
           {t('media.live')}
         </span>
       ) : null}
       {index === shown.length - 1 && rest > 0 ? (
-        <span className="absolute inset-0 flex items-center justify-center bg-black/35 font-serif text-[1.5rem] text-white">
+        <span className="absolute inset-0 flex items-center justify-center bg-black/35 font-serif text-2xl text-white">
           +{rest}
         </span>
       ) : null}
@@ -63,7 +63,7 @@ export function Mosaic({
     // never takes the whole screen; landscapes keep their own shape.
     const aspect = Math.min(Math.max(ratio, 0.8), 1.9)
     return (
-      <div className={cn('w-full', className)} style={{ aspectRatio: String(aspect) }}>
+      <div className={cn('max-h-72 w-full', className)} style={{ aspectRatio: String(aspect) }}>
         {cell(media, 0)}
       </div>
     )

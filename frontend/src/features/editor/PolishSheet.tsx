@@ -141,13 +141,13 @@ export function PolishSheet({
       }
     >
       {!available ? (
-        <p role="status" className="mt-3 rounded-[14px] bg-accent-soft px-4 py-3 text-[0.875rem] leading-snug text-accent">
+        <p role="status" className="body-2 mt-3 rounded-lg bg-accent-soft px-4 py-3 text-accent">
           {reason}
         </p>
       ) : null}
 
       {empty ? (
-        <p role="status" className="mt-3 rounded-[14px] bg-well px-4 py-3 text-[0.875rem] leading-snug text-ink-2">
+        <p role="status" className="body-2 mt-3 rounded-lg bg-well px-4 py-3 text-ink-2">
           {t('polish.empty')}
         </p>
       ) : null}
@@ -161,7 +161,7 @@ export function PolishSheet({
       </div>
 
       <label className="mt-4 block">
-        <span className="mb-1.5 block text-[0.8125rem] text-ink-3">{t('polish.instruction')}</span>
+        <span className="caption mb-1.5 block text-ink-3">{t('polish.instruction')}</span>
         <textarea
           value={instruction}
           onChange={(event) => {
@@ -177,13 +177,13 @@ export function PolishSheet({
       </label>
 
       {error ? (
-        <p role="alert" className="mt-3 text-[0.875rem] text-danger">
+        <p role="alert" className="body-2 mt-3 text-danger">
           {error}
         </p>
       ) : null}
 
       {busy ? (
-        <p role="status" className="mt-4 flex items-center gap-2 text-[0.875rem] text-ink-3">
+        <p role="status" className="body-2 mt-4 flex items-center gap-2 text-ink-3">
           <Spinner size={16} />
           {t('polish.working')}
         </p>
@@ -192,17 +192,17 @@ export function PolishSheet({
       {result !== null ? (
         <div className="mt-4">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-[0.8125rem] font-semibold text-ink-2">{t('polish.result')}</h3>
-            <button type="button" onClick={() => setShowOriginal((value) => !value)} className="press text-[0.8125rem] font-medium text-accent">
+            <h3 className="caption text-ink-3">{t('polish.result')}</h3>
+            <button type="button" onClick={() => setShowOriginal((value) => !value)} className="press text-sm font-medium text-accent hover:text-ink">
               {showOriginal ? t('polish.hideOriginal') : t('polish.showOriginal')}
             </button>
           </div>
           {showOriginal ? (
-            <div className="mt-2 rounded-[14px] bg-well px-4 py-3 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-ink-2">
+            <div className="body-2 mt-2 rounded-lg bg-well px-4 py-3 whitespace-pre-wrap text-ink-2">
               {text}
             </div>
           ) : null}
-          <div className="mt-2 rounded-[14px] border border-rule px-4 py-3 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-ink">
+          <div className="body-1 mt-2 rounded-lg bg-well/50 px-4 py-3 whitespace-pre-wrap text-ink hairline">
             {result}
           </div>
           <Button tone="quiet" className="mt-2" onClick={() => void run()}>

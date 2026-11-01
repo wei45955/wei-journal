@@ -161,7 +161,7 @@ export function Sheet({ open, onClose, title, action, children, tall, width = 'm
         style={drag ? { transform: `translateY(${drag}px)`, transition: 'none' } : undefined}
         className={cn(
           'relative flex w-full flex-col overflow-hidden bg-leaf shadow-sheet outline-none',
-          'rounded-t-[26px] sm:rounded-[22px]',
+          'rounded-t-2xl sm:rounded-2xl',
           // The panel is as tall as its content, up to a limit. A sheet that
           // always fills the screen leaves a large blank band under a short
           // list of choices.
@@ -179,16 +179,16 @@ export function Sheet({ open, onClose, title, action, children, tall, width = 'm
           onPointerCancel={onPointerUp}
         >
           <div className="flex justify-center pt-2 pb-1 sm:hidden" aria-hidden="true">
-            <span className="h-[5px] w-9 rounded-full bg-rule" />
+            <span className="h-1 w-9 rounded-full bg-rule" />
           </div>
           {title || action ? (
             <header className="flex min-h-12 items-center gap-3 px-5 pt-1 pb-2 sm:pt-4">
-              <h2 className="min-w-0 flex-1 truncate text-[1.0625rem] font-semibold text-ink">{title}</h2>
+              <h2 className="title-1 min-w-0 flex-1 truncate text-ink">{title}</h2>
               {action ?? (
                 <button
                   type="button"
                   onClick={onClose}
-                  className="press -mr-2 h-10 rounded-full px-3 text-[0.9375rem] font-medium text-accent"
+                  className="press -mr-2 h-10 rounded-lg px-3 text-sm font-medium text-accent hover:bg-well"
                 >
                   {t('common.done')}
                 </button>
@@ -240,8 +240,8 @@ export function ConfirmSheet({
   return (
     <Sheet open={open} onClose={() => !busy && onClose()} width="sm" label={title}>
       <div className="pt-3 text-center sm:pt-6">
-        <h2 className="font-serif text-[1.375rem] leading-snug font-medium text-ink">{title}</h2>
-        {body ? <p className="mx-auto mt-2 max-w-[20rem] text-[0.9375rem] leading-relaxed text-ink-2">{body}</p> : null}
+        <h2 className="heading-3 text-ink">{title}</h2>
+        {body ? <p className="body-2 mx-auto mt-2 max-w-80 text-ink-2">{body}</p> : null}
       </div>
       <div className="mt-6 flex flex-col gap-2">
         <Button

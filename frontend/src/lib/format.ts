@@ -48,9 +48,41 @@ function formatPattern(date: Date, language: string, pattern: string): string {
 }
 
 /** Formats an ISO timestamp for display. */
-export function formatDateTime(iso: string, language = 'en', pattern = 'PPP p'): string {
-  const date = parseISO(iso)
-  if (!isValid(date)) return ''
+/**
+ * The wall clock of an instant in a named zone, as a Date whose local fields
+ * are those wall-clock fields. It lets `format` print a timestamp in the zone
+ * the reader chose, the same one that decides which day an entry belongs to.
+ */
+function inZone(date: Date, timeZone: string): Date {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date)
+    const field = (type: string) => Number(parts.find((part) => part.type === type)?.value)
+    const year = field('year')
+    const month = field('month')
+    const day = field('day')
+    const hour = field('hour')
+    const minute = field('minute')
+    const second = field('second')
+    if ([year, month, day, hour, minute, second].some((value) => !Number.isFinite(value))) return date
+    return new Date(year, month - 1, day, hour, minute, second)
+  } catch {
+    return date
+  }
+}
+
+export function formatDateTime(iso: string, language = 'en', pattern = 'PPP p', timeZone?: string): string {
+  const parsed = parseISO(iso)
+  if (!isValid(parsed)) return ''
+  const date = timeZone ? inZone(parsed, timeZone) : parsed
   return formatPattern(date, language, normalizeDateFormat(pattern))
 }
 

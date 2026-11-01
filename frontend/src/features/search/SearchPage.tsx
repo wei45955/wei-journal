@@ -128,7 +128,7 @@ export function SearchPage() {
         {/* Plain paper, not frosted: this bar starts at the very top of the
             screen, which on a phone is under the system status bar. */}
         <div aria-hidden="true" className="h-[env(safe-area-inset-top)]" />
-        <div className="px-5 pt-3 pb-3 sm:px-8 lg:px-10">
+        <div className="border-b border-rule/70 px-5 pt-3 pb-3 sm:px-8 lg:px-10">
           <form
             role="search"
             onSubmit={(event) => {
@@ -148,7 +148,7 @@ export function SearchPage() {
               aria-label={t('nav.search')}
               enterKeyHint="search"
               autoComplete="off"
-              className="h-12 w-full rounded-full bg-leaf pr-11 pl-11 text-[16px] text-ink shadow-[0_1px_2px_rgb(23_32_51/0.06)] outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_2px_var(--wj-accent)]"
+              className="h-12 w-full rounded-lg bg-leaf pr-11 pl-11 text-base text-ink hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_2px_var(--wj-accent)]"
             />
             {text ? (
               <button
@@ -158,7 +158,7 @@ export function SearchPage() {
                   setText('')
                   input.current?.focus()
                 }}
-                className="press absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-ink-3"
+                className="press absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-ink-3 hover:bg-well hover:text-ink"
               >
                 <CloseIcon size={18} />
               </button>
@@ -166,7 +166,7 @@ export function SearchPage() {
           </form>
           <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 no-scrollbar sm:mx-0 sm:px-0" role="radiogroup" aria-label={t('search.scope')}>
             {SCOPES.map((value) => (
-              <Chip key={value} selected={scope === value} onClick={() => setScope(value)} className="h-8 shrink-0 text-[0.8125rem]">
+              <Chip key={value} selected={scope === value} onClick={() => setScope(value)} className="shrink-0 text-sm">
                 {value === 'all' ? t('search.everything') : t(`search.fields.${value}`)}
               </Chip>
             ))}
@@ -183,7 +183,7 @@ export function SearchPage() {
         ) : status === 'loading' ? (
           <div className="flex flex-col gap-3" aria-busy="true">
             {[0, 1, 2].map((index) => (
-              <Skeleton key={index} className="h-24 w-full rounded-[18px]" />
+              <Skeleton key={index} className="h-24 w-full rounded-xl" />
             ))}
           </div>
         ) : status === 'error' ? (
@@ -192,10 +192,10 @@ export function SearchPage() {
           <EmptyState title={t('search.noneTitle', { q: term })} body={t('search.noneBody')} />
         ) : (
           <>
-            <p className="mb-3 text-[0.8125rem] text-ink-3" role="status">
+            <p className="caption mb-3 text-ink-3" role="status">
               {t('search.results', { count: results.length })}
             </p>
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-2">
               {results.map((result) => (
                 <li key={result.entry.id}>
                   <ResultRow result={result} term={term} language={language} dateFormat={dateFormat} />
@@ -218,24 +218,26 @@ export function SearchPage() {
 
 function Idle({ recent, tags, onPick, onClearRecent }: { recent: string[]; tags: string[]; onPick: (value: string) => void; onClearRecent: () => void }) {
   const { t } = useTranslation()
-  if (recent.length === 0 && tags.length === 0) {
-    return <EmptyState title={t('search.idleTitle')} body={t('search.idleBody')} />
-  }
   return (
-    <div className="flex flex-col gap-7 pt-2">
+    <div className="flex flex-col gap-8 pt-6">
+      <div>
+        <h1 className="heading-1 max-w-[16ch] text-ink">{t('search.idleTitle')}</h1>
+        <p className="body-2 mt-3 max-w-sm text-ink-2">{t('search.idleBody')}</p>
+      </div>
+
       {recent.length > 0 ? (
-        <section>
+        <section className="border-t border-rule pt-3">
           <div className="mb-1 flex items-center justify-between">
-            <h2 className="text-[0.8125rem] text-ink-3">{t('search.recent')}</h2>
-            <button type="button" onClick={onClearRecent} className="press h-8 rounded-full px-1 text-[0.8125rem] text-ink-3">
+            <h2 className="caption text-ink-3">{t('search.recent')}</h2>
+            <button type="button" onClick={onClearRecent} className="press h-8 rounded-md px-2 text-sm text-ink-3 hover:bg-well hover:text-ink">
               {t('common.clear')}
             </button>
           </div>
           <ul className="-mx-2">
             {recent.map((item) => (
               <li key={item}>
-                <button type="button" onClick={() => onPick(item)} className="flex min-h-[48px] w-full items-center gap-3 rounded-[12px] px-2 text-left text-[1rem] text-ink active:bg-well">
-                  <ClockIcon size={19} className="text-ink-3" />
+                <button type="button" onClick={() => onPick(item)} className="press flex min-h-12 w-full items-center gap-3 rounded-lg px-2 text-left text-base text-ink hover:bg-well">
+                  <ClockIcon size={18} className="shrink-0 text-ink-3" />
                   <span className="truncate">{item}</span>
                 </button>
               </li>
@@ -243,9 +245,10 @@ function Idle({ recent, tags, onPick, onClearRecent }: { recent: string[]; tags:
           </ul>
         </section>
       ) : null}
+
       {tags.length > 0 ? (
-        <section>
-          <h2 className="mb-3 text-[0.8125rem] text-ink-3">{t('filters.tags')}</h2>
+        <section className="border-t border-rule pt-3">
+          <h2 className="caption mb-3 text-ink-3">{t('filters.tags')}</h2>
           <div className="flex flex-wrap gap-2">
             {tags.map((name) => (
               <Chip key={name} onClick={() => onPick(name)}>
@@ -255,7 +258,6 @@ function Idle({ recent, tags, onPick, onClearRecent }: { recent: string[]; tags:
           </div>
         </section>
       ) : null}
-      <p className="text-[0.875rem] leading-relaxed text-ink-3">{t('search.idleBody')}</p>
     </div>
   )
 }
@@ -266,7 +268,7 @@ function Highlighted({ text, term }: { text: string; term: string }) {
     <>
       {parts.map((part, index) =>
         part.hit ? (
-          <mark key={index} className="rounded-[3px] bg-accent-soft px-[1px] text-accent">
+          <mark key={index} className="rounded-sm bg-accent-soft px-0.5 text-accent">
             {part.text}
           </mark>
         ) : (
@@ -285,19 +287,19 @@ function ResultRow({ result, term, language, dateFormat }: { result: SearchResul
   const fallback = entry.plainText.replace(/\s+/g, ' ').trim().slice(0, 160)
 
   return (
-    <Link to={`/entry/${entry.id}`} className="press flex gap-3.5 rounded-[18px] bg-leaf p-4">
+    <Link to={`/entry/${entry.id}`} className="press flex gap-3.5 rounded-xl bg-leaf p-4 hairline hover:-translate-y-px">
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-3">
-          <h3 className="min-w-0 truncate font-serif text-[1.0625rem] font-medium text-ink">
-            {entry.title ? <Highlighted text={entry.title} term={term} /> : <span className="text-ink-3 italic">{t('timeline.untitled')}</span>}
+          <h3 className="heading-3 min-w-0 truncate text-ink">
+            {entry.title ? <Highlighted text={entry.title} term={term} /> : <span className="text-ink-3">{t('timeline.untitled')}</span>}
           </h3>
-          <span className="tnum shrink-0 text-[0.75rem] text-ink-3">{formatEventDate(entry.eventDate, language, dateFormat)}</span>
+          <span className="tnum caption shrink-0 text-ink-3">{formatEventDate(entry.eventDate, language, dateFormat)}</span>
         </div>
         {passages.length > 0 ? (
           <ul className="mt-1.5 flex flex-col gap-1">
             {passages.map((match, index) => (
-              <li key={index} className="text-[0.875rem] leading-relaxed text-ink-2">
-                <span className="mr-1.5 text-[0.75rem] text-ink-3">{t(`search.fields.${match.kind}`, { defaultValue: '' })}</span>
+              <li key={index} className="body-2 text-ink-2">
+                <span className="caption mr-1.5 text-ink-3">{t(`search.fields.${match.kind}`, { defaultValue: '' })}</span>
                 <span className="line-clamp-2 inline">
                   <Highlighted text={match.snippet} term={term} />
                 </span>
@@ -305,13 +307,13 @@ function ResultRow({ result, term, language, dateFormat }: { result: SearchResul
             ))}
           </ul>
         ) : fallback ? (
-          <p className="mt-1.5 line-clamp-2 text-[0.875rem] leading-relaxed text-ink-2">
+          <p className="body-2 mt-1.5 line-clamp-2 text-ink-2">
             <Highlighted text={fallback} term={term} />
           </p>
         ) : null}
       </div>
       {cover ? (
-        <span className="size-16 shrink-0 overflow-hidden rounded-[12px] bg-well">
+        <span className="size-16 shrink-0 overflow-hidden rounded-lg bg-well">
           <Thumb media={cover} />
         </span>
       ) : null}

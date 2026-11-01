@@ -42,7 +42,7 @@ function Plate({ media, onOpen, className }: { media: Media; onOpen: () => void;
   const Icon = isFilm(media) ? VideoIcon : isPicture(media) ? ImageIcon : FileIcon
   return (
     <figure className={cn('mb-7', className)}>
-      <div className="relative mx-auto w-fit max-w-full overflow-hidden rounded-[18px] bg-well">
+      <div className="relative mx-auto w-fit max-w-full overflow-hidden rounded-xl bg-well">
         <button
           type="button"
           onClick={(event) => {
@@ -127,7 +127,7 @@ function Strip({
               onOpen?.(index)
             }}
             aria-label={media.originalName || t('media.open')}
-            className="relative w-[min(86%,24rem)] shrink-0 snap-center overflow-hidden rounded-[18px] bg-well"
+            className="relative w-[min(86%,24rem)] shrink-0 snap-center overflow-hidden rounded-xl bg-well"
             style={{ aspectRatio: '4 / 3' }}
           >
             <Thumb media={media} large />
@@ -135,7 +135,7 @@ function Strip({
           </button>
         ))}
       </div>
-      <figcaption className="tnum mt-2 text-center text-[0.75rem] text-ink-3">
+      <figcaption className="tnum mt-2 text-center text-xs text-ink-3">
         {t('media.position', { index: current + 1, total: items.length })}
       </figcaption>
     </figure>
@@ -154,7 +154,7 @@ function Badge({ media }: { media: Media }) {
   }
   if (media.kind === 'live-still') {
     return (
-      <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[0.6875rem] font-medium text-white backdrop-blur-sm">
+      <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
         <LiveIcon size={13} />
         {t('media.live')}
       </span>

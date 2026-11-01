@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../../lib/api'
-import { localDateKey, longDate } from '../../lib/format'
+import { dayParts, localDateKey } from '../../lib/format'
 import { setLanguage } from '../../i18n'
 import { useAuth } from '../../state/auth'
 import { useToast } from '../../state/toast'
-import { Button, TextInput } from '../../ui'
+import { Button } from '../../ui'
+import { InkUnderline, Seal } from '../../ui/Seal'
+import { cn } from '../../lib/cn'
 
 function safeReturn(value: unknown): string {
   if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return '/'
@@ -14,9 +16,13 @@ function safeReturn(value: unknown): string {
   return value
 }
 
+const fieldClass =
+  'mt-1 block h-12 w-full border-0 border-b border-rule bg-transparent px-0 text-base text-ink ' +
+  'placeholder:text-ink-3 transition-colors focus:border-accent focus-visible:outline-offset-4'
+
 /**
- * Signing in opens on today's page: the date, written the way the journal
- * writes it, waiting for the first line.
+ * The opening page of the journal: today's date, unopened, and the small
+ * mark that says it belongs to you. Signing in opens the same page.
  */
 export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   const { t, i18n } = useTranslation()
@@ -54,83 +60,138 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
     }
   }
 
-  const today = longDate(localDateKey(new Date()), language)
+  const today = localDateKey(new Date())
+  const parts = dayParts(today, language)
+  const year = today.slice(0, 4)
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[26rem] flex-col px-6 pt-[calc(env(safe-area-inset-top)+3.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
-      <p className="text-[0.9375rem] text-ink-2">{t('app.name')}</p>
-      <h1 className="mt-2 font-serif text-[2.5rem] leading-[1.08] font-medium tracking-[-0.015em] text-ink [font-variation-settings:'opsz'_72] animate-rise">
-        {today}
-      </h1>
-      <div className="mt-5 h-px w-12 bg-accent" aria-hidden="true" />
-      <p className="mt-5 font-serif text-[1.125rem] leading-relaxed text-ink-2">
-        {signingUp ? t('auth.signUpLead') : t('auth.signInLead')}
-      </p>
+    <main className="grid min-h-dvh lg:grid-cols-[1.08fr_0.92fr]">
+      <section className="flex flex-col px-6 pt-[calc(env(safe-area-inset-top)+2rem)] pb-8 sm:pb-10 sm:px-10 lg:justify-between lg:px-16 lg:py-14">
+        <div className="flex items-center gap-3">
+          <Seal size={34}>记</Seal>
+          <span className="wordmark text-ink">{t('app.name')}</span>
+        </div>
 
-      <form onSubmit={submit} className="mt-9 flex flex-col gap-3" noValidate>
-        <TextInput
-          name="username"
-          autoComplete="username"
-          autoCapitalize="none"
-          spellCheck={false}
-          placeholder={t('auth.username')}
-          aria-label={t('auth.username')}
-          value={username}
-          invalid={Boolean(error)}
-          onChange={(event) => setUsername(event.target.value)}
-          className="bg-leaf"
-        />
-        {signingUp ? (
-          <TextInput
-            name="email"
-            type="email"
-            autoComplete="email"
-            autoCapitalize="none"
-            placeholder={t('auth.email')}
-            aria-label={t('auth.email')}
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="bg-leaf"
-          />
-        ) : null}
-        <TextInput
-          name="password"
-          type="password"
-          autoComplete={signingUp ? 'new-password' : 'current-password'}
-          placeholder={t('auth.password')}
-          aria-label={t('auth.password')}
-          value={password}
-          invalid={Boolean(error)}
-          onChange={(event) => setPassword(event.target.value)}
-          className="bg-leaf"
-        />
-        {error ? (
-          <p role="alert" className="px-1 text-[0.875rem] text-danger animate-fade">
-            {error}
+        <div className="mt-10 lg:my-10">
+          <div className="flex items-end gap-4 animate-rise">
+            <span className="date-numeral text-ink">{parts.day}</span>
+            <div className="flex flex-col gap-2 pb-1">
+              <Seal size={44} stamp label={t('common.today')}>
+                今
+              </Seal>
+              <div>
+                <p className="title-3 text-ink">{parts.weekday}</p>
+                <p className="caption tnum mt-0.5 text-ink-3">
+                  {year} · {parts.month}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="display-2 mt-6 max-w-[13ch] text-ink sm:mt-8">{t('auth.tagline')}</h1>
+          <div className="mt-3 w-44 text-seal" aria-hidden="true">
+            <InkUnderline />
+          </div>
+          <p className="body-1 mt-4 max-w-sm text-ink-2">{t('auth.taglineLead')}</p>
+        </div>
+
+        <p className="caption hidden text-ink-3 lg:block">{t('app.name')}</p>
+      </section>
+
+      <section className="flex flex-col justify-center border-t border-rule bg-leaf px-6 py-8 sm:px-10 sm:py-10 lg:border-t-0 lg:border-l lg:px-16">
+        <div className="mx-auto w-full max-w-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="heading-2 text-ink">{signingUp ? t('auth.signUpTitle') : t('auth.signInTitle')}</h2>
+              <p className="body-2 mt-2 text-ink-2">{signingUp ? t('auth.signUpLead') : t('auth.signInLead')}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLanguage(language === 'zh-CN' ? 'en' : 'zh-CN')}
+              className="press -mr-2 h-9 shrink-0 rounded-lg px-2 text-sm text-ink-3 hover:bg-well hover:text-ink"
+            >
+              {language === 'zh-CN' ? 'English' : '中文'}
+            </button>
+          </div>
+
+          <form onSubmit={submit} className="mt-6 flex flex-col gap-5 sm:mt-8" noValidate>
+            <div>
+              <label htmlFor="auth-username" className="title-3 text-ink-2">
+                {t('auth.username')}
+              </label>
+              <input
+                id="auth-username"
+                name="username"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={username}
+                aria-invalid={Boolean(error) || undefined}
+                onChange={(event) => setUsername(event.target.value)}
+                className={cn(fieldClass, error && 'border-danger')}
+              />
+            </div>
+
+            {signingUp ? (
+              <div>
+                <label htmlFor="auth-email" className="title-3 text-ink-2">
+                  {t('auth.email')}
+                </label>
+                <input
+                  id="auth-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                    value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+            ) : null}
+
+            <div>
+              <label htmlFor="auth-password" className="title-3 text-ink-2">
+                {t('auth.password')}
+              </label>
+              <input
+                id="auth-password"
+                name="password"
+                type="password"
+                autoComplete={signingUp ? 'new-password' : 'current-password'}
+                value={password}
+                aria-invalid={Boolean(error) || undefined}
+                onChange={(event) => setPassword(event.target.value)}
+                className={cn(fieldClass, error && 'border-danger')}
+              />
+            </div>
+
+            {error ? (
+              <p role="alert" className="body-2 text-danger animate-fade">
+                {error}
+              </p>
+            ) : null}
+
+            <Button type="submit" tone="primary" size="lg" block loading={busy} className="mt-1">
+              {signingUp ? t('auth.signUp') : t('auth.signIn')}
+            </Button>
+          </form>
+
+          {signingUp ? <p className="caption mt-4 text-ink-3">{t('auth.firstAdmin')}</p> : null}
+
+          <p className="body-2 mt-8 text-ink-2">
+            {signingUp ? t('auth.haveAccount') : t('auth.noAccount')}{' '}
+            <Link
+              to={signingUp ? '/signin' : '/signup'}
+              state={location.state}
+              replace
+              className="font-medium text-accent underline decoration-1 underline-offset-4"
+            >
+              {signingUp ? t('auth.toSignIn') : t('auth.toSignUp')}
+            </Link>
           </p>
-        ) : null}
-        <Button type="submit" tone="primary" size="lg" block loading={busy} className="mt-2">
-          {signingUp ? t('auth.signUp') : t('auth.signIn')}
-        </Button>
-      </form>
-
-      {signingUp ? <p className="mt-4 text-[0.8125rem] leading-relaxed text-ink-3">{t('auth.firstAdmin')}</p> : null}
-
-      <div className="mt-auto flex items-center justify-between gap-4 pt-10 text-[0.9375rem]">
-        <p className="text-ink-2">
-          {signingUp ? t('auth.haveAccount') : t('auth.noAccount')}{' '}
-          <Link to={signingUp ? '/signin' : '/signup'} state={location.state} replace className="font-medium text-accent">
-            {signingUp ? t('auth.toSignIn') : t('auth.toSignUp')}
-          </Link>
-        </p>
-        <button
-          type="button"
-          onClick={() => setLanguage(language === 'zh-CN' ? 'en' : 'zh-CN')}
-          className="press h-9 rounded-full px-3 text-[0.875rem] text-ink-2"
-        >
-          {language === 'zh-CN' ? 'English' : '中文'}
-        </button>
-      </div>
+        </div>
+      </section>
     </main>
   )
 }

@@ -72,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={toast.id}
             onClick={() => dismiss(toast.id)}
             className={cn(
-              'glass pointer-events-auto max-w-[min(26rem,100%)] rounded-full px-4 py-2.5 text-center text-[0.875rem] font-medium shadow-float',
+              'glass pointer-events-auto max-w-[min(26rem,100%)] rounded-lg px-4 py-2.5 text-center text-sm font-medium shadow-float hairline',
               'transition-[opacity,translate] duration-200',
               toast.leaving ? '-translate-y-2 opacity-0' : 'animate-pop',
               toast.tone === 'error' ? 'text-danger' : 'text-ink',

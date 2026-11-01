@@ -6,8 +6,8 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#edeff2" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0d1219" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e8ebec" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c1117" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <meta name="description" content="A private, self-hosted journal." />
     <meta name="format-detection" content="telephone=no" />
@@ -30,7 +30,7 @@
             choice === 'dark' ||
             (choice !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
           if (choice === 'dark' || choice === 'light') root.setAttribute('data-theme', choice)
-          var color = dark ? '#0d1219' : '#edeff2'
+          var color = dark ? '#0c1117' : '#e8ebec'
           var metas = document.querySelectorAll('meta[name="theme-color"]')
           for (var i = 0; i < metas.length; i += 1) metas[i].setAttribute('content', color)
           if (localStorage.getItem('wj.language') === 'zh-CN') {

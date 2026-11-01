@@ -53,11 +53,11 @@ export function TopBar({
           scrolled ? 'bg-paper opacity-100 shadow-[0_0.5px_0_var(--wj-rule)]' : 'opacity-0',
         )}
       />
-      <div className="relative flex h-[52px] items-center gap-1">
+      <div className="relative flex h-12 items-center gap-1">
         <div className="relative z-10 flex min-w-11 items-center">{leading}</div>
         <div
           className={cn(
-            'pointer-events-none absolute inset-x-24 truncate text-center text-[1rem] font-semibold text-ink transition-opacity duration-200',
+            'pointer-events-none absolute inset-x-24 truncate text-center text-base font-medium text-ink transition-opacity duration-200',
             showTitle ? 'opacity-100' : 'opacity-0',
           )}
           aria-hidden={!showTitle}
@@ -91,10 +91,10 @@ export function BackButton({ fallback = '/', label }: { fallback?: string; label
       type="button"
       onClick={back}
       aria-label={label ?? t('nav.back')}
-      className="press -ml-1 flex h-11 items-center rounded-full pr-3 pl-1 text-accent"
+      className="press -ml-1 flex h-11 items-center rounded-lg pr-3 pl-1 text-ink-2 hover:bg-well hover:text-ink"
     >
       <ChevronLeftIcon size={26} strokeWidth={1.9} />
-      {label ? <span className="max-w-[9rem] truncate text-[1rem]">{label}</span> : null}
+      {label ? <span className="max-w-36 truncate text-base">{label}</span> : null}
     </button>
   )
 }
@@ -102,11 +102,9 @@ export function BackButton({ fallback = '/', label }: { fallback?: string; label
 /** The large page title that the bar takes over when it scrolls away. */
 export function PageTitle({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
   return (
-    <div className="pt-1 pb-4">
-      <h1 className="font-serif text-[2.125rem] leading-[1.1] font-medium tracking-[-0.01em] text-ink [font-variation-settings:'opsz'_60]">
-        {children}
-      </h1>
-      {sub ? <div className="mt-1.5 text-[0.9375rem] text-ink-2">{sub}</div> : null}
+    <div className="pt-2 pb-6">
+      <h1 className="heading-1 text-ink">{children}</h1>
+      {sub ? <div className="body-2 mt-2 text-ink-2">{sub}</div> : null}
     </div>
   )
 }

@@ -118,13 +118,13 @@ export function PlaceSheet({
       <button
         type="button"
         onClick={() => choose(place)}
-        className="flex min-h-[56px] w-full items-center gap-3 rounded-[14px] px-3 text-left active:bg-well"
+        className="press flex min-h-14 w-full items-center gap-3 rounded-lg px-3 text-left hover:bg-well"
       >
         <PlaceIcon size={20} className="shrink-0 text-ink-3" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[1rem] text-ink">{place.name || coordinates(place.latitude, place.longitude)}</span>
+          <span className="title-2 block truncate text-ink">{place.name || coordinates(place.latitude, place.longitude)}</span>
           {place.address && place.address !== place.name ? (
-            <span className="block truncate text-[0.8125rem] text-ink-3">{place.address}</span>
+            <span className="caption block truncate text-ink-3">{place.address}</span>
           ) : null}
         </span>
       </button>
@@ -151,18 +151,18 @@ export function PlaceSheet({
         </Button>
       </div>
 
-      {error ? <p className="mt-1 rounded-[14px] bg-danger-soft px-4 py-3 text-[0.875rem] text-danger">{error}</p> : null}
-      {!canSearch && query ? <p className="mt-1 text-[0.8125rem] leading-snug text-ink-3">{t('place.searchOff')}</p> : null}
+      {error ? <p className="body-2 mt-1 rounded-lg bg-danger-soft px-4 py-3 text-danger">{error}</p> : null}
+      {!canSearch && query ? <p className="caption mt-1 text-ink-3">{t('place.searchOff')}</p> : null}
 
       {own.length > 0 ? (
         <section className="mt-3">
-          <h3 className="px-1 text-[0.8125rem] text-ink-3">{t('place.yours')}</h3>
+          <h3 className="caption px-1 text-ink-3">{t('place.yours')}</h3>
           <ul className="-mx-2 mt-1">{own.map((place, index) => row(place, `own-${index}`))}</ul>
         </section>
       ) : null}
       {found.length > 0 ? (
         <section className="mt-3">
-          <h3 className="px-1 text-[0.8125rem] text-ink-3">{t('place.results')}</h3>
+          <h3 className="caption px-1 text-ink-3">{t('place.results')}</h3>
           <ul className="-mx-2 mt-1">{found.map((place, index) => row(place, `hit-${index}`))}</ul>
         </section>
       ) : null}
@@ -171,7 +171,7 @@ export function PlaceSheet({
           <Spinner />
         </div>
       ) : own.length === 0 && found.length === 0 ? (
-        <p className="py-6 text-center text-[0.9375rem] text-ink-3">{query ? t('place.none') : t('place.hint')}</p>
+        <p className="body-2 py-6 text-center text-ink-3">{query ? t('place.none') : t('place.hint')}</p>
       ) : null}
 
       {current ? (
@@ -182,7 +182,7 @@ export function PlaceSheet({
               onRemove()
               onClose()
             }}
-            className="press h-11 rounded-full px-1 text-[0.9375rem] text-danger"
+            className="press h-11 rounded-lg px-3 text-sm text-danger hover:bg-danger-soft"
           >
             {t('place.remove')}
           </button>

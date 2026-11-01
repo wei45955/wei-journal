@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '../lib/cn'
 import { useAuth } from '../state/auth'
 import { useFolders } from '../state/library'
+import { Seal } from '../ui/Seal'
 import { ArchiveIcon, BookIcon, GearIcon, InboxIcon, PenIcon, PlaceIcon, SearchIcon, FolderIcon } from '../ui/icons'
 
 const TABS = [
@@ -96,12 +97,12 @@ export function AppShell() {
   const arriving = type !== 'POP'
 
   return (
-    <div className="min-h-dvh lg:pl-[17rem]">
+    <div className="min-h-dvh lg:pl-72">
       <Sidebar />
       <main
         className={cn(
-          'mx-auto w-full max-w-[44rem] px-5 sm:px-8 lg:px-10',
-          tabs ? 'pb-[calc(env(safe-area-inset-bottom)+7rem)] lg:pb-16' : 'pb-[calc(env(safe-area-inset-bottom)+2rem)]',
+          'mx-auto w-full max-w-2xl px-5 sm:px-8 lg:px-10',
+          tabs ? 'pb-[calc(env(safe-area-inset-bottom)+6rem)] lg:pb-16' : 'pb-[calc(env(safe-area-inset-bottom)+2rem)]',
         )}
       >
         <Suspense fallback={<div className="min-h-dvh" />}>
@@ -115,7 +116,10 @@ export function AppShell() {
   )
 }
 
-/** The thumb-reach navigation of the phone: four places and the pen. */
+/**
+ * The thumb-reach navigation of the phone: four places, and the pen set in
+ * vermilion at the right edge, where the thumb already rests.
+ */
 function TabBar() {
   const { t } = useTranslation()
   const { pathname } = useLocation()
@@ -125,10 +129,10 @@ function TabBar() {
   return (
     <nav
       aria-label={t('nav.main')}
-      className="tabbar fixed inset-x-0 bottom-0 z-50 flex items-end justify-center gap-3 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
+      className="tabbar fixed inset-x-0 bottom-0 z-50 border-t border-rule bg-paper/95 pb-[env(safe-area-inset-bottom)] glass lg:hidden"
     >
-      <div className="glass flex h-[62px] flex-1 items-center justify-around rounded-full px-1.5 shadow-float sm:max-w-[26rem] sm:flex-none sm:gap-2">
-        {TABS.map((tab) => {
+      <div className="mx-auto grid h-14 max-w-lg grid-cols-5 items-center px-1">
+        {TABS.slice(0, 4).map((tab) => {
           const active = tab.match(pathname)
           return (
             <Link
@@ -143,23 +147,26 @@ function TabBar() {
               }}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'press flex h-[52px] min-w-[3.75rem] flex-col items-center justify-center gap-[3px] rounded-full px-2 sm:px-4',
-                active ? 'text-accent' : 'text-ink-2',
+                'press relative flex h-full flex-col items-center justify-center gap-0.5',
+                active ? 'text-ink' : 'text-ink-3',
               )}
             >
-              <tab.icon size={23} strokeWidth={active ? 1.9 : 1.6} className="transition-[stroke-width] duration-200" />
-              <span className="text-[0.6875rem] leading-none font-medium">{t(tab.key)}</span>
+              {active ? <span aria-hidden="true" className="absolute top-0 h-0.5 w-5 rounded-full bg-seal" /> : null}
+              <tab.icon size={21} strokeWidth={active ? 1.9 : 1.6} />
+              <span className={cn('text-xs', active ? 'font-medium' : 'font-normal')}>{t(tab.key)}</span>
             </Link>
           )
         })}
+        <Link
+          to={writeTo}
+          aria-label={t('nav.write')}
+          className="press flex h-full items-center justify-center"
+        >
+          <Seal size={38} label={t('nav.write')}>
+            写
+          </Seal>
+        </Link>
       </div>
-      <Link
-        to={writeTo}
-        aria-label={t('nav.write')}
-        className="press flex size-[62px] shrink-0 items-center justify-center rounded-full bg-accent text-accent-on shadow-float"
-      >
-        <PenIcon size={25} strokeWidth={1.8} />
-      </Link>
     </nav>
   )
 }
@@ -173,20 +180,22 @@ function Sidebar() {
 
   const row = (active: boolean) =>
     cn(
-      'flex h-10 items-center gap-3 rounded-[12px] px-3 text-[0.9375rem] transition-colors',
-      active ? 'bg-leaf font-medium text-ink shadow-[0_1px_2px_rgb(0_0_0/0.06)]' : 'text-ink-2 hover:text-ink',
+      'relative flex h-10 items-center gap-3 rounded-lg px-3 text-base transition-colors',
+      active ? 'bg-leaf font-medium text-ink shadow-sm' : 'text-ink-2 hover:bg-well/50 hover:text-ink',
     )
 
   return (
-    <aside className="fixed inset-y-0 left-0 hidden w-[17rem] flex-col border-r border-rule px-4 pt-7 pb-5 lg:flex">
-      <div className="px-3 font-serif text-[1.5rem] font-medium text-ink [font-variation-settings:'opsz'_48]">
-        {t('app.name')}
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-rule px-4 pt-6 pb-5 lg:flex">
+      <div className="flex items-center gap-3 px-2">
+        <Seal size={32}>记</Seal>
+        <p className="wordmark min-w-0 truncate text-ink">{t('app.name')}</p>
       </div>
+
       <Link
         to="/write"
-        className="press mt-6 flex h-11 items-center justify-center gap-2 rounded-full bg-accent text-[0.9375rem] font-semibold text-accent-on"
+        className="press mt-7 flex h-11 items-center justify-center gap-2 rounded-lg bg-accent text-base font-semibold text-accent-on hover:bg-accent/90"
       >
-        <PenIcon size={19} />
+        <PenIcon size={18} />
         {t('nav.write')}
       </Link>
 
@@ -202,34 +211,41 @@ function Sidebar() {
             replace={isTabPage(pathname)}
             className={row(tab.match(pathname) && !pathname.startsWith('/folder/'))}
           >
-            <tab.icon size={20} />
+            {tab.match(pathname) && !pathname.startsWith('/folder/') ? (
+              <span aria-hidden="true" className="absolute top-2.5 bottom-2.5 left-0 w-0.5 rounded-full bg-seal" />
+            ) : null}
+            <tab.icon size={19} />
             {t(tab.key)}
           </Link>
         ))}
       </nav>
 
       <div className="mt-7 min-h-0 flex-1 overflow-y-auto">
-        <p className="px-3 pb-1.5 text-[0.8125rem] text-ink-3">{t('settings.folders')}</p>
+        <p className="caption px-3 pb-2 text-ink-3">{t('settings.folders')}</p>
         <div className="flex flex-col gap-0.5">
           <NavLink to="/folder/none" className={({ isActive }) => row(isActive)}>
-            <InboxIcon size={19} />
+            <InboxIcon size={18} />
             <span className="flex-1 truncate">{t('timeline.unfiled')}</span>
           </NavLink>
           {folders.map((folder) => (
             <NavLink key={folder.id} to={`/folder/${folder.id}`} className={({ isActive }) => row(isActive)}>
-              <FolderIcon size={19} />
+              <FolderIcon size={18} />
               <span className="flex-1 truncate">{folder.name}</span>
-              <span className="tnum text-[0.8125rem] text-ink-3">{folder.entryCount}</span>
+              <span className="tnum text-sm text-ink-3">{folder.entryCount}</span>
             </NavLink>
           ))}
         </div>
       </div>
 
-      <NavLink to="/settings" className={({ isActive }) => cn(row(isActive), 'mt-3')}>
-        <GearIcon size={20} />
-        <span className="flex-1 truncate">{t('nav.settings')}</span>
-        <span className="max-w-[6rem] truncate text-[0.8125rem] text-ink-3">{user?.username}</span>
-      </NavLink>
+      <div className="mt-3 border-t border-rule pt-3">
+        <NavLink to="/settings" className={({ isActive }) => cn(row(isActive), 'h-11')}>
+          <Seal size={27} muted>
+            {user?.username?.slice(0, 1).toUpperCase() || '记'}
+          </Seal>
+          <span className="flex-1 truncate">{user?.username}</span>
+          <GearIcon size={17} className="text-ink-3" />
+        </NavLink>
+      </div>
     </aside>
   )
 }

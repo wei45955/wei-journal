@@ -57,7 +57,7 @@ export function ScopeMenu({
 
   const row = (active: boolean) =>
     cn(
-      'flex min-h-[44px] w-full items-center gap-3 rounded-[12px] px-2.5 text-left text-[0.9375rem] transition-colors active:bg-well',
+      'title-3 flex min-h-11 w-full items-center gap-3 rounded-lg px-2.5 text-left transition-colors hover:bg-well',
       active ? 'text-accent' : 'text-ink',
     )
 
@@ -68,7 +68,7 @@ export function ScopeMenu({
       anchorRef={anchorRef}
       placement="bottom-start"
       label={t('timeline.scopeTitle')}
-      className="w-[15rem] max-w-[calc(100vw_-_1.5rem)] p-1.5"
+      className="w-60 max-w-[calc(100vw_-_1.5rem)] p-1.5"
     >
       <ul>
         <li>
@@ -98,7 +98,7 @@ export function ScopeMenu({
               {scope === folder.id ? (
                 <CheckIcon size={19} />
               ) : (
-                <span className="tnum text-[0.8125rem] text-ink-3">{folder.entryCount}</span>
+                <span className="tnum caption text-ink-3">{folder.entryCount}</span>
               )}
             </button>
           </li>
@@ -124,7 +124,7 @@ export function ScopeMenu({
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="press flex h-10 items-center gap-2 rounded-[12px] px-2.5 text-[0.9375rem] font-medium text-accent"
+            className="press title-3 flex h-10 items-center gap-2 rounded-lg px-2.5 text-accent hover:bg-well"
           >
             <PlusIcon size={19} />
             {t('timeline.newFolder')}

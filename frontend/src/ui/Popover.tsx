@@ -225,7 +225,7 @@ export function Popover<T extends HTMLElement = HTMLElement>({
         }`,
       }}
       className={cn(
-        'z-[85] rounded-[18px] bg-leaf shadow-float outline-none',
+        'z-[85] rounded-xl bg-leaf shadow-float hairline outline-none',
         'transition-[opacity,transform] duration-150 ease-[var(--ease-out-soft)]',
         leaving ? 'scale-[0.97] opacity-0' : box?.vertical === 'top' ? 'animate-popover-up' : 'animate-popover',
         className,
@@ -270,7 +270,7 @@ export function Menu<T extends HTMLElement = HTMLElement>({
       anchorRef={anchorRef}
       placement={placement}
       label={label}
-      className="w-max min-w-[10rem] max-w-[min(18rem,calc(100vw_-_1.5rem))] p-1.5"
+      className="w-max min-w-40 max-w-[min(18rem,calc(100vw_-_1.5rem))] p-1.5"
     >
       <ul className="flex flex-col">
         {items.map((item) => (
@@ -283,7 +283,7 @@ export function Menu<T extends HTMLElement = HTMLElement>({
                 item.onSelect()
               }}
               className={cn(
-                'flex min-h-[44px] w-full items-center gap-3 rounded-[12px] px-2.5 text-left text-[0.9375rem] transition-colors active:bg-well disabled:opacity-40',
+                'title-3 flex min-h-11 w-full items-center gap-3 rounded-lg px-2.5 text-left transition-colors hover:bg-well disabled:opacity-40',
                 item.destructive ? 'text-danger' : 'text-ink',
               )}
             >

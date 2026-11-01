@@ -76,7 +76,7 @@ function Tool({
       onMouseDown={keepFocus ? (event) => event.preventDefault() : undefined}
       onClick={onPress}
       className={cn(
-        'press flex h-11 min-w-11 shrink-0 items-center justify-center rounded-[12px] disabled:opacity-30',
+        'press flex h-11 min-w-11 shrink-0 items-center justify-center rounded-lg disabled:opacity-30',
         active ? 'bg-accent-soft text-accent' : 'text-ink',
       )}
     >
@@ -135,12 +135,12 @@ export function EditorToolbar({
 
   return (
     <div
-      className="fixed inset-x-0 z-50 lg:pl-[17rem]"
+      className="fixed inset-x-0 z-50 lg:pl-72"
       style={{ bottom: inset, transition: keyboard ? 'none' : 'bottom 200ms' }}
     >
       <div
         className={cn(
-          'glass mx-auto flex max-w-[44rem] items-center border-t border-rule/70 px-2 sm:mb-3 sm:rounded-[18px] sm:border sm:shadow-float',
+          'glass mx-auto flex max-w-2xl items-center border-t border-rule/70 px-2 sm:mb-3 sm:rounded-xl sm:border sm:border-rule sm:shadow-float',
           keyboard ? 'pb-0' : 'pb-[env(safe-area-inset-bottom)]',
         )}
       >
@@ -175,7 +175,7 @@ export function EditorToolbar({
             </>
           ) : (
             <>
-              <Tool label={t('nav.back')} onPress={() => setMode('tools')}>
+              <Tool label={t('editor.tools')} onPress={() => setMode('tools')}>
                 <ChevronLeftIcon size={22} />
               </Tool>
               <span className="mx-1 h-6 w-px shrink-0 bg-rule" aria-hidden="true" />
@@ -192,10 +192,10 @@ export function EditorToolbar({
                 <StrikeIcon size={20} />
               </Tool>
               <Tool label={t('format.heading')} active={state?.h2} onPress={() => run((c) => c.toggleHeading({ level: 2 }))}>
-                <span className="font-serif text-[1.125rem] font-semibold">H</span>
+                <span className="font-serif text-lg font-semibold">H</span>
               </Tool>
               <Tool label={t('format.subheading')} active={state?.h3} onPress={() => run((c) => c.toggleHeading({ level: 3 }))}>
-                <span className="font-serif text-[0.9375rem] font-semibold">h</span>
+                <span className="font-serif text-base font-semibold">h</span>
               </Tool>
               <Tool label={t('format.bullet')} active={state?.bullet} onPress={() => run((c) => c.toggleBulletList())}>
                 <ListIcon size={21} />
@@ -216,9 +216,9 @@ export function EditorToolbar({
                 buttonRef={anchors?.style}
                 onPress={() => onTool('style')}
               >
-                <span className="relative font-serif text-[1.125rem] font-semibold">
+                <span className="relative font-serif text-lg font-semibold">
                   A
-                  <span className="absolute inset-x-0 -bottom-0.5 h-[3px] rounded-full bg-[linear-gradient(90deg,#3b6fb6,#2f8a5f,#c0602f,#9a5bb5)]" />
+                  <span className="absolute inset-x-0 -bottom-0.5 h-0.5 rounded-full bg-seal" />
                 </span>
               </Tool>
               <span className="mx-1 h-6 w-px shrink-0 bg-rule" aria-hidden="true" />
@@ -236,7 +236,7 @@ export function EditorToolbar({
             type="button"
             aria-label={t('editor.hideKeyboard')}
             onClick={() => (document.activeElement as HTMLElement | null)?.blur()}
-            className="press ml-1 flex size-11 shrink-0 items-center justify-center rounded-[12px] text-ink-2"
+            className="press ml-1 flex size-11 shrink-0 items-center justify-center rounded-lg text-ink-2 hover:bg-well hover:text-ink"
           >
             <KeyboardDownIcon size={22} />
           </button>

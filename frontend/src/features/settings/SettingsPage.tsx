@@ -21,7 +21,8 @@ import { setLanguage } from '../../i18n'
 import { useAuth } from '../../state/auth'
 import { useToast } from '../../state/toast'
 import { BackButton, PageTitle, TopBar } from '../../shell/TopBar'
-import { Button, Segmented, Switch, TextInput } from '../../ui'
+import { Button, Chip, Segmented, Switch, TextInput } from '../../ui'
+import { Seal } from '../../ui/Seal'
 import { ConfirmSheet, Sheet } from '../../ui/Sheet'
 import { SignOutIcon } from '../../ui/icons'
 import { FolderManager, TagManager } from './Managers'
@@ -150,20 +151,20 @@ export function SettingsPage() {
       <div className="flex flex-col gap-8">
         <Group title={t('settings.account')}>
           <div className="flex items-center gap-3.5 px-4 py-3.5">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-accent font-serif text-[1.375rem] text-accent-on uppercase">
-              {user.username.slice(0, 1)}
-            </span>
+            <Seal size={52} muted className="shrink-0">
+              {user.username.slice(0, 1).toUpperCase()}
+            </Seal>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[1.0625rem] font-medium text-ink">{user.username}</p>
-              <p className="truncate text-[0.8125rem] text-ink-3">
+              <p className="title-1 truncate text-ink">{user.username}</p>
+              <p className="caption truncate text-ink-3">
                 {user.role === 'admin' ? t('settings.admin') : t('settings.member')}
               </p>
-              <p className="truncate text-[0.8125rem] text-ink-3">
+              <p className="caption truncate text-ink-3">
                 {t('settings.joined', { date: formatDate(user.createdAt, language, normalizeDateFormat(settings.dateFormat)) })}
               </p>
             </div>
           </div>
-          <button type="button" onClick={() => void signOut()} className="flex min-h-[52px] w-full items-center gap-3 px-4 text-left text-[1rem] text-danger active:bg-well">
+          <button type="button" onClick={() => void signOut()} className="press flex min-h-14 w-full items-center gap-3 px-4 text-left text-base text-danger hover:bg-well/60">
             <SignOutIcon size={20} />
             {t('settings.signOut')}
           </button>
@@ -208,7 +209,7 @@ export function SettingsPage() {
               ))}
             </select>
           </Row>
-          <Row label={t('settings.timezone')} hint={t('settings.timezoneHint')} htmlFor="time-zone">
+          <Row label={t('settings.timezone')} hint={t('settings.timezoneHint')} htmlFor="time-zone" stacked>
             <select
               id="time-zone"
               className={selectClass}
@@ -251,7 +252,7 @@ export function SettingsPage() {
                     onKeyUp={() => quality !== settings.imageQuality && void save({ imageQuality: quality })}
                     className="h-1.5 min-w-0 flex-1 cursor-pointer accent-[var(--wj-accent)]"
                   />
-                  <span className="tnum w-8 text-right text-[0.9375rem] text-ink-2">{quality}</span>
+                  <span className="tnum w-8 text-right text-base text-ink-2">{quality}</span>
                 </div>
               </Row>
               <Row label={t('settings.maxSize')} htmlFor="max-size">
@@ -286,20 +287,16 @@ export function SettingsPage() {
         >
           <div className="flex flex-wrap gap-1.5 p-3 pb-0">
             {TILE_SOURCES.map((source) => (
-              <button
+              <Chip
                 key={source.id}
-                type="button"
+                selected={tiles.trim() === source.url}
                 onClick={() => {
                   setTiles(source.url)
                   void save({ mapTileUrl: source.url })
                 }}
-                className={cn(
-                  'press h-9 rounded-full px-3.5 text-[0.875rem]',
-                  tiles.trim() === source.url ? 'bg-accent text-accent-on' : 'bg-well text-ink',
-                )}
               >
                 {source.label}
-              </button>
+              </Chip>
             ))}
           </div>
           <div className="p-3">
@@ -312,29 +309,28 @@ export function SettingsPage() {
               aria-label={t('settings.tiles')}
               onChange={(event) => setTiles(event.target.value)}
               onBlur={() => tiles.trim() !== (settings.mapTileUrl ?? '') && void save({ mapTileUrl: tiles.trim() })}
-              className="text-[0.9375rem]"
             />
           </div>
         </Group>
 
         <Group title={t('settings.security')}>
-          <button type="button" onClick={() => setPasswordOpen(true)} className="flex min-h-[52px] w-full items-center px-4 text-left text-[1rem] text-accent active:bg-well">
+          <button type="button" onClick={() => setPasswordOpen(true)} className="press flex min-h-14 w-full items-center px-4 text-left text-base text-accent hover:bg-well/60">
             {t('settings.changePassword')}
           </button>
         </Group>
 
         <Group title={t('settings.devices')}>
           {(sessions.data ?? []).length === 0 ? (
-            <p className="px-4 py-4 text-[0.9375rem] text-ink-3">{sessions.loading ? t('common.loading') : t('settings.noDevices')}</p>
+            <p className="body-2 px-4 py-4 text-ink-3">{sessions.loading ? t('common.loading') : t('settings.noDevices')}</p>
           ) : (
             (sessions.data ?? []).map((session) => (
-              <div key={session.id} className="flex min-h-[60px] items-center gap-3 px-4 py-2.5">
+              <div key={session.id} className="flex min-h-15 items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[1rem] text-ink">{deviceName(session.userAgent)}</p>
-                  <p className={cn('truncate text-[0.8125rem]', session.current ? 'text-accent' : 'text-ink-3')}>
+                  <p className="body-1 truncate text-ink">{deviceName(session.userAgent)}</p>
+                  <p className={cn('caption truncate', session.current ? 'text-accent' : 'text-ink-3')}>
                     {session.current
                       ? t('settings.thisDevice')
-                      : t('settings.lastActive', { date: formatDateTime(session.lastSeenAt, language, dateTimePattern(settings.dateFormat)) })}
+                      : t('settings.lastActive', { date: formatDateTime(session.lastSeenAt, language, dateTimePattern(settings.dateFormat), displayTimezone(zoneValue)) })}
                   </p>
                 </div>
                 {!session.current ? (
@@ -355,7 +351,7 @@ export function SettingsPage() {
             type="button"
             disabled={exporting}
             onClick={() => void exportAll()}
-            className="flex min-h-[52px] w-full items-center px-4 text-left text-[1rem] text-accent active:bg-well disabled:opacity-50"
+            className="press flex min-h-14 w-full items-center px-4 text-left text-base text-accent hover:bg-well/60 disabled:opacity-50"
           >
             {exporting ? t('settings.exporting') : t('settings.export')}
           </button>
@@ -428,7 +424,7 @@ function PasswordSheet({ open, onClose }: { open: boolean; onClose: () => void }
         <TextInput type="password" autoComplete="new-password" placeholder={t('settings.newPassword')} aria-label={t('settings.newPassword')} value={next} onChange={(event) => setNext(event.target.value)} />
         <TextInput type="password" autoComplete="new-password" placeholder={t('settings.repeatPassword')} aria-label={t('settings.repeatPassword')} value={repeat} invalid={Boolean(error)} onChange={(event) => setRepeat(event.target.value)} />
         {error ? (
-          <p role="alert" className="text-[0.875rem] text-danger">
+          <p role="alert" className="body-2 text-danger">
             {error}
           </p>
         ) : null}

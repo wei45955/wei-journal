@@ -96,13 +96,13 @@ export function FolderManager() {
   return (
     <Group id="folders" title={t('settings.folders')}>
       {folders.length === 0 ? (
-        <p className="px-4 py-4 text-[0.9375rem] leading-relaxed text-ink-3">{t('settings.noFolders')}</p>
+        <p className="body-2 px-4 py-4 text-ink-3">{t('settings.noFolders')}</p>
       ) : (
         folders.map((folder, index) => (
-          <div key={folder.id} className="flex min-h-[52px] items-center gap-3 pr-1 pl-4">
+          <div key={folder.id} className="flex min-h-14 items-center gap-3 pr-1 pl-4">
             <FolderIcon size={20} className="shrink-0 text-ink-3" />
-            <span className="min-w-0 flex-1 truncate text-[1rem] text-ink">{folder.name}</span>
-            <span className="tnum text-[0.8125rem] text-ink-3">{folder.entryCount}</span>
+            <span className="title-2 min-w-0 flex-1 truncate text-ink">{folder.name}</span>
+            <span className="tnum caption text-ink-3">{folder.entryCount}</span>
             <IconButton size="sm" label={t('settings.moveUp')} disabled={index === 0} onClick={() => void move(folder, -1)} className="text-ink-2">
               <ArrowUpIcon size={18} />
             </IconButton>
@@ -158,7 +158,7 @@ export function FolderManager() {
         }}
       />
       <Sheet open={removing !== null && !permanent} onClose={() => setRemoving(null)} width="sm" label={t('settings.deleteFolderTitle', { name: removing?.name ?? '' })}>
-        <h2 className="pt-3 text-center font-serif text-[1.375rem] leading-snug text-ink sm:pt-6">
+        <h2 className="heading-3 pt-3 text-center text-ink sm:pt-6">
           {t('settings.deleteFolderTitle', { name: removing?.name ?? '' })}
         </h2>
         <div className="mt-6 flex flex-col gap-2">
@@ -166,21 +166,21 @@ export function FolderManager() {
             type="button"
             disabled={busy}
             onClick={() => removing && void remove(removing, 'default')}
-            className="press rounded-[16px] bg-well px-4 py-3.5 text-left disabled:opacity-50"
+            className="press rounded-lg bg-well px-4 py-3.5 text-left hover:bg-rule/60 disabled:opacity-50"
           >
-            <span className="block text-[1rem] font-medium text-ink">{t('settings.keepEntries')}</span>
-            <span className="block text-[0.8125rem] text-ink-2">{t('settings.keepEntriesHint')}</span>
+            <span className="title-2 block text-ink">{t('settings.keepEntries')}</span>
+            <span className="caption mt-0.5 block text-ink-2">{t('settings.keepEntriesHint')}</span>
           </button>
           <button
             type="button"
             disabled={busy || (removing?.entryCount ?? 0) === 0}
             onClick={() => setPermanent(true)}
-            className="press rounded-[16px] bg-danger-soft px-4 py-3.5 text-left disabled:opacity-40"
+            className="press rounded-lg bg-danger-soft px-4 py-3.5 text-left hover:bg-danger-soft/80 disabled:opacity-40"
           >
-            <span className="block text-[1rem] font-medium text-danger">
+            <span className="title-2 block text-danger">
               {t('settings.deleteEntries', { count: removing?.entryCount ?? 0 })}
             </span>
-            <span className="block text-[0.8125rem] text-danger/80">{t('settings.deleteEntriesHint')}</span>
+            <span className="caption mt-0.5 block text-danger/80">{t('settings.deleteEntriesHint')}</span>
           </button>
           <Button block size="lg" tone="quiet" onClick={() => setRemoving(null)}>
             {t('common.cancel')}
@@ -214,7 +214,7 @@ export function TagManager() {
   return (
     <Group id="tags" title={t('settings.tags')}>
       {tags.length === 0 ? (
-        <p className="px-4 py-4 text-[0.9375rem] text-ink-3">{t('settings.noTags')}</p>
+        <p className="body-2 px-4 py-4 text-ink-3">{t('settings.noTags')}</p>
       ) : (
         <div className="flex flex-wrap gap-2 p-4">
           {tags.map((tag) => (
@@ -225,10 +225,10 @@ export function TagManager() {
                 menuAnchor.current = event.currentTarget
                 setMenu(tag)
               }}
-              className="press flex h-9 items-center gap-1.5 rounded-full bg-well px-3.5 text-[0.875rem] text-ink"
+              className="press flex h-9 items-center gap-1.5 rounded-md bg-well px-3 text-sm text-ink hover:bg-rule/60"
             >
               #{tag.name}
-              <span className="tnum text-[0.75rem] text-ink-3">{tag.entryCount}</span>
+              <span className="tnum caption text-ink-3">{tag.entryCount}</span>
             </button>
           ))}
         </div>

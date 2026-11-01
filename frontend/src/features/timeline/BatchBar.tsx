@@ -43,7 +43,7 @@ export function BatchBar({ selected, onDone }: { selected: number[]; onDone: () 
       disabled={count === 0 || busy}
       onClick={onClick}
       className={cn(
-        'press flex h-[52px] flex-1 flex-col items-center justify-center gap-[3px] rounded-full text-[0.6875rem] font-medium disabled:opacity-35',
+        'press flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg text-xs font-medium disabled:opacity-35',
         danger ? 'text-danger' : 'text-accent',
       )}
     >
@@ -52,12 +52,12 @@ export function BatchBar({ selected, onDone }: { selected: number[]; onDone: () 
     </button>
   )
 
-  const row = 'flex min-h-[52px] w-full items-center gap-3.5 rounded-[14px] px-3 text-left text-[1rem] text-ink active:bg-well'
+  const row = 'title-2 flex min-h-13 w-full items-center gap-3.5 rounded-lg px-3 text-left text-ink hover:bg-well'
 
   return createPortal(
     <>
       <div className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-rise lg:pl-[17rem]">
-        <div className="glass flex h-[62px] w-full max-w-[26rem] items-center rounded-full px-2 shadow-float">
+        <div className="glass flex h-14 w-full max-w-md items-center rounded-xl px-1 shadow-float hairline">
           {action(<FolderIcon size={22} />, t('batch.move'), () => setSheet('move'))}
           {action(<TagIcon size={22} />, t('batch.tag'), () => setSheet('tag'))}
           {action(<TrashIcon size={22} />, t('batch.delete'), () => setSheet('delete'), true)}
@@ -90,17 +90,17 @@ export function BatchBar({ selected, onDone }: { selected: number[]; onDone: () 
 
       <Sheet open={sheet === 'tag'} onClose={() => setSheet(null)} title={t('batch.tagTitle')} width="sm">
         {tags.length === 0 ? (
-          <p className="py-4 text-[0.9375rem] text-ink-3">{t('filters.noTags')}</p>
+          <p className="body-2 py-4 text-ink-3">{t('filters.noTags')}</p>
         ) : (
           <ul className="divide-y divide-rule">
             {tags.map((tag) => (
-              <li key={tag.id} className="flex min-h-[52px] items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-[1rem] text-ink">#{tag.name}</span>
+              <li key={tag.id} className="flex min-h-13 items-center gap-2">
+                <span className="title-2 min-w-0 flex-1 truncate text-ink">#{tag.name}</span>
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => void run({ action: 'removeTags', tagIds: [tag.id] }, 'batch.tagged', false)}
-                  className="press h-9 rounded-full px-3 text-[0.875rem] text-ink-2"
+                  className="press h-9 rounded-md px-3 text-sm text-ink-2 hover:bg-well"
                 >
                   {t('batch.removeTag')}
                 </button>
@@ -108,7 +108,7 @@ export function BatchBar({ selected, onDone }: { selected: number[]; onDone: () 
                   type="button"
                   disabled={busy}
                   onClick={() => void run({ action: 'addTags', tagIds: [tag.id] }, 'batch.tagged', false)}
-                  className="press h-9 rounded-full bg-accent-soft px-3.5 text-[0.875rem] font-medium text-accent"
+                  className="press h-9 rounded-md bg-accent-soft px-3.5 text-sm font-medium text-accent hover:bg-accent-soft/70"
                 >
                   {t('batch.addTag')}
                 </button>

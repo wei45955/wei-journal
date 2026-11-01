@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { formatTime } from '../../lib/format'
 import type { Entry } from '../../lib/types'
-import { FileIcon, PinIcon, PlaceIcon } from '../../ui/icons'
+import { FileIcon, PlaceIcon } from '../../ui/icons'
+import { SealMark } from '../../ui/Seal'
 import { Mosaic } from '../media/Mosaic'
 import { splitMedia } from '../media/Thumb'
 import { SketchView } from '../sketch/SketchView'
@@ -47,28 +48,28 @@ export const EntryCard = memo(function EntryCard({
       <Mosaic
         items={visual}
         onOpen={selecting ? undefined : (index) => onOpenMedia?.(entry, index)}
-        className="overflow-hidden rounded-t-[20px]"
+        className="overflow-hidden"
       />
     ) : null
 
   const body = (
     <>
       {sketch ? (
-        <div className="border-b border-rule bg-paper/50 px-6 py-2">
+        <div className="bg-paper/60 px-4 py-2 sm:px-6">
           <SketchView strokes={sketch} className="mx-auto block aspect-[4/3] max-h-44 w-full" />
         </div>
       ) : null}
 
-      <div className="px-[18px] pt-3.5 pb-4">
+      <div className="px-4 pt-4 pb-4 sm:px-6 sm:pt-5 sm:pb-5">
         <div className="flex items-baseline gap-3">
           {title ? (
-            <h3 className="min-w-0 flex-1 font-serif text-[1.1875rem] leading-snug font-medium text-ink [font-variation-settings:'opsz'_24]">
+            <h3 className="heading-3 min-w-0 flex-1 text-ink">
               {title}
             </h3>
           ) : (
             <span className="flex-1" />
           )}
-          <time dateTime={entry.eventTime} className="tnum shrink-0 text-[0.8125rem] text-ink-3">
+          <time dateTime={entry.eventTime} className="tnum shrink-0 text-xs text-ink-3">
             {formatTime(entry.eventTime, language, zone)}
           </time>
         </div>
@@ -76,22 +77,22 @@ export const EntryCard = memo(function EntryCard({
         {excerpt ? (
           <p
             className={cn(
-              'font-serif text-[1rem] leading-[1.6] text-ink-2',
-              title ? 'mt-1 line-clamp-3' : 'mt-0.5 line-clamp-4 text-ink',
+              'entry-excerpt',
+              title ? 'mt-1 line-clamp-3' : 'line-clamp-4 text-ink',
             )}
           >
             {excerpt}
           </p>
         ) : !title && visual.length === 0 && !sketch ? (
-          <p className="font-serif text-[1rem] text-ink-3 italic">{t('timeline.untitled')}</p>
+          <p className="entry-excerpt text-ink-3">{t('timeline.untitled')}</p>
         ) : null}
 
         {place || entry.tags.length || files.length || entry.isPinned || entry.folderName ? (
-          <div className="mt-3 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[0.8125rem] text-ink-3">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-ink-3">
             {entry.isPinned ? (
-              <span className="flex items-center text-accent" title={t('timeline.pinned')}>
-                <PinIcon size={15} />
-                <span className="sr-only">{t('timeline.pinned')}</span>
+              <span className="flex items-center gap-1.5 text-seal" title={t('timeline.pinned')}>
+                <SealMark size={7} />
+                <span>{t('timeline.pinned')}</span>
               </span>
             ) : null}
             {place ? (
@@ -107,7 +108,7 @@ export const EntryCard = memo(function EntryCard({
               </span>
             ) : null}
             {entry.tags.slice(0, 3).map((tag) => (
-              <span key={tag.id} className="max-w-[8rem] truncate text-accent/85">
+              <span key={tag.id} className="max-w-[8rem] truncate text-accent">
                 #{tag.name}
               </span>
             ))}
@@ -119,8 +120,8 @@ export const EntryCard = memo(function EntryCard({
   )
 
   const frame = cn(
-    'relative block overflow-hidden rounded-[20px] bg-leaf text-left shadow-[0_1px_2px_rgb(23_32_51/0.05)]',
-    'transition-[transform,box-shadow] duration-200 active:scale-[0.985]',
+    'relative block overflow-hidden rounded-xl bg-leaf text-left hairline',
+    'transition-transform duration-200 active:scale-[0.99] sm:hover:-translate-y-px',
     'animate-reveal',
     selected && 'shadow-[0_0_0_2px_var(--wj-accent)]',
   )
@@ -159,7 +160,7 @@ export const EntryCard = memo(function EntryCard({
   return (
     <article className={frame} style={arrive}>
       {pictures}
-      <Link to={`/entry/${entry.id}`} className="block rounded-b-[20px]">
+      <Link to={`/entry/${entry.id}`} className="block">
         {body}
       </Link>
     </article>

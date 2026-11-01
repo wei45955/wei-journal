@@ -330,7 +330,7 @@ export function Viewer({
     >
       <header
         className={cn(
-          'absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-gradient-to-b from-black/50 to-transparent px-2 pt-[calc(env(safe-area-inset-top)+0.25rem)] pb-6 transition-opacity duration-200',
+          'absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-black/45 px-2 pt-[calc(env(safe-area-inset-top)+0.25rem)] pb-2 backdrop-blur-sm transition-opacity duration-200',
           dragY === 0 ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
       >
@@ -338,18 +338,18 @@ export function Viewer({
           type="button"
           onClick={onClose}
           aria-label={t('common.close')}
-          className="press flex size-11 items-center justify-center rounded-full"
+          className="press flex size-11 items-center justify-center rounded-lg hover:bg-white/10"
         >
           <CloseIcon size={24} />
         </button>
         <div className="min-w-0 flex-1 text-center">
           {items.length > 1 ? (
-            <p className="tnum text-[0.9375rem] font-medium">
+            <p className="tnum text-sm font-medium">
               {t('media.position', { index: current + 1, total: items.length })}
             </p>
           ) : null}
           {motion ? (
-            <p className="mt-0.5 flex items-center justify-center gap-1 text-[0.75rem] text-white/70">
+            <p className="mt-0.5 flex items-center justify-center gap-1 text-xs text-white/70">
               <LiveIcon size={13} />
               {t('media.holdToPlay')}
             </p>
@@ -359,7 +359,7 @@ export function Viewer({
           href={media.url}
           download={media.originalName}
           aria-label={t('media.download')}
-          className="press flex size-11 items-center justify-center rounded-full"
+          className="press flex size-11 items-center justify-center rounded-lg hover:bg-white/10"
         >
           <DownloadIcon size={22} />
         </a>
@@ -431,14 +431,14 @@ export function Viewer({
             <div className="flex flex-col items-center gap-4 text-center">
               <FileIcon size={44} />
               <div>
-                <p className="max-w-[16rem] truncate text-[1rem] font-medium">{media.originalName}</p>
-                <p className="mt-1 text-[0.875rem] text-white/60">{formatBytes(media.size)}</p>
+                <p className="max-w-64 truncate text-base font-medium">{media.originalName}</p>
+                <p className="body-2 mt-1 text-white/60">{formatBytes(media.size)}</p>
               </div>
               <a
                 href={media.url}
                 download={media.originalName}
                 onClick={(event) => event.stopPropagation()}
-                className="press rounded-full bg-white px-5 py-2.5 text-[0.9375rem] font-semibold text-black"
+                className="press rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-black hover:bg-white/90"
               >
                 {t('media.download')}
               </a>
@@ -479,7 +479,7 @@ export function Viewer({
       {items.length > 1 ? (
         <div
           className={cn(
-            'absolute inset-x-0 bottom-0 flex justify-center gap-1.5 bg-gradient-to-t from-black/50 to-transparent pt-8 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] transition-opacity duration-200',
+            'absolute inset-x-0 bottom-0 flex justify-center gap-1.5 bg-black/45 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-sm transition-opacity duration-200',
             dragY === 0 ? 'opacity-100' : 'opacity-0',
           )}
           aria-hidden="true"

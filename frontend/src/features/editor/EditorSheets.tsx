@@ -69,13 +69,13 @@ export function TagSheet({ open, onClose, value, onChange }: { open: boolean; on
           type="button"
           disabled={busy}
           onClick={() => void add()}
-          className="press mb-3 flex h-11 items-center gap-2 rounded-full px-1 text-[0.9375rem] font-medium text-accent"
+          className="press title-3 mb-3 flex h-11 items-center gap-2 rounded-lg px-3 text-accent hover:bg-well"
         >
           <PlusIcon size={19} />
           {t('tags.create', { name: text.trim() })}
         </button>
       ) : null}
-      {tags.length === 0 && !needle ? <p className="py-4 text-[0.9375rem] text-ink-3">{t('tags.empty')}</p> : null}
+      {tags.length === 0 && !needle ? <p className="body-2 py-4 text-ink-3">{t('tags.empty')}</p> : null}
       <div className="flex flex-wrap gap-2">
         {shown.map((tag) => (
           <Chip key={tag.id} selected={chosen.has(tag.id)} onClick={() => toggle(tag)}>
@@ -128,7 +128,7 @@ export function FolderSheet({
 
   const row = (active: boolean) =>
     cn(
-      'flex min-h-[52px] w-full items-center gap-3.5 rounded-[14px] px-3 text-left text-[1rem] active:bg-well',
+      'title-2 flex min-h-13 w-full items-center gap-3.5 rounded-lg px-3 text-left hover:bg-well',
       active ? 'text-accent' : 'text-ink',
     )
 
@@ -195,7 +195,7 @@ export function TimeSheet({
           aria-label={t('time.title')}
           className={cn(inputClass, 'tnum')}
         />
-        <p className="mt-2 text-[0.8125rem] leading-snug text-ink-3">{t('time.hint')}</p>
+        <p className="caption mt-2 text-ink-3">{t('time.hint')}</p>
         <Button className="mt-4" size="sm" onClick={() => onChange(new Date().toISOString())}>
           {t('time.now')}
         </Button>
@@ -238,9 +238,9 @@ export function StyleMenu({
       anchorRef={anchorRef}
       placement="top-end"
       label={t('editor.format')}
-      className="w-[17.5rem] max-w-[calc(100vw_-_1.5rem)] p-4"
+      className="w-70 max-w-[calc(100vw_-_1.5rem)] p-4"
     >
-      <p className="text-[0.8125rem] text-ink-3">{t('format.color')}</p>
+      <p className="caption text-ink-3">{t('format.color')}</p>
       <div className="mt-2 flex items-center justify-between">
         <button
           type="button"
@@ -267,7 +267,7 @@ export function StyleMenu({
           </button>
         ))}
       </div>
-      <p className="mt-4 text-[0.8125rem] text-ink-3">{t('format.size')}</p>
+      <p className="caption mt-4 text-ink-3">{t('format.size')}</p>
       <div className="mt-2 grid grid-cols-3 gap-2">
         {TEXT_SIZES.map((option) => {
           const active = (size ?? '') === option.value
@@ -278,7 +278,7 @@ export function StyleMenu({
               aria-pressed={active}
               onClick={() => onSize(option.value || null)}
               className={cn(
-                'press flex h-12 items-center justify-center rounded-[14px] font-serif',
+                'press flex h-12 items-center justify-center rounded-lg font-serif',
                 active ? 'bg-accent-soft text-accent' : 'bg-well text-ink',
               )}
               style={{ fontSize: option.value || '18px' }}
